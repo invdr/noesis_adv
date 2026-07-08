@@ -1,6 +1,6 @@
-# Деплой на VPS sweb.ru
+# Деплой на VPS
 
-Прод-инфраструктура — один VPS на sweb.ru с Docker. Всё поднимается через
+Прод-инфраструктура — один VPS на VPS с Docker. Всё поднимается через
 `infra/docker-compose.prod.yml`: PostgreSQL, бэкенд (Hono+Prisma) и nginx,
 который раздаёт статику и проксирует API.
 
@@ -14,11 +14,11 @@ backend ──▶ postgres:5432
 
 ## Деплой по IP без домена (HTTP)
 
-Пока домена нет, сайт открывается по голому IP — `http://168.222.140.78/`
-(CRM — `http://168.222.140.78/crm/`). Для этого режима в `infra/.env.example`
+Пока домена нет, сайт открывается по голому IP — `http://<VPS_IP>/`
+(CRM — `http://<VPS_IP>/crm/`). Для этого режима в `infra/.env.example`
 уже выставлены безопасные для HTTP значения, важно их не перепутать:
 
-- `CORS_ORIGINS=http://168.222.140.78` — ровно тот origin, по которому
+- `CORS_ORIGINS=http://<VPS_IP>` — ровно тот origin, по которому
   открывают сайт (схема + IP, без слэша и без порта). Если оставить здесь
   домен или `https`, анти-CSRF guard вернёт **403** на входе в CRM и на
   отправке заявки с лендинга.
@@ -64,7 +64,7 @@ backend ──▶ postgres:5432
 
 Лендинг — статика: данные «запекаются» на сборке. Чтобы правки контента из CRM
 можно было вывести на сайт без полного деплоя, на хосте крутится сервис-сборщик
-`gsk-site-builder`. CRM сначала сохраняет правки как неопубликованные, а админ
+`noesis-site-builder`. CRM сначала сохраняет правки как неопубликованные, а админ
 отдельно нажимает «Опубликовать сайт». После этого сборщик опрашивает backend
 «нужна ли публикация?» (дебаунс ~2 мин, одна сборка одновременно — логика в
 backend) и при необходимости пересобирает сайт.
@@ -87,15 +87,15 @@ backend) и при необходимости пересобирает сайт.
 
 ```bash
 # BUILD_WORKER_TOKEN уже задан в infra/.env (см. «Первый деплой»).
-sudo cp infra/gsk-site-builder.service /etc/systemd/system/
+sudo cp infra/noesis-site-builder.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now gsk-site-builder
-journalctl -u gsk-site-builder -f   # логи сборщика
+sudo systemctl enable --now noesis-site-builder
+journalctl -u noesis-site-builder -f   # логи сборщика
 ```
 
-> Юнит рассчитан на каталог деплоя `/root/tower-site` и `bun` в
+> Юнит рассчитан на каталог деплоя `/root/noesis_adv` и `bun` в
 > `/root/.bun/bin`. Если иначе — поправьте `WorkingDirectory`, `EnvironmentFile`
-> и `PATH` в `infra/gsk-site-builder.service` перед копированием.
+> и `PATH` в `infra/noesis-site-builder.service` перед копированием.
 
 `bun run deploy:vps` собирает лендинг тем же `build-website.sh` (релиз + свап) и
 сообщает backend об успешной публикации — ручной деплой и фоновая публикация
@@ -103,23 +103,23 @@ journalctl -u gsk-site-builder -f   # логи сборщика
 — фоновая публикация просто выключена, всё работает как раньше (только ручной
 деплой).
 
-## Переход на домен gsktower.com
+## Переход на домен noesis-grozny.ru
 
 Сейчас сайт открыт по IP без HTTPS. SEO/Метрика завязаны на единый `SITE_URL`,
 поэтому переход — это смена конфигов и пересборка, без правок в коде:
 
-1. Направьте домен `gsktower.com` (A-запись) на IP VPS.
+1. Направьте домен `noesis-grozny.ru` (A-запись) на IP VPS.
 2. Выпустите сертификат (см. «TLS (HTTPS)» ниже) и раскомментируйте HTTPS-блок и
-   `server_name gsktower.com www.gsktower.com;` в `infra/nginx/default.conf`.
+   `server_name noesis-grozny.ru www.noesis-grozny.ru;` в `infra/nginx/default.conf`.
 3. В `infra/.env`:
-   - `SITE_URL=https://gsktower.com` (canonical/OG/sitemap/Schema.org);
-   - `CORS_ORIGINS=https://gsktower.com,https://www.gsktower.com`;
+   - `SITE_URL=https://noesis-grozny.ru` (canonical/OG/sitemap/Schema.org);
+   - `CORS_ORIGINS=https://noesis-grozny.ru,https://www.noesis-grozny.ru`;
    - `COOKIE_SECURE=true` (на HTTPS — обязательно для входа в CRM).
 4. Пересоберите и перезапустите: `bun run deploy:vps`.
-5. Проверьте `https://gsktower.com/`, вход в CRM, отправку заявки.
-6. Отдайте `https://gsktower.com/sitemap.xml` в Яндекс.Вебмастер и Google Search
+5. Проверьте `https://noesis-grozny.ru/`, вход в CRM, отправку заявки.
+6. Отдайте `https://noesis-grozny.ru/sitemap.xml` в Яндекс.Вебмастер и Google Search
    Console (на IP индексация фактически не работала). Текст Политики ПДн уже
-   ссылается на `gsktower.com` — править не нужно.
+   ссылается на `noesis-grozny.ru` — править не нужно.
 7. Яндекс.Метрика (Веха 4.3): ID счётчика задаётся **в CRM** (вкладка «Сайт» →
    Яндекс.Метрика), не в `.env`. Пока ID пуст — счётчик не грузится. Заведите
    счётчик на домен, впишите ID в CRM, сохраните и нажмите «Опубликовать сайт».
@@ -147,7 +147,7 @@ journalctl -u gsk-site-builder -f   # логи сборщика
 
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"   # если bun не находится
-cd /root/tower-site                  # каталог деплоя на VPS
+cd /root/noesis_adv                  # каталог деплоя на VPS
 git pull origin main
 bun run deploy:vps
 ```
@@ -177,7 +177,7 @@ API и перезапускает nginx с новой статикой.
    bun run deploy:vps
    ```
 4. Один раз создайте администратора (`... exec backend bun run --cwd backend db:seed`) и
-   проверьте: `http://168.222.140.78/` (лендинг) и `http://168.222.140.78/crm/`
+   проверьте: `http://<VPS_IP>/` (лендинг) и `http://<VPS_IP>/crm/`
    (вход в CRM).
 
 ## Переменные сборки фронта
@@ -191,12 +191,12 @@ API и перезапускает nginx с новой статикой.
 Том `postgres_data` хранит данные. Регулярный дамп:
 ```bash
 docker compose -f infra/docker-compose.prod.yml exec -T postgres \
-  pg_dump -U gsk gsk_tower > backup_$(date +%F).sql
+  pg_dump -U gsk noesis > backup_$(date +%F).sql
 ```
 
 ## Отличия от шаблона vibe
 
 Шаблон ориентирован на DigitalOcean App Platform / Yandex Cloud (`.do/`,
 `scripts/prepare-do-specs.mjs`). Здесь это заменено на самоуправляемый
-Docker-стек под один VPS sweb.ru. Архитектура приложения (Hono/Prisma/Astro/React,
+Docker-стек под один VPS. Архитектура приложения (Hono/Prisma/Astro/React,
 общие контракты) сохранена без изменений.

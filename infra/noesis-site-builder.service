@@ -1,26 +1,26 @@
 # systemd-юнит автосборщика лендинга (Веха 4.2).
 #
 # Установка на VPS (один раз):
-#   sudo cp /root/tower-site/infra/gsk-site-builder.service /etc/systemd/system/
+#   sudo cp /root/noesis_adv/infra/noesis-site-builder.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable --now gsk-site-builder
-# Логи:  journalctl -u gsk-site-builder -f
+#   sudo systemctl enable --now noesis-site-builder
+# Логи:  journalctl -u noesis-site-builder -f
 #
 # Если каталог деплоя/пользователь иные — поправьте WorkingDirectory, пути и User.
 [Unit]
-Description=ГСК TOWER — автосборщик лендинга (site-builder)
+Description=Noesis — автосборщик лендинга (site-builder)
 After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/tower-site
+WorkingDirectory=/root/noesis_adv
 # Токен сборщика (BUILD_WORKER_TOKEN), SITE_URL и пр. — из infra/.env:
-EnvironmentFile=/root/tower-site/infra/.env
+EnvironmentFile=/root/noesis_adv/infra/.env
 # bun должен быть в PATH (на этом VPS — /root/.bun/bin):
 Environment=PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/usr/bin/env bash /root/tower-site/infra/site-builder.sh
+ExecStart=/usr/bin/env bash /root/noesis_adv/infra/site-builder.sh
 Restart=always
 RestartSec=10
 

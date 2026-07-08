@@ -213,7 +213,7 @@ export const SITE_SETTINGS_DEFAULTS: ResolvedSiteSettings = {
   contactsLeaveCta: "Оставить заявку",
   ctaOrderCall: "Заказать звонок",
   phonePrimary: "+79280009300",
-  email: "gsktower@yandex.ru",
+  email: "info@noesis-grozny.ru",
   address: "г. Грозный, ул. Лорсанова, 8а",
   workHoursWeekday: "Пн-Пт: 9:00-18:00 (перерыв 13:00-14:00)",
   workHoursSaturday: "Сб: 9:00-14:00",

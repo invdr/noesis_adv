@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Резервная копия прода ГСК TOWER (VPS sweb.ru): дамп PostgreSQL + архив
+# Резервная копия прода Noesis (VPS): дамп PostgreSQL + архив
 # загруженных файлов (том files_data). Запуск из корня репозитория:
 #   bash infra/backup.sh            # вручную
 #   (по расписанию — cron, см. docs/backup-restore.md)
@@ -30,10 +30,10 @@ fi
 # Тот же безопасный доступ к ключам .env, что в deploy.sh (без source).
 get_env() { grep -E "^$1=" infra/.env 2>/dev/null | tail -1 | cut -d= -f2- || true; }
 
-PG_USER="$(get_env POSTGRES_USER)"; PG_USER="${PG_USER:-gsk}"
-PG_DB="$(get_env POSTGRES_DB)"; PG_DB="${PG_DB:-gsk_tower}"
+PG_USER="$(get_env POSTGRES_USER)"; PG_USER="${PG_USER:-noesis}"
+PG_DB="$(get_env POSTGRES_DB)"; PG_DB="${PG_DB:-noesis}"
 
-BACKUP_DIR="${BACKUP_DIR:-/root/tower-backups}"
+BACKUP_DIR="${BACKUP_DIR:-/root/noesis-backups}"
 BACKUP_KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 STAMP="$(date +%Y-%m-%d_%H%M)"
 DEST="$BACKUP_DIR/$STAMP"
@@ -98,8 +98,8 @@ if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ]; then
       # URL с токеном бота — через конфиг на fd 3, а не argv (не светится в ps).
       curl -fsS -X POST \
         -F "chat_id=$TG_CHAT" \
-        -F "document=@$DEST/db.sql.gz.gpg;filename=gsk-tower-db-$STAMP.sql.gz.gpg" \
-        -F "caption=Бэкап БД ГСК TOWER $STAMP (расшифровка: gpg -d, парольная фраза в infra/.env)" \
+        -F "document=@$DEST/db.sql.gz.gpg;filename=noesis-db-$STAMP.sql.gz.gpg" \
+        -F "caption=Бэкап БД Noesis $STAMP (расшифровка: gpg -d, парольная фраза в infra/.env)" \
         --config /dev/fd/3 >/dev/null \
         3<<<"url = \"https://api.telegram.org/bot$TG_TOKEN/sendDocument\"" \
         && echo "дамп отправлен в Telegram." \

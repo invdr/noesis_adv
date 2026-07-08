@@ -3,7 +3,7 @@
 # пересборка?» (с учётом дебаунса и сериализации — логика в backend), и при
 # необходимости собирает сайт (build-website.sh) и отчитывается о результате.
 #
-# Запускается как systemd-сервис gsk-site-builder (Restart=always), токен и
+# Запускается как systemd-сервис noesis-site-builder (Restart=always), токен и
 # параметры — из infra/.env (EnvironmentFile). Бесконечный цикл с паузой.
 #
 # JSON разбираем/кодируем через bun (на VPS он всегда есть) — надёжнее, чем

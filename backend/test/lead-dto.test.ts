@@ -62,7 +62,7 @@ describe("toLeadDetailDto", () => {
       id: "n1",
       leadId: "abc123",
       authorId: "u1",
-      author: { email: "manager@gsktower.com" },
+      author: { email: "manager@noesis-grozny.ru" },
       text: "Перезвонить",
       createdAt: now,
       updatedAt: now,
@@ -80,9 +80,9 @@ describe("toLeadDetailDto", () => {
       id: "a1",
       leadId: "abc123",
       assigneeId: "u2",
-      assignee: { name: "Иван Менеджер", email: "ivan@gsktower.com" },
+      assignee: { name: "Иван Менеджер", email: "ivan@noesis-grozny.ru" },
       authorId: "u1",
-      author: { email: "admin@gsktower.com" },
+      author: { email: "admin@noesis-grozny.ru" },
       createdAt: now,
     };
     const contact: LeadContactEventRow = {
@@ -92,7 +92,7 @@ describe("toLeadDetailDto", () => {
       at: now,
       typeName: "Звонок",
       authorId: "u1",
-      author: { email: "manager@gsktower.com" },
+      author: { email: "manager@noesis-grozny.ru" },
       createdAt: now,
     };
     const dto = toLeadDetailDto({
@@ -105,10 +105,10 @@ describe("toLeadDetailDto", () => {
       referrer: { id: "c_realtor", fullName: "Пётр Риелтор", kind: "realtor" },
     });
     expect(() => leadDetailSchema.parse(dto)).not.toThrow();
-    expect(dto.notes[0]?.authorEmail).toBe("manager@gsktower.com");
+    expect(dto.notes[0]?.authorEmail).toBe("manager@noesis-grozny.ru");
     expect(dto.statusHistory[0]?.authorEmail).toBeNull();
     expect(dto.assignHistory[0]?.assigneeLabel).toBe("Иван Менеджер");
-    expect(dto.assignHistory[0]?.authorEmail).toBe("admin@gsktower.com");
+    expect(dto.assignHistory[0]?.authorEmail).toBe("admin@noesis-grozny.ru");
     expect(dto.contactHistory[0]?.typeName).toBe("Звонок");
     expect(dto.contactHistory[0]?.at).toBe("2026-06-25T10:00:00.000Z");
     expect(dto.related[0]?.id).toBe("rel1");

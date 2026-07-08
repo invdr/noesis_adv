@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "gsk-tower",
+      "name": "noesis",
       "devDependencies": {
         "@playwright/test": "^1.61.1",
         "@types/bun": "^1.2.0",

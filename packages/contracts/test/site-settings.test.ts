@@ -50,25 +50,25 @@ describe("formatPhoneRu / deriveSecondaryContact", () => {
   test("telegram нормализует @/ссылку в t.me/<handle>", () => {
     expect(
       deriveSecondaryContact(
-        resolveSiteSettings({ secondaryContactKind: "telegram", secondaryContactValue: "@gsktower" }),
+        resolveSiteSettings({ secondaryContactKind: "telegram", secondaryContactValue: "@noesis" }),
       ).href,
-    ).toBe("https://t.me/gsktower");
+    ).toBe("https://t.me/noesis");
     expect(
       deriveSecondaryContact(
-        resolveSiteSettings({ secondaryContactKind: "telegram", secondaryContactValue: "https://t.me/gsktower" }),
+        resolveSiteSettings({ secondaryContactKind: "telegram", secondaryContactValue: "https://t.me/noesis" }),
       ).href,
-    ).toBe("https://t.me/gsktower");
+    ).toBe("https://t.me/noesis");
   });
 
   test("произвольная подпись переопределяет дефолтную", () => {
     const c = deriveSecondaryContact(
       resolveSiteSettings({
         secondaryContactKind: "link",
-        secondaryContactValue: "https://vk.com/gsktower",
+        secondaryContactValue: "https://vk.com/noesis",
         secondaryContactLabel: "Мы во ВКонтакте",
       }),
     );
-    expect(c.href).toBe("https://vk.com/gsktower");
+    expect(c.href).toBe("https://vk.com/noesis");
     expect(c.label).toBe("Мы во ВКонтакте");
   });
 });

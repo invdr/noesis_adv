@@ -1,6 +1,6 @@
 // Общие константы сайта для SEO (канонические URL, Open Graph, sitemap).
 // Сайт пока открыт по голому IP — это и есть рабочий origin для абсолютных
-// ссылок. Домен в текстах (Политика ПДн) — `gsktower.com`, но canonical/OG
+// ссылок. Домен в текстах (Политика ПДн) — `noesis-grozny.ru`, но canonical/OG
 // должны указывать на реальный адрес выдачи. Переопределяется `SITE_URL`.
 export const SITE_URL = (
   process.env.SITE_URL || "http://168.222.140.78"

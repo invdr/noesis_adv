@@ -1,5 +1,5 @@
-# Бэкенд ГСК TOWER. Сборка из корня монорепо:
-#   docker build -f backend/Dockerfile -t gsk-tower-backend .
+# Бэкенд Noesis. Сборка из корня монорепо:
+#   docker build -f backend/Dockerfile -t noesis-backend .
 FROM oven/bun:1.3.11-alpine
 
 WORKDIR /app

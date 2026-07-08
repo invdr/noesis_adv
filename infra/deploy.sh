@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Деплой ГСК TOWER на VPS sweb.ru.
+# Деплой Noesis на VPS.
 # Запуск из корня репозитория: bun run deploy:vps  (или bash infra/deploy.sh)
 #
 # Порядок важен (Веха 4): website собирается на ХОСТЕ и фетчит реальные данные с

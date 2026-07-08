@@ -1,4 +1,4 @@
-# Прод-стек для VPS sweb.ru. Запуск из корня репозитория:
+# Прод-стек для VPS. Запуск из корня репозитория:
 #   docker compose -f infra/docker-compose.prod.yml up -d --build
 #
 # Переменные берутся из infra/.env (см. infra/.env.example).
@@ -7,13 +7,13 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-gsk_tower}
-      POSTGRES_USER: ${POSTGRES_USER:-gsk}
+      POSTGRES_DB: ${POSTGRES_DB:-noesis}
+      POSTGRES_USER: ${POSTGRES_USER:-noesis}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в infra/.env}
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gsk} -d ${POSTGRES_DB:-gsk_tower}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-noesis} -d ${POSTGRES_DB:-noesis}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,9 +25,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-gsk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gsk_tower}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-noesis}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-noesis}?schema=public
       PORT: 3000
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://gsktower.com}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://noesis-grozny.ru}
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
       # В проде Secure включается автоматически по NODE_ENV; оставляем для явности.
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
