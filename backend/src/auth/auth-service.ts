@@ -11,7 +11,7 @@ import { HttpError } from "../http/errors";
 import { toSessionUser } from "./user-dto";
 
 /** Имя cookie с токеном сессии. */
-export const SESSION_COOKIE = "gsk_session";
+export const SESSION_COOKIE = "noesis_session";
 
 /** Хеш пароля (argon2id через встроенный Bun.password). */
 export function hashPassword(password: string): Promise<string> {

@@ -39,6 +39,7 @@ test-results/
 
 # scratch
 .scratch/
+scratchpad-shots/
 
 # загруженные файлы (фото ЖК, документы) — хранятся на томе, не в репозитории
 backend/uploads/

@@ -79,7 +79,7 @@ COMPOSE="docker compose -f infra/docker-compose.prod.yml --env-file infra/.env"
 # Ошибка в любом звене пайпа = ошибка команды, а не молчаливый «успех».
 set -o pipefail
 # Креды БД — из infra/.env, как их видит сам стек (не хардкодим).
-PG_USER=$(grep -E '^POSTGRES_USER=' infra/.env | cut -d= -f2-); PG_USER=${PG_USER:-gsk}
+PG_USER=$(grep -E '^POSTGRES_USER=' infra/.env | cut -d= -f2-); PG_USER=${PG_USER:-noesis}
 PG_DB=$(grep -E '^POSTGRES_DB=' infra/.env | cut -d= -f2-); PG_DB=${PG_DB:-noesis}
 
 # 1) Остановить backend, чтобы никто не писал в БД во время восстановления.
@@ -126,7 +126,7 @@ bun run deploy:vps
    ```bash
    COMPOSE="docker compose -f infra/docker-compose.prod.yml --env-file infra/.env"
    set -o pipefail
-   PG_USER=$(grep -E '^POSTGRES_USER=' infra/.env | cut -d= -f2-); PG_USER=${PG_USER:-gsk}
+   PG_USER=$(grep -E '^POSTGRES_USER=' infra/.env | cut -d= -f2-); PG_USER=${PG_USER:-noesis}
    PG_DB=$(grep -E '^POSTGRES_DB=' infra/.env | cut -d= -f2-); PG_DB=${PG_DB:-noesis}
    $COMPOSE up -d postgres
    # дождаться healthy: $COMPOSE ps

@@ -191,7 +191,7 @@ API и перезапускает nginx с новой статикой.
 Том `postgres_data` хранит данные. Регулярный дамп:
 ```bash
 docker compose -f infra/docker-compose.prod.yml exec -T postgres \
-  pg_dump -U gsk noesis > backup_$(date +%F).sql
+  pg_dump -U noesis noesis > backup_$(date +%F).sql
 ```
 
 ## Отличия от шаблона vibe

@@ -133,6 +133,6 @@ export async function notifySiteBuildStalled(
 ): Promise<void> {
   await sendTelegramMessage(
     rt,
-    `⚠️ <b>Сайт не обновляется ~${minutes} мин</b>\nИзменения из CRM ждут пересборки, но сборщик их не берёт. Проверьте сервис сборки на сервере (gsk-site-builder).`,
+    `⚠️ <b>Сайт не обновляется ~${minutes} мин</b>\nИзменения из CRM ждут пересборки, но сборщик их не берёт. Проверьте сервис сборки на сервере (noesis-site-builder).`,
   );
 }
