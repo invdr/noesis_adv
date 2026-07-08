@@ -1,5 +1,5 @@
 import type { User } from "@prisma/client";
-import type { AdminUser } from "@gsk-tower/contracts";
+import type { AdminUser } from "@noesis/contracts";
 
 /** Маппинг строки БД в DTO учётки для админ-списка. */
 export function toAdminUserDto(user: User, activeLeadCount: number): AdminUser {

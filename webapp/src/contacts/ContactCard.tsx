@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CONTACT_KIND_LABEL, type ContactLeadRef } from "@gsk-tower/contracts";
+import { CONTACT_KIND_LABEL, type ContactLeadRef } from "@noesis/contracts";
 import { api } from "../api/client";
 import { copyToClipboard } from "../ui/clipboard";
 import { navigate } from "../router";

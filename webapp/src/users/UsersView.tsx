@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AdminUser, SessionUser, UserRole } from "@gsk-tower/contracts";
+import type { AdminUser, SessionUser, UserRole } from "@noesis/contracts";
 import { api } from "../api/client";
 import { copyToClipboard } from "../ui/clipboard";
 

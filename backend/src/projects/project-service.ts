@@ -6,7 +6,7 @@ import {
   type ListProjectsQuery,
   type Project,
   type UpsertProjectInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { z } from "zod";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";

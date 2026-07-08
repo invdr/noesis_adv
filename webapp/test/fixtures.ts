@@ -5,7 +5,7 @@ import {
   type LeadAgendaResponse,
   type LeadDetail,
   type SessionUser,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 
 // --- CRM: пользователи, заявки, повестка, контакты ---
 

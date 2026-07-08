@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { createUserSchema, updateUserSchema } from "@gsk-tower/contracts";
+import { createUserSchema, updateUserSchema } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requireRole } from "../http/auth";

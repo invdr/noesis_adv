@@ -4,7 +4,7 @@ import {
   createDocumentSchema,
   MAX_UPLOAD_BYTES,
   updateDocumentSchema,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged } from "../http/auth";

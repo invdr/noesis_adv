@@ -1,4 +1,4 @@
-import type { LeadSource, SessionUser, Lead } from "@gsk-tower/contracts";
+import type { LeadSource, SessionUser, Lead } from "@noesis/contracts";
 
 export const SOURCE_LABELS: Record<string, string> = {
   hero_form: "Главная форма",

@@ -1,4 +1,4 @@
-import type { Developer, UpsertDeveloperInput } from "@gsk-tower/contracts";
+import type { Developer, UpsertDeveloperInput } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import { uniqueSlug } from "../http/slug";

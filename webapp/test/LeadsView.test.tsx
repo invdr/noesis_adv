@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Funnel, Stage } from "@gsk-tower/contracts";
+import type { Funnel, Stage } from "@noesis/contracts";
 import { api } from "../src/api/client";
 import { LeadsView } from "../src/leads/LeadsView";
 import { lead, sessionUser } from "./fixtures";

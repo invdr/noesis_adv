@@ -6,7 +6,7 @@ import {
   type NewsLabel,
   type NewsStatus,
   type UpsertNewsInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
 
 const KEY = ["news"];

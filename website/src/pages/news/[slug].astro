@@ -21,7 +21,7 @@ const view = toNewsView(item);
 const chrome = buildChrome(await fetchSiteSettings());
 const s = chrome.s;
 
-const title = `${view.title} | ГСК TOWER`;
+const title = `${view.title} | Noesis`;
 const description = (item.excerpt || view.body[0] || view.title).slice(0, 200);
 
 // Schema.org NewsArticle — rich-сниппет статьи в выдаче. datePublished ставим

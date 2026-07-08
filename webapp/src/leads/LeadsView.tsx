@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Funnel, Lead, SessionUser, Stage } from "@gsk-tower/contracts";
+import type { Funnel, Lead, SessionUser, Stage } from "@noesis/contracts";
 import { api, ApiError, type LeadListParams } from "../api/client";
 import { LeadCard } from "./LeadCard";
 import { KanbanBoard, type BoardFilters } from "./KanbanBoard";

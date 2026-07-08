@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { STAGE_COLOR_HEX } from "@gsk-tower/contracts";
-import type { Funnel, SessionUser, Stage } from "@gsk-tower/contracts";
+import { STAGE_COLOR_HEX } from "@noesis/contracts";
+import type { Funnel, SessionUser, Stage } from "@noesis/contracts";
 import { api } from "../api/client";
 import { copyToClipboard } from "../ui/clipboard";
 import { navigate } from "../router";

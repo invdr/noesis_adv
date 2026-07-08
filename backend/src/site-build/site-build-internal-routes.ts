@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { reportBuildSchema } from "@gsk-tower/contracts";
+import { reportBuildSchema } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { HttpError } from "../http/errors";

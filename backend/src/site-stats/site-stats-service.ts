@@ -1,4 +1,4 @@
-import type { PublicSiteStats } from "@gsk-tower/contracts";
+import type { PublicSiteStats } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 
 /** Публичные агрегаты для hero главной страницы. */

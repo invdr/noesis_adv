@@ -10,10 +10,10 @@
       },
     },
     "backend": {
-      "name": "@gsk-tower/backend",
+      "name": "@noesis/backend",
       "version": "0.1.0",
       "dependencies": {
-        "@gsk-tower/contracts": "workspace:*",
+        "@noesis/contracts": "workspace:*",
         "@prisma/client": "^6.3.1",
         "file-type": "^22.0.1",
         "hono": "^4.7.0",
@@ -26,7 +26,7 @@
       },
     },
     "packages/contracts": {
-      "name": "@gsk-tower/contracts",
+      "name": "@noesis/contracts",
       "version": "0.1.0",
       "dependencies": {
         "zod": "^3.24.1",
@@ -36,11 +36,11 @@
       },
     },
     "webapp": {
-      "name": "@gsk-tower/webapp",
+      "name": "@noesis/webapp",
       "version": "0.1.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
-        "@gsk-tower/contracts": "workspace:*",
+        "@noesis/contracts": "workspace:*",
         "@tanstack/react-query": "^5.66.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
@@ -57,10 +57,10 @@
       },
     },
     "website": {
-      "name": "@gsk-tower/website",
+      "name": "@noesis/website",
       "version": "0.1.0",
       "dependencies": {
-        "@gsk-tower/contracts": "workspace:*",
+        "@noesis/contracts": "workspace:*",
         "astro": "^5.2.5",
       },
       "devDependencies": {
@@ -204,14 +204,6 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.12", "", { "os": "win32", "cpu": "x64" }, "sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA=="],
 
-    "@gsk-tower/backend": ["@gsk-tower/backend@workspace:backend"],
-
-    "@gsk-tower/contracts": ["@gsk-tower/contracts@workspace:packages/contracts"],
-
-    "@gsk-tower/webapp": ["@gsk-tower/webapp@workspace:webapp"],
-
-    "@gsk-tower/website": ["@gsk-tower/website@workspace:website"],
-
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@20.10.6", "", { "dependencies": { "@types/node": ">=20.0.0", "happy-dom": "^20.10.6" } }, "sha512-Nu/IjRkkNxmeG2ywWsyJSO4d1BrWTqVzxCPL+gXj0b97klhmjd6wLzt6Bx/laNpkZ3WLW7zNCqmtMIbIlahqug=="],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
@@ -277,6 +269,14 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@noesis/backend": ["@noesis/backend@workspace:backend"],
+
+    "@noesis/contracts": ["@noesis/contracts@workspace:packages/contracts"],
+
+    "@noesis/webapp": ["@noesis/webapp@workspace:webapp"],
+
+    "@noesis/website": ["@noesis/website@workspace:website"],
 
     "@oslojs/encoding": ["@oslojs/encoding@1.1.0", "", {}, "sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ=="],
 

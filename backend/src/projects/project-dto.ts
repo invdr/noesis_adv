@@ -10,7 +10,7 @@ import {
   type Badge,
   type Project,
   type RoomFormat,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 import { toDeveloperDto } from "../developers/developer-dto";
 

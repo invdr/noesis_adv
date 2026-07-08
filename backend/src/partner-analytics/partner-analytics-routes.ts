@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { partnerAnalyticsQuerySchema } from "@gsk-tower/contracts";
+import { partnerAnalyticsQuerySchema } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged } from "../http/auth";

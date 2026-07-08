@@ -1,4 +1,4 @@
-import type { SessionUser } from "@gsk-tower/contracts";
+import type { SessionUser } from "@noesis/contracts";
 import type { Prisma } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { visibilityWhere } from "../leads/lead-visibility";

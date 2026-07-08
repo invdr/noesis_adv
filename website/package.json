@@ -1,5 +1,5 @@
 {
-  "name": "@gsk-tower/website",
+  "name": "@noesis/website",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@gsk-tower/contracts": "workspace:*",
+    "@noesis/contracts": "workspace:*",
     "astro": "^5.2.5"
   },
   "devDependencies": {

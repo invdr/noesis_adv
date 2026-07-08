@@ -5,7 +5,7 @@ import {
   type CreateDocumentInput,
   type Document,
   type DocumentKind,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { api } from "../api/client";
 
 /**

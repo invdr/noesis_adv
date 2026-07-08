@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { assetSchema } from "@gsk-tower/contracts";
+import { assetSchema } from "@noesis/contracts";
 import { toAssetDto } from "../src/files/file-dto";
 
 const cfg = { publicBase: "/files" };

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { stageSchema } from "@gsk-tower/contracts";
+import { stageSchema } from "@noesis/contracts";
 import { toStageDto } from "../src/stages/stage-dto";
 
 describe("toStageDto", () => {

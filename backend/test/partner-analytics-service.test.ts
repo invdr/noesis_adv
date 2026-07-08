@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SessionUser } from "@gsk-tower/contracts";
+import type { SessionUser } from "@noesis/contracts";
 import type { Runtime } from "../src/runtime";
 import { getPartnerAnalytics } from "../src/partner-analytics/partner-analytics-service";
 

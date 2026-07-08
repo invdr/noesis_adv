@@ -5,7 +5,7 @@ import {
   type ListNewsQuery,
   type News,
   type UpsertNewsInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { z } from "zod";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";

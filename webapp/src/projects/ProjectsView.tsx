@@ -15,7 +15,7 @@ import {
   type ProjectTools,
   type RoomFormat,
   type UpsertProjectInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 
 /** Инструменты «Выбор квартиры»: подписи карточек лендинга. */
 const TOOL_DEFS: { key: keyof ProjectTools; label: string; hint: string }[] = [

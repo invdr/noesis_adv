@@ -1,5 +1,5 @@
 import type { SiteBuild } from "@prisma/client";
-import type { SiteBuildStatus } from "@gsk-tower/contracts";
+import type { SiteBuildStatus } from "@noesis/contracts";
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
 

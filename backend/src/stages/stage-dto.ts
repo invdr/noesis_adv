@@ -1,5 +1,5 @@
 import type { Stage as PrismaStage } from "@prisma/client";
-import type { Stage, StageColor } from "@gsk-tower/contracts";
+import type { Stage, StageColor } from "@noesis/contracts";
 
 /** Маппинг строки БД в DTO контракта (даты → ISO; archivedAt → isArchived). */
 export function toStageDto(stage: PrismaStage): Stage {

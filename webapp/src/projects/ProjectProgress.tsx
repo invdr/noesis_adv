@@ -6,7 +6,7 @@ import {
   PROGRESS_MONTHS,
   progressPeriodLabel,
   type ProgressAlbum,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { api } from "../api/client";
 
 /**

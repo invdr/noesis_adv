@@ -4,7 +4,7 @@ import {
   upsertProgressAlbumSchema,
   MAX_PROGRESS_PHOTOS_PER_REQUEST,
   PROGRESS_UPLOAD_MAX_BYTES,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged } from "../http/auth";

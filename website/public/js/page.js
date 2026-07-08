@@ -125,7 +125,7 @@
       if (ctx.message) payload.message = ctx.message;
       if (ctx.projectId) payload.projectId = ctx.projectId;
 
-      const API_URL = (typeof window !== 'undefined' && window.GSK_API_URL) || '';
+      const API_URL = (typeof window !== 'undefined' && window.NOESIS_API_URL) || '';
       if (submitBtn) submitBtn.disabled = true;
       try {
         const res = await fetch(API_URL + '/api/leads', {
@@ -168,7 +168,7 @@
   }
 
   // Модальная форма заявки на странице ЖК: лид привязывается к этому ЖК
-  // (source=project, projectId из window.GSK_PROJECT).
+  // (source=project, projectId из window.NOESIS_PROJECT).
   function setupLeadModal() {
     const modal = document.getElementById('leadModal');
     if (!modal) return;
@@ -192,7 +192,7 @@
     modal._close = () => { if (!modal.hidden) close(); };
 
     wireLeadForm(form, () => {
-      const p = window.GSK_PROJECT || {};
+      const p = window.NOESIS_PROJECT || {};
       return {
         source: 'project',
         projectId: p.id || undefined,

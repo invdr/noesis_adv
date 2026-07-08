@@ -1,4 +1,4 @@
-import { normalizeRuPhone } from "@gsk-tower/contracts";
+import { normalizeRuPhone } from "@noesis/contracts";
 
 export const PHONE_PLACEHOLDER = "+7 (___) ___-__-__";
 export const PHONE_INCOMPLETE_MESSAGE = "Введите номер полностью: +7 или 8 и 10 цифр";

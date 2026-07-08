@@ -1,4 +1,4 @@
-import type { AnalyticsResponse } from "@gsk-tower/contracts";
+import type { AnalyticsResponse } from "@noesis/contracts";
 import { sourceLabel } from "../leads/shared";
 
 /** Экранирование ячейки CSV (RFC 4180) + нейтрализация формул Excel. */

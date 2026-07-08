@@ -1,7 +1,7 @@
 ---
 // Главная лендинга. Дизайн перенесён 1:1; данные каталога/новостей/документов
 // запекаются из публичного API на этапе сборки (см. website/src/lib/api.ts) и
-// прокидываются в main.js через window.GSK_DATA. Пустые блоки (и их пункты
+// прокидываются в main.js через window.NOESIS_DATA. Пустые блоки (и их пункты
 // меню) скрываются. URL API в браузере — через PUBLIC_API_URL.
 import SiteHead from "../components/SiteHead.astro";
 import Footer from "../components/Footer.astro";
@@ -18,7 +18,7 @@ import {
 } from "../lib/api";
 import { SITE_URL, absUrl } from "../lib/site";
 import { buildChrome } from "../lib/chrome";
-import { orderHomepageProjects } from "@gsk-tower/contracts";
+import { orderHomepageProjects } from "@noesis/contracts";
 
 const apiUrl = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -66,7 +66,7 @@ const flatsImage =
 
 // Данные для main.js: каталожные карточки получают прямые href на /zhk/<slug>,
 // новости и документы по-прежнему открываются в своих overlay.
-const gskData = {
+const noesisData = {
   projects: projectViews,
   news: newsViews,
   newsHomeCount: s.newsHomeCount,
@@ -98,9 +98,9 @@ const orgJsonLd = {
   },
 };
 
-const title = "ГСК TOWER — Жилые комплексы в Грозном";
+const title = "Noesis — Жилые комплексы в Грозном";
 const description =
-  "Группа строительных компаний TOWER. Пять застройщиков, один офис продаж. Строим будущее, сохраняя прошлое.";
+  "Рекламное агентство Noesis. Пять застройщиков, один офис продаж. Строим будущее, сохраняя прошлое.";
 ---
 <!DOCTYPE html>
 <html lang="ru">
@@ -217,7 +217,7 @@ const description =
 
     <div class="flats-grid">
       <div class="flats-image reveal-up">
-        <img src={flatsImage} alt="Квартиры ГСК TOWER" loading="lazy">
+        <img src={flatsImage} alt="Квартиры Noesis" loading="lazy">
         <div class="flats-image-gradient"></div>
         <div class="flats-image-stats">
           <div><span class="flats-image-num">Ст, 1к, 2к, 3к</span><span class="flats-image-cap">форматы квартир</span></div>
@@ -251,7 +251,7 @@ const description =
   <div class="wrap">
     <div class="section-head-single reveal-up">
       <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.aboutEyebrow}</span></div>
-      <h2 class="h2">Преимущества ГСК <span class="h2-spaced">TOWER</span></h2>
+      <h2 class="h2">Преимущества <span class="h2-spaced">Noesis</span></h2>
     </div>
     <div class="advantages">
       <div class="advantage reveal-up">
@@ -441,9 +441,9 @@ const description =
 
 <CookieBanner />
 
-<script is:inline define:vars={{ apiUrl, gskData }}>
-  window.GSK_API_URL = apiUrl;
-  window.GSK_DATA = gskData;
+<script is:inline define:vars={{ apiUrl, noesisData }}>
+  window.NOESIS_API_URL = apiUrl;
+  window.NOESIS_DATA = noesisData;
 </script>
 <script is:inline src="/js/main.js"></script>
 </body>

@@ -1,7 +1,7 @@
 ---
 // Единый <head> для всех страниц лендинга: метаданные, canonical, Open Graph /
 // Twitter Card, шрифты и стили. Дизайн не меняем — это только SEO-обвязка.
-import { SITE_SETTINGS_DEFAULTS } from "@gsk-tower/contracts";
+import { SITE_SETTINGS_DEFAULTS } from "@noesis/contracts";
 import { absUrl } from "../lib/site";
 
 interface Props {
@@ -45,7 +45,7 @@ const counter = Number(metrikaId);
 const metrikaScript = metrikaId
   ? `(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");` +
     `ym(${counter},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:false});` +
-    `window.GSK_METRIKA_ID=${counter};` +
+    `window.NOESIS_METRIKA_ID=${counter};` +
     `window.ymGoal=function(n,p){try{if(window.ym)ym(${counter},"reachGoal",n,p||{});}catch(e){}};` +
     `document.addEventListener("click",function(ev){var a=ev.target&&ev.target.closest&&ev.target.closest('a[href^="tel:"]');if(a)window.ymGoal("phone_click");});`
   : "";

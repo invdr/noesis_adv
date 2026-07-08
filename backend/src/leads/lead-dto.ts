@@ -15,7 +15,7 @@ import type {
   LeadReferrerRef,
   LeadStatusEvent,
   LeadStageRef,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type {
   LeadAssignEvent as PrismaLeadAssignEvent,
   LeadContactEvent as PrismaLeadContactEvent,

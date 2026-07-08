@@ -13,7 +13,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { Lead, SessionUser, Stage } from "@gsk-tower/contracts";
+import type { Lead, SessionUser, Stage } from "@noesis/contracts";
 import { api, type LeadListParams, type PaginatedLeads } from "../api/client";
 import { canEditLead, formatDateTime, sourceLabel } from "./shared";
 

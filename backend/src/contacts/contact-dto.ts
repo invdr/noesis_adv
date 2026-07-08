@@ -3,7 +3,7 @@ import type {
   Lead as PrismaLead,
   Stage as PrismaStage,
 } from "@prisma/client";
-import type { Contact, LeadStageRef } from "@gsk-tower/contracts";
+import type { Contact, LeadStageRef } from "@noesis/contracts";
 
 /** Минимум полей этапа для DTO контакта (последняя заявка клиента). */
 type StageRefRow = Pick<PrismaStage, "id" | "name" | "kind" | "funnelId">;

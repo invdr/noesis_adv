@@ -1,12 +1,12 @@
 (() => {
-  // Данные лендинга запечены из API на сборке и прокинуты через window.GSK_DATA
+  // Данные лендинга запечены из API на сборке и прокинуты через window.NOESIS_DATA
   // (см. website/src/pages/index.astro). Подписи (цена, комнатность, дата) уже
   // готовы во view-моделях — здесь только рендер 1:1 с дизайном.
-  const DATA = (typeof window !== 'undefined' && window.GSK_DATA) || {};
+  const DATA = (typeof window !== 'undefined' && window.NOESIS_DATA) || {};
   const PROJECTS = DATA.projects || [];   // {slug,name,address,img,isSoon,priceLabel,rooms,roomsLabel,href,tools,badges}
   const NEWS = DATA.news || [];           // {slug,tag,title,excerpt,img,date,body,href}
   const DOC_CATEGORIES = DATA.docs || []; // [{name,slug,projects:[{slug,name,address,img}]}]
-  const API_BASE = (typeof window !== 'undefined' && window.GSK_API_URL) || '';
+  const API_BASE = (typeof window !== 'undefined' && window.NOESIS_API_URL) || '';
 
   // Документы ЖК тянем лениво по slug (на запуске их нет — блок скрыт).
   const docsCache = new Map();
@@ -478,7 +478,7 @@
   }
 
   // ---------- lead forms (hero + modal) ----------
-  var API_URL = (typeof window !== 'undefined' && window.GSK_API_URL) || '';
+  var API_URL = (typeof window !== 'undefined' && window.NOESIS_API_URL) || '';
 
   // Общая обвязка лид-формы: маска телефона, валидация, отправка в API и
   // состояния успеха/ошибки. Источник и сообщение задаются на момент отправки

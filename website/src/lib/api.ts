@@ -15,7 +15,7 @@ import {
   type ProjectTools,
   type ResolvedSiteSettings,
   type RoomFormat,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { formatNewsDate } from "./format";
 
 const API_BASE = (

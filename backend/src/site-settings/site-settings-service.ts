@@ -5,7 +5,7 @@ import {
   type UpdateSiteSettingsInput,
   resolveSiteSettings,
   siteSettingsBaseSchema,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 

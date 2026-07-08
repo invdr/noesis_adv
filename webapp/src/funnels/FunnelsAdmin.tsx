@@ -5,7 +5,7 @@ import {
   type Stage,
   type StageColor,
   type StageKind,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
 
 const KIND_LABELS: Record<StageKind, string> = {

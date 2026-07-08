@@ -18,7 +18,7 @@ import {
   documentMeta,
   type Project,
 } from "../../lib/api";
-import { progressPeriodLabel } from "@gsk-tower/contracts";
+import { progressPeriodLabel } from "@noesis/contracts";
 import { buildChrome } from "../../lib/chrome";
 
 export async function getStaticPaths() {
@@ -53,13 +53,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3000";
 
 const about =
   project.description ||
-  "Современный жилой комплекс в Грозном от ГСК TOWER. Удобные планировки, продуманная инфраструктура и современные инженерные решения. Покупка напрямую от застройщика — без посредников и переплат, с поддержкой на всех этапах сделки.";
+  "Современный жилой комплекс в Грозном от Noesis. Удобные планировки, продуманная инфраструктура и современные инженерные решения. Покупка напрямую от застройщика — без посредников и переплат, с поддержкой на всех этапах сделки.";
 
 const displayName = `ЖК ${view.name}`;
-const title = `${displayName} — квартиры в Грозном | ГСК TOWER`;
+const title = `${displayName} — квартиры в Грозном | Noesis`;
 const description = project.description
   ? project.description.slice(0, 200)
-  : `${displayName} — жилой комплекс в Грозном от ГСК TOWER. ${view.roomsLabel}${project.priceFrom ? `, ${view.priceLabel}` : ""}. Квартиры напрямую от застройщика, без посредников.`;
+  : `${displayName} — жилой комплекс в Грозном от Noesis. ${view.roomsLabel}${project.priceFrom ? `, ${view.priceLabel}` : ""}. Квартиры напрямую от застройщика, без посредников.`;
 ---
 <!DOCTYPE html>
 <html lang="ru">
@@ -215,9 +215,9 @@ const description = project.description
 <CookieBanner />
 
 <script is:inline define:vars={{ apiUrl, zhkSlug: project.slug, zhkId: project.id, zhkName: view.name }}>
-  window.GSK_API_URL = apiUrl;
+  window.NOESIS_API_URL = apiUrl;
   // Контекст для формы заявки: привязка лида к этому ЖК (source=project).
-  window.GSK_PROJECT = { id: zhkId, name: zhkName, slug: zhkSlug };
+  window.NOESIS_PROJECT = { id: zhkId, name: zhkName, slug: zhkSlug };
   // Цель Метрики «просмотр ЖК» (Веха 4.3); no-op, если счётчик не задан.
   if (window.ymGoal) window.ymGoal('zhk_view', { slug: zhkSlug });
 </script>

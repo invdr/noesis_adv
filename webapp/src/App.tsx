@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { SessionUser } from "@gsk-tower/contracts";
+import type { SessionUser } from "@noesis/contracts";
 import { api, ApiError } from "./api/client";
 import { Icon, type IconName } from "./ui/icons";
 import { LeadsView } from "./leads/LeadsView";
@@ -169,7 +169,7 @@ function Login() {
         <div className="auth-brand">
           <BrandMark />
           <div>
-            <div className="brand-name">ГСК TOWER</div>
+            <div className="brand-name">Noesis</div>
             <div className="brand-sub">CRM для сотрудников</div>
           </div>
         </div>
@@ -231,7 +231,7 @@ function ChangePassword() {
         <div className="auth-brand">
           <BrandMark />
           <div>
-            <div className="brand-name">ГСК TOWER</div>
+            <div className="brand-name">Noesis</div>
             <div className="brand-sub">CRM для сотрудников</div>
           </div>
         </div>
@@ -352,7 +352,7 @@ function Dashboard({ user }: { user: SessionUser }) {
         <div className="brand">
           <BrandMark />
           <div className="brand-text">
-            <div className="brand-name">ГСК TOWER</div>
+            <div className="brand-name">Noesis</div>
             <div className="brand-sub">CRM заявок</div>
           </div>
           <button

@@ -8,10 +8,10 @@ import {
 describe("loginRequestSchema", () => {
   test("нормализует email к нижнему регистру и тримит", () => {
     const result = loginRequestSchema.parse({
-      email: "  Manager@GSK.RU ",
+      email: "  Manager@NOESIS.RU ",
       password: "secret",
     });
-    expect(result.email).toBe("manager@gsk.ru");
+    expect(result.email).toBe("manager@noesis.ru");
   });
 
   test("отклоняет некорректный email", () => {

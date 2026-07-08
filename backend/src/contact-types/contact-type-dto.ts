@@ -1,5 +1,5 @@
 import type { ContactType as PrismaContactType } from "@prisma/client";
-import type { ContactType } from "@gsk-tower/contracts";
+import type { ContactType } from "@noesis/contracts";
 
 /** Маппинг строки БД в DTO типа контакта (archivedAt → isArchived). */
 export function toContactTypeDto(ct: PrismaContactType): ContactType {

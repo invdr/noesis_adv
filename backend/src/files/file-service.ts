@@ -12,7 +12,7 @@ import {
   IMAGE_VARIANT_WIDTHS,
   type Asset,
   type AssetKind,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Env } from "../env";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { AnalyticsResponse, SessionUser } from "@gsk-tower/contracts";
+import type { AnalyticsResponse, SessionUser } from "@noesis/contracts";
 import { api } from "../src/api/client";
 import { AnalyticsView } from "../src/analytics/AnalyticsView";
 

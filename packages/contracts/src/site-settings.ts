@@ -183,7 +183,7 @@ export type ResolvedSiteSettings = Required<SiteSettingsOverrides>;
 
 /** Дефолты = текущие тексты сайта 1:1. Единственный источник правды по умолчанию. */
 export const SITE_SETTINGS_DEFAULTS: ResolvedSiteSettings = {
-  siteName: "ГСК TOWER",
+  siteName: "Noesis",
   navCatalog: "Каталог",
   navFlats: "Квартиры",
   navAbout: "О нас",
@@ -219,7 +219,7 @@ export const SITE_SETTINGS_DEFAULTS: ResolvedSiteSettings = {
   workHoursSaturday: "Сб: 9:00-14:00",
   footerBrand:
     "Группа строительных компаний. Пять застройщиков, один офис продаж, полный цикл услуг в Грозном.",
-  copyright: "© ГСК TOWER. Не является публичной офертой",
+  copyright: "© Noesis. Не является публичной офертой",
   slogan: "Строим будущее, сохраняя прошлое",
   secondaryContactKind: "email",
   secondaryContactValue: "",

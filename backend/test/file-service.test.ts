@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import sharp from "sharp";
-import { IMAGE_MAX_BYTES } from "@gsk-tower/contracts";
+import { IMAGE_MAX_BYTES } from "@noesis/contracts";
 import {
   imageVariantTargets,
   toWebp,

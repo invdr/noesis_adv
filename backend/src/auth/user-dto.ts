@@ -1,5 +1,5 @@
 import type { User } from "@prisma/client";
-import type { SessionUser } from "@gsk-tower/contracts";
+import type { SessionUser } from "@noesis/contracts";
 
 /** Маппинг строки БД в DTO текущего пользователя сессии. */
 export function toSessionUser(user: User): SessionUser {

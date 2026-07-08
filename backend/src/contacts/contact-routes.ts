@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { listContactsQuerySchema, upsertContactSchema } from "@gsk-tower/contracts";
+import { listContactsQuerySchema, upsertContactSchema } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged, requireRole } from "../http/auth";

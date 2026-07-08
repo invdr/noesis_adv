@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { LeadAgendaItem, SessionUser } from "@gsk-tower/contracts";
+import type { LeadAgendaItem, SessionUser } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
 import { navigate } from "../router";
 import { formatDateTime } from "./shared";

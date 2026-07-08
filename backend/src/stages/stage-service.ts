@@ -6,7 +6,7 @@ import type {
   StageColor,
   StageKind,
   UpdateStageInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import { toStageDto } from "./stage-dto";

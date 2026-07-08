@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { PartnerAnalyticsResponse, SessionUser } from "@gsk-tower/contracts";
+import type { PartnerAnalyticsResponse, SessionUser } from "@noesis/contracts";
 import { api } from "../api/client";
 import { formatDateTime } from "../leads/shared";
 

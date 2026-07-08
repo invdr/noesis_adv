@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AdminUser, CreateManualLeadInput, Funnel, SessionUser } from "@gsk-tower/contracts";
+import type { AdminUser, CreateManualLeadInput, Funnel, SessionUser } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
 import {
   formatPhoneInput,

@@ -1,5 +1,5 @@
 import type { Funnel as PrismaFunnel } from "@prisma/client";
-import type { Funnel } from "@gsk-tower/contracts";
+import type { Funnel } from "@noesis/contracts";
 
 /** Маппинг строки БД в DTO воронки (даты → ISO; archivedAt → isArchived). */
 export function toFunnelDto(funnel: PrismaFunnel, stageCount: number): Funnel {

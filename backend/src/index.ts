@@ -12,7 +12,7 @@ startSessionSweeper(rt);
 // Сторожок простоя публикации лендинга (алерт, если сборщик не работает).
 startBuildStallWatcher(rt);
 
-console.log(`API ГСК TOWER слушает порт ${rt.env.PORT}`);
+console.log(`API Noesis слушает порт ${rt.env.PORT}`);
 
 export default {
   port: rt.env.PORT,

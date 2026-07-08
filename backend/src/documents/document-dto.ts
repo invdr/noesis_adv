@@ -3,7 +3,7 @@ import type {
   Document as PrismaDocument,
   DocumentCategory as PrismaDocumentCategory,
 } from "@prisma/client";
-import type { Document, DocumentCategory } from "@gsk-tower/contracts";
+import type { Document, DocumentCategory } from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 
 /** Строка категории документов. */

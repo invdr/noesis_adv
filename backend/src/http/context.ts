@@ -1,4 +1,4 @@
-import type { SessionUser } from "@gsk-tower/contracts";
+import type { SessionUser } from "@noesis/contracts";
 
 /** Переменные, которые auth-guard'ы кладут в контекст Hono. */
 export interface AppEnv {

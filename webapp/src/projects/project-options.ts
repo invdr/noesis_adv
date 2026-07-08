@@ -1,4 +1,4 @@
-import type { Project } from "@gsk-tower/contracts";
+import type { Project } from "@noesis/contracts";
 import { api } from "../api/client";
 
 export async function listProjectOptions(): Promise<Project[]> {

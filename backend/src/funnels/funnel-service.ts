@@ -2,7 +2,7 @@ import type {
   CreateFunnelInput,
   Funnel,
   UpdateFunnelInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Funnel as PrismaFunnel } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";

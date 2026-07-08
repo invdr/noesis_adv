@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { SITE_SETTINGS_DEFAULTS, updateSiteSettingsSchema } from "@gsk-tower/contracts";
+import { SITE_SETTINGS_DEFAULTS, updateSiteSettingsSchema } from "@noesis/contracts";
 import type { Runtime } from "../src/runtime";
 import { HttpError } from "../src/http/errors";
 import {

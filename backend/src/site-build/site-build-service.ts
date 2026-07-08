@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { SiteBuild } from "@prisma/client";
-import type { ClaimBuildResult, SiteBuildStatus } from "@gsk-tower/contracts";
+import type { ClaimBuildResult, SiteBuildStatus } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import {
   notifySiteBuildFailed,

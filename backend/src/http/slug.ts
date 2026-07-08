@@ -1,4 +1,4 @@
-import { slugify } from "@gsk-tower/contracts";
+import { slugify } from "@noesis/contracts";
 
 /**
  * Подобрать свободный slug. База — `slugify(name)` (или `fallback`, если из

@@ -2,7 +2,7 @@ import type {
   LeadSourceOption,
   ReorderLeadSourcesInput,
   UpsertLeadSourceInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import { toLeadSourceDto } from "./source-dto";

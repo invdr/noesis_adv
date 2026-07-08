@@ -3,7 +3,7 @@ import type {
   ProgressAlbum as PrismaProgressAlbum,
   ProgressPhoto as PrismaProgressPhoto,
 } from "@prisma/client";
-import type { ProgressAlbum } from "@gsk-tower/contracts";
+import type { ProgressAlbum } from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 
 /** Строка альбома хода строительства со связями для DTO. */

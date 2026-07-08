@@ -4,7 +4,7 @@ import type {
   LoginRequest,
   SessionUser,
   UserRole,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { User } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";

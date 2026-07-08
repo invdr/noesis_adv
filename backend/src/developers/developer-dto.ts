@@ -2,7 +2,7 @@ import type {
   Asset as PrismaAsset,
   Developer as PrismaDeveloper,
 } from "@prisma/client";
-import type { Developer } from "@gsk-tower/contracts";
+import type { Developer } from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 
 /** Строка застройщика с подгруженным логотипом. */

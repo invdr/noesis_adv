@@ -6,7 +6,7 @@ import {
   type LeadSourceOption,
   type SessionUser,
   type WeeklyPoint,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { api } from "../api/client";
 import { sourceLabel } from "../leads/shared";
 import { analyticsToCsv, downloadCsv } from "./analytics-csv";

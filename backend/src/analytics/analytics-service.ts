@@ -5,7 +5,7 @@ import type {
   StageColor,
   StageDurationPoint,
   WeeklyPoint,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { MSK_OFFSET_MS, mskDay, mskWeekStart } from "../http/msk";
 

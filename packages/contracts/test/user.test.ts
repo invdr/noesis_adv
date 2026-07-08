@@ -4,10 +4,10 @@ import { createUserSchema, updateUserSchema } from "../src/user";
 describe("createUserSchema", () => {
   test("нормализует email и принимает роль", () => {
     const result = createUserSchema.parse({
-      email: "  New.Manager@GSK.RU ",
+      email: "  New.Manager@NOESIS.RU ",
       role: "manager",
     });
-    expect(result.email).toBe("new.manager@gsk.ru");
+    expect(result.email).toBe("new.manager@noesis.ru");
     expect(result.role).toBe("manager");
   });
 

@@ -1,5 +1,5 @@
 import type { LeadSource as PrismaLeadSource } from "@prisma/client";
-import type { LeadSourceOption } from "@gsk-tower/contracts";
+import type { LeadSourceOption } from "@noesis/contracts";
 
 /** Маппинг строки справочника источников в DTO контракта. */
 export function toLeadSourceDto(row: PrismaLeadSource): LeadSourceOption {

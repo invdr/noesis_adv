@@ -4,7 +4,7 @@ import {
   createStageSchema,
   reorderStagesSchema,
   updateStageSchema,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged, requireRole } from "../http/auth";

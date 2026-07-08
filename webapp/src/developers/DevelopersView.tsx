@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Developer, UpsertDeveloperInput } from "@gsk-tower/contracts";
+import type { Developer, UpsertDeveloperInput } from "@noesis/contracts";
 import { api } from "../api/client";
 
 const KEY = ["developers"];

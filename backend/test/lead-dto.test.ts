@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { leadSchema, leadDetailSchema } from "@gsk-tower/contracts";
+import { leadSchema, leadDetailSchema } from "@noesis/contracts";
 import {
   toLeadDetailDto,
   toLeadDto,

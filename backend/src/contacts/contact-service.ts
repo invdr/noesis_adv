@@ -6,8 +6,8 @@ import type {
   ListContactsQuery,
   SessionUser,
   UpsertContactInput,
-} from "@gsk-tower/contracts";
-import { normalizeRuPhone } from "@gsk-tower/contracts";
+} from "@noesis/contracts";
+import { normalizeRuPhone } from "@noesis/contracts";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";

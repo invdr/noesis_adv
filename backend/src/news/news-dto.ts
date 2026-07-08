@@ -3,7 +3,7 @@ import type {
   News as PrismaNews,
   NewsLabel as PrismaNewsLabel,
 } from "@prisma/client";
-import type { News, NewsLabel } from "@gsk-tower/contracts";
+import type { News, NewsLabel } from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 
 /** Строка метки новости. */

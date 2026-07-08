@@ -4,7 +4,7 @@ import type { CookieOptions } from "hono/utils/cookie";
 import {
   changePasswordRequestSchema,
   loginRequestSchema,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requireAuth } from "../http/auth";

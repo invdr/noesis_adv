@@ -5,8 +5,8 @@ import type {
   ContactKind,
   SessionUser,
   UpsertContactInput,
-} from "@gsk-tower/contracts";
-import { CONTACT_KIND_LABEL } from "@gsk-tower/contracts";
+} from "@noesis/contracts";
+import { CONTACT_KIND_LABEL } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
 import { navigate } from "../router";
 import {

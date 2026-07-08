@@ -1,5 +1,5 @@
 import type { Asset as PrismaAsset } from "@prisma/client";
-import type { Asset, ImageVariant } from "@gsk-tower/contracts";
+import type { Asset, ImageVariant } from "@noesis/contracts";
 
 /** Одна производная картинки на диске: ширина + ключ хранения (WebP). */
 export interface StoredRendition {

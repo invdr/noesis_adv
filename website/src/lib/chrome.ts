@@ -6,7 +6,7 @@ import {
   phoneHref,
   type ResolvedSiteSettings,
   type SecondaryContactKind,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 
 export interface Chrome {
   /** Полный набор настроек (дефолты + переопределения). */

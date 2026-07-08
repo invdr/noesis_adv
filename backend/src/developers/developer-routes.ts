@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { MAX_UPLOAD_BYTES, upsertDeveloperSchema } from "@gsk-tower/contracts";
+import { MAX_UPLOAD_BYTES, upsertDeveloperSchema } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged, requireRole } from "../http/auth";

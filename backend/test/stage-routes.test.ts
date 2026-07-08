@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, test } from "bun:test";
-import type { UserRole } from "@gsk-tower/contracts";
+import type { UserRole } from "@noesis/contracts";
 import { createApp } from "../src/app";
 import { SESSION_COOKIE } from "../src/auth/auth-service";
 import type { Runtime } from "../src/runtime";

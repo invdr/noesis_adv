@@ -57,7 +57,7 @@ import type {
   UpsertProgressAlbumInput,
   UpsertNewsLabelInput,
   UpsertProjectInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 

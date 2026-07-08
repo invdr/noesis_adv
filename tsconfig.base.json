@@ -15,7 +15,7 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "paths": {
-      "@gsk-tower/contracts": ["./packages/contracts/src/index.ts"]
+      "@noesis/contracts": ["./packages/contracts/src/index.ts"]
     }
   }
 }

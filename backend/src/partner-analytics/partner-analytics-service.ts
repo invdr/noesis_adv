@@ -3,7 +3,7 @@ import type {
   PartnerAnalyticsResponse,
   PartnerRow,
   SessionUser,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { visibilityWhere } from "../leads/lead-visibility";
 

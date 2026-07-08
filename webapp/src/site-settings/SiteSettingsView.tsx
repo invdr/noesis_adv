@@ -10,7 +10,7 @@ import {
   type SecondaryContactKind,
   type SiteSettingsOverrides,
   type UpdateSiteSettingsInput,
-} from "@gsk-tower/contracts";
+} from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
 
 const L = SITE_SETTINGS_LIMITS;

@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
-import type { SessionUser, UserRole } from "@gsk-tower/contracts";
+import type { SessionUser, UserRole } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { HttpError } from "./errors";
 import type { AppEnv } from "./context";
