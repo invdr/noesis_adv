@@ -15,8 +15,9 @@ import { stageRoutes } from "./stages/stage-routes";
 import { funnelRoutes } from "./funnels/funnel-routes";
 import { fileRoutes } from "./files/file-routes";
 import { developerRoutes } from "./developers/developer-routes";
-import { projectRoutes } from "./projects/project-routes";
-import { publicProjectRoutes } from "./projects/project-public-routes";
+import { constructionRoutes } from "./constructions/construction-routes";
+import { publicConstructionRoutes } from "./constructions/construction-public-routes";
+import { legacySiteRoutes } from "./constructions/legacy-site-routes";
 import { newsLabelRoutes } from "./news/news-label-routes";
 import { newsRoutes } from "./news/news-routes";
 import { publicNewsRoutes } from "./news/news-public-routes";
@@ -86,15 +87,17 @@ export function createApp(rt: Runtime): Hono<AppEnv> {
   app.route("/api/partner-analytics", partnerAnalyticsRoutes(rt));
   app.route("/api/files", fileRoutes(rt));
   app.route("/api/developers", developerRoutes(rt));
-  // Документы и ход строительства по ЖК — отдельные роутеры на том же префиксе;
-  // `:projectId` в их путях, паттерны не пересекаются с `/:id` ЖК.
-  app.route("/api/projects", documentRoutes(rt));
-  app.route("/api/projects", progressRoutes(rt));
-  app.route("/api/projects", projectRoutes(rt));
+  // Документы и ход строительства по конструкции — отдельные роутеры на том же
+  // префиксе; `:constructionId` в их путях, паттерны не пересекаются с `/:id`.
+  app.route("/api/constructions", documentRoutes(rt));
+  app.route("/api/constructions", progressRoutes(rt));
+  app.route("/api/constructions", constructionRoutes(rt));
   app.route("/api/document-categories", documentCategoryRoutes(rt));
   app.route("/api/news-labels", newsLabelRoutes(rt));
   app.route("/api/news", newsRoutes(rt));
-  app.route("/api/public/projects", publicProjectRoutes(rt));
+  app.route("/api/public/constructions", publicConstructionRoutes(rt));
+  // Унаследованный лендинг (недвижимость): ЖК-форма каталога до Этапа 5.
+  app.route("/api/public/projects", legacySiteRoutes(rt));
   app.route("/api/public/news", publicNewsRoutes(rt));
   app.route("/api/public/documents", publicDocumentRoutes(rt));
   app.route("/api/public/progress", publicProgressRoutes(rt));

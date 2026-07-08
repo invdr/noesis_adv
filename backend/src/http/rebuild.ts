@@ -5,11 +5,11 @@ import { markContentChanged } from "../site-build/site-build-service";
 
 /**
  * Префиксы роутов, мутации которых меняют публичный контент лендинга и требуют
- * пересборки. `/api/projects` покрывает и документы по ЖК (тот же префикс).
+ * пересборки. `/api/constructions` покрывает и документы по конструкции.
  * Публичные `/api/public/*` сюда не входят (только GET).
  */
 const CONTENT_PREFIXES = [
-  "/api/projects",
+  "/api/constructions",
   "/api/developers",
   "/api/news",
   "/api/news-labels",

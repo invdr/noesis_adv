@@ -76,7 +76,7 @@ export const createLeadSchema = z.object({
   // Публичная форма шлёт только фиксированные веб-слаги — произвольный источник
   // с улицы не принимаем (кастомные источники назначаются внутри CRM).
   source: z.enum(WEB_SOURCE_IDS).default("hero_form"),
-  projectId: z.string().trim().max(64).optional(),
+  constructionId: z.string().trim().max(64).optional(),
   message: z.string().trim().max(2000).optional(),
   company: z.string().max(200).optional(),
 });
@@ -107,7 +107,7 @@ export const createManualLeadSchema = z.object({
   // справочника); веб-слаги проставляет лендинг автоматически. Живость и
   // не-веб проверяет сервис.
   source: leadSourceSchema.default("offline"),
-  projectId: z.string().trim().max(64).optional(),
+  constructionId: z.string().trim().max(64).optional(),
   message: z.string().trim().max(2000).optional(),
   contactId: z.string().min(1).optional(),
   /**
@@ -149,9 +149,9 @@ export const leadSchema = z.object({
   stageId: z.string(),
   /** Развёрнутый этап для отображения и признака активна/закрыта (по `kind`). */
   stage: leadStageRefSchema,
-  projectId: z.string().nullable(),
-  /** Название ЖК (развёрнуто из `projectId`) — для показа без догрузки справочника. */
-  projectName: z.string().nullable(),
+  constructionId: z.string().nullable(),
+  /** Название конструкции (развёрнуто из `constructionId`) — для показа без догрузки справочника. */
+  constructionName: z.string().nullable(),
   message: z.string().nullable(),
   /** Контакт-покупатель (FK на Contact kind=client); ставится при приёме. */
   contactId: z.string().nullable(),
@@ -307,11 +307,13 @@ export const updateLeadSourceSchema = z.object({
 });
 export type UpdateLeadSourceInput = z.infer<typeof updateLeadSourceSchema>;
 
-/** Смена/снятие ЖК в карточке сделки. */
-export const updateLeadProjectSchema = z.object({
-  projectId: z.string().min(1).nullable(),
+/** Смена/снятие конструкции в карточке сделки. */
+export const updateLeadConstructionSchema = z.object({
+  constructionId: z.string().min(1).nullable(),
 });
-export type UpdateLeadProjectInput = z.infer<typeof updateLeadProjectSchema>;
+export type UpdateLeadConstructionInput = z.infer<
+  typeof updateLeadConstructionSchema
+>;
 
 /**
  * Назначить/снять реферера заявки (контакт-партнёр риелтор/агентство).
@@ -346,7 +348,7 @@ export const listLeadsQuerySchema = z.object({
   /** Фильтр по воронке (через этап заявки). */
   funnelId: z.string().optional(),
   source: leadSourceSchema.optional(),
-  projectId: z.string().optional(),
+  constructionId: z.string().optional(),
   /** Ответственный; литерал `"none"` — только не назначенные (общая очередь). */
   assigneeId: z.string().optional(),
   /** Фильтр по рефереру (партнёру), приведшему заявку. */

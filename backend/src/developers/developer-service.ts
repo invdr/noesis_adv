@@ -140,7 +140,7 @@ export async function restoreDeveloper(rt: Runtime, id: string): Promise<Develop
  */
 export async function deleteDeveloper(rt: Runtime, id: string): Promise<void> {
   const dev = await requireDeveloper(rt, id);
-  const used = await rt.prisma.project.count({ where: { developerId: id } });
+  const used = await rt.prisma.construction.count({ where: { ownerId: id } });
   if (used > 0) {
     throw new HttpError(
       409,

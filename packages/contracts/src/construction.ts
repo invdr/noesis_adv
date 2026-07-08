@@ -1,17 +1,7 @@
 import { z } from "zod";
-import { paginationQuerySchema } from "./common";
-import { assetSchema } from "./file";
+import { paginationQuerySchema, SLUG_RE } from "./common";
+import { assetSchema, IMAGE_MAX_BYTES } from "./file";
 import { developerSchema } from "./developer";
-// Переиспользуем домен-независимые примитивы из унаследованного каталога ЖК
-// (tower-site). При выводе `Project` из обихода (Этап 1) эти хелперы стоит
-// вынести в общий модуль — сейчас берём их как есть, чтобы не дублировать.
-import {
-  SLUG_RE,
-  badgeSchema,
-  MAX_BADGES,
-  projectImageInputSchema,
-  MAX_GALLERY_IMAGES,
-} from "./project";
 
 // --- Справочные значения и константы ---
 
@@ -71,6 +61,55 @@ export const CONSTRUCTION_LIGHTING_LABEL: Record<ConstructionLighting, string> =
 export const MAX_CONSTRUCTION_CODE = 40;
 /** Габариты как свободная подпись («1,2 × 1,8 м») — форматы разнятся. */
 export const MAX_CONSTRUCTION_SIZE = 60;
+
+// --- Бейджи карточки (палитра — единый источник для CRM-пикера и лендинга) ---
+
+/**
+ * Палитра бейджей. Цвета из фирменных CSS-переменных; форма бейджа повторяет
+ * `.badge-soon`. `bg` — фон, `fg` — контрастный текст.
+ */
+export const BADGE_PALETTE = {
+  blue: { label: "Красный", bg: "#A4161A", fg: "#ffffff" },
+  graphite: { label: "Графит", bg: "#262C35", fg: "#ffffff" },
+  gray: { label: "Серый", bg: "#54555E", fg: "#ffffff" },
+  light: { label: "Светло-красный", bg: "#D46A6A", fg: "#3a0d12" },
+  soft: { label: "Розовый", bg: "#FBEAEA", fg: "#A4161A" },
+} as const;
+export type BadgeColor = keyof typeof BADGE_PALETTE;
+
+/** Цвет бейджа — только токен из палитры (не произвольная CSS-строка). */
+export const badgeColorSchema = z.enum([
+  "blue",
+  "graphite",
+  "gray",
+  "light",
+  "soft",
+]);
+
+/** Максимум символов в тексте бейджа (чтобы не ломать карточку). */
+export const MAX_BADGE_TEXT = 24;
+/** Разумный потолок числа бейджей на карточке. */
+export const MAX_BADGES = 20;
+/**
+ * Мягкий предел фото в галерее: каждое фото обрабатывается синхронно (оригинал +
+ * 3 WebP), большая галерея за одно сохранение упёрлась бы в таймаут на VPS.
+ */
+export const MAX_GALLERY_IMAGES = 30;
+
+/**
+ * Верхняя граница тела запроса сохранения конструкции (multipart с данными +
+ * новыми фото) для раннего отказа до буферизации в память: вся галерея по
+ * максимуму.
+ */
+export const CONSTRUCTION_UPLOAD_MAX_BYTES =
+  MAX_GALLERY_IMAGES * IMAGE_MAX_BYTES + 2 * 1024 * 1024;
+
+/** Один бейдж: текст + цвет из палитры. */
+export const badgeSchema = z.object({
+  text: z.string().trim().min(1, "Текст бейджа пуст").max(MAX_BADGE_TEXT),
+  color: badgeColorSchema,
+});
+export type Badge = z.infer<typeof badgeSchema>;
 
 // --- Хелперы вывода (чистые, переиспользуются бэком, CRM и лендингом) ---
 
@@ -137,11 +176,18 @@ export type Construction = z.infer<typeof constructionSchema>;
 // --- Вход на создание/обновление (multipart: `data` + файлы `image_N`) ---
 
 /**
- * Элемент галереи при сохранении: оставить загруженное фото (`existing`) или
- * привязать новый файл из multipart по индексу (`new`). Тот же снимок-паттерн,
- * что у каталога ЖК (переиспользуем `projectImageInputSchema`).
+ * Элемент итоговой галереи при сохранении: оставить уже загруженное фото
+ * (`existing`) или привязать новый файл из multipart по индексу (`new`).
+ * Сохранение — полный снимок: клиент присылает весь желаемый состав, бэкенд
+ * догружает новое и удаляет убранное.
  */
-export const constructionImageInputSchema = projectImageInputSchema;
+export const constructionImageInputSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("existing"), assetId: z.string() }),
+  z.object({
+    kind: z.literal("new"),
+    uploadIndex: z.number().int().nonnegative(),
+  }),
+]);
 export type ConstructionImageInput = z.infer<
   typeof constructionImageInputSchema
 >;
@@ -167,10 +213,12 @@ export const upsertConstructionSchema = z
     district: z.string().trim().max(120).optional(),
     lat: z.number().min(-90).max(90).nullable().optional(),
     lng: z.number().min(-180).max(180).nullable().optional(),
-    format: constructionFormatSchema,
+    // Формат/подсветка с дефолтами: черновику достаточно названия, форма всегда
+    // шлёт их явно. Основной продукт — сити-формат, подсветка по умолчанию нет.
+    format: constructionFormatSchema.default("cityFormat"),
     size: z.string().trim().max(MAX_CONSTRUCTION_SIZE).optional(),
     side: constructionSideSchema.nullable().optional(),
-    lighting: constructionLightingSchema,
+    lighting: constructionLightingSchema.default("none"),
     grp: z.number().nonnegative().nullable().optional(),
     trafficPerDay: z.number().int().nonnegative().nullable().optional(),
     pricePerMonth: z

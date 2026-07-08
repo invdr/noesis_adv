@@ -161,8 +161,8 @@ const contactLeadSelect = {
   createdAt: true,
   source: true,
   sourceOption: { select: { name: true } },
-  projectId: true,
-  project: { select: { name: true } },
+  constructionId: true,
+  construction: { select: { name: true } },
   assigneeId: true,
   stage: stageSelect,
 } as const;
@@ -189,7 +189,7 @@ export async function getContactDetail(
     createdAt: Date;
     source: string;
     sourceOption: { name: string } | null;
-    project: { name: string } | null;
+    construction: { name: string } | null;
     assigneeId: string | null;
     stage: { id: string; name: string; kind: "in_progress" | "won" | "lost"; funnelId: string };
   }): ContactLeadRef => ({
@@ -199,7 +199,7 @@ export async function getContactDetail(
     stage: l.stage,
     source: l.source,
     sourceName: l.sourceOption?.name ?? null,
-    projectName: l.project?.name ?? null,
+    projectName: l.construction?.name ?? null,
     assigneeId: l.assigneeId,
   });
 

@@ -35,7 +35,7 @@ describe("deleteDeveloper", () => {
   test("заблокировано, пока на застройщика ссылаются ЖК", async () => {
     const prisma = {
       developer: { findUnique: async () => ({ id: "d1", logoId: null }) },
-      project: { count: async () => 2 },
+      construction: { count: async () => 2 },
     };
     await expect(deleteDeveloper(runtimeWith(prisma), "d1")).rejects.toMatchObject({
       status: 409,
@@ -51,7 +51,7 @@ describe("deleteDeveloper", () => {
           deleted = true;
         },
       },
-      project: { count: async () => 0 },
+      construction: { count: async () => 0 },
     };
     await deleteDeveloper(runtimeWith(prisma), "d1");
     expect(deleted).toBe(true);

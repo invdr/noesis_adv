@@ -5,56 +5,64 @@ import { join } from "node:path";
 import sharp from "sharp";
 import type { Runtime } from "../src/runtime";
 import {
-  createProject,
-  updateProject,
-} from "../src/projects/project-service";
+  createConstruction,
+  updateConstruction,
+} from "../src/constructions/construction-service";
 
 /**
- * Тесты сохранения ЖК: загрузка фото, обложка/состав галереи, блокировка по
- * версии и гарантия «ноль сирот». БД — in-memory заглушка (движка Prisma в среде
- * нет), эмулирующая ровно те вызовы, что делает сервис; файлы — во временный
- * каталог через реальный сервис файлов.
+ * Тесты сохранения конструкции: загрузка фото, обложка/состав галереи,
+ * блокировка по версии и гарантия «ноль сирот». БД — in-memory заглушка (движка
+ * Prisma в среде нет), эмулирующая ровно те вызовы, что делает сервис; файлы —
+ * во временный каталог через реальный сервис файлов.
  */
 
 let dir: string;
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), "proj-test-"));
+  dir = await mkdtemp(join(tmpdir(), "constr-test-"));
 });
 afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-/** Заглушка Prisma: ровно операции saveProject + сервиса файлов. */
+/** Заглушка Prisma: ровно операции saveConstruction + сервиса файлов. */
 function makeDb() {
   const assets = new Map<string, any>();
-  const projects = new Map<string, any>();
+  const constructions = new Map<string, any>();
   let seq = 0;
   const id = (p: string) => `${p}_${++seq}`;
 
   function buildRow(data: any, existing?: any) {
     const imageCreate = data.images?.create ?? [];
     const images = imageCreate.map((ic: any, idx: number) => ({
-      id: id("pi"),
+      id: id("ci"),
       position: ic.position ?? idx,
       assetId: ic.asset.connect.id,
       asset: assets.get(ic.asset.connect.id),
     }));
     const coverId = data.coverId ?? null;
     return {
-      id: existing?.id ?? id("proj"),
+      id: existing?.id ?? id("constr"),
       slug: data.slug ?? existing?.slug,
       name: data.name ?? existing?.name,
+      code: data.code ?? null,
       address: data.address ?? null,
-      developerId: data.developerId ?? null,
-      developer: null,
-      priceFrom: data.priceFrom ?? null,
-      rooms: data.rooms ?? [],
+      district: data.district ?? null,
+      lat: data.lat ?? null,
+      lng: data.lng ?? null,
+      ownerId: data.ownerId ?? null,
+      owner: null,
+      format: data.format ?? "cityFormat",
+      size: data.size ?? null,
+      side: data.side ?? null,
+      lighting: data.lighting ?? "none",
+      grp: data.grp ?? null,
+      trafficPerDay: data.trafficPerDay ?? null,
+      pricePerMonth: data.pricePerMonth ?? null,
       description: data.description ?? null,
       coverId,
       cover: coverId ? assets.get(coverId) : null,
       badges: data.badges ?? [],
       status: data.status ?? existing?.status,
-      comingSoon: data.comingSoon ?? false,
       archivedAt: existing?.archivedAt ?? null,
       createdById: data.createdById ?? existing?.createdById ?? null,
       createdAt: existing?.createdAt ?? new Date(),
@@ -78,34 +86,34 @@ function makeDb() {
         return r;
       },
     },
-    project: {
+    construction: {
       count: async ({ where }: any) => {
         if (where?.slug !== undefined) {
           const notId = where.id?.not;
-          return [...projects.values()].filter(
-            (p) => p.slug === where.slug && p.id !== notId,
+          return [...constructions.values()].filter(
+            (c) => c.slug === where.slug && c.id !== notId,
           ).length;
         }
-        if (where?.id !== undefined) return projects.has(where.id) ? 1 : 0;
-        return projects.size;
+        if (where?.id !== undefined) return constructions.has(where.id) ? 1 : 0;
+        return constructions.size;
       },
-      findUnique: async ({ where }: any) => projects.get(where.id) ?? null,
+      findUnique: async ({ where }: any) => constructions.get(where.id) ?? null,
       create: async ({ data }: any) => {
         const row = buildRow(data);
-        projects.set(row.id, row);
+        constructions.set(row.id, row);
         return row;
       },
       update: async ({ where, data }: any) => {
-        const row = buildRow(data, projects.get(where.id));
-        projects.set(where.id, row);
+        const row = buildRow(data, constructions.get(where.id));
+        constructions.set(where.id, row);
         return row;
       },
     },
-    projectImage: { deleteMany: async () => ({ count: 0 }) },
+    constructionImage: { deleteMany: async () => ({ count: 0 }) },
     $transaction: async (arg: any) =>
       typeof arg === "function" ? arg(db) : Promise.all(arg),
   };
-  return { db, assets, projects };
+  return { db, assets, constructions };
 }
 
 function runtimeWith(db: any): Runtime {
@@ -137,7 +145,7 @@ async function listFiles(root: string): Promise<string[]> {
   return out;
 }
 
-describe("createProject", () => {
+describe("createConstruction", () => {
   test("грузит фото, ставит обложку, кладёт оригинал + 3 WebP на каждое фото", async () => {
     const { db } = makeDb();
     const rt = runtimeWith(db);
@@ -146,10 +154,10 @@ describe("createProject", () => {
       ["image_1", await pngFile("b.png")],
     ]);
 
-    const project = await createProject(
+    const construction = await createConstruction(
       rt,
       {
-        name: "ЖК Тест",
+        name: "Сити-формат Тест",
         status: "draft",
         images: [
           { kind: "new", uploadIndex: 0 },
@@ -161,25 +169,25 @@ describe("createProject", () => {
       "user_1",
     );
 
-    expect(project.images).toHaveLength(2);
-    expect(project.cover?.url).toBe(project.images[1]!.url);
-    expect(project.slug).toBe("zhk-test");
+    expect(construction.images).toHaveLength(2);
+    expect(construction.cover?.url).toBe(construction.images[1]!.url);
+    expect(construction.slug).toBe("siti-format-test");
     // 2 фото × (оригинал + 3 WebP) = 8 файлов
     expect(await listFiles(dir)).toHaveLength(8);
   });
 
-  test("сбой записи ЖК не оставляет загруженных сирот", async () => {
+  test("сбой записи конструкции не оставляет загруженных сирот", async () => {
     const { db } = makeDb();
-    db.project.create = async () => {
+    db.construction.create = async () => {
       throw new Error("db down");
     };
     const rt = runtimeWith(db);
 
     await expect(
-      createProject(
+      createConstruction(
         rt,
         {
-          name: "ЖК",
+          name: "СФ-014",
           status: "draft",
           images: [{ kind: "new", uploadIndex: 0 }],
           coverIndex: 0,
@@ -193,14 +201,14 @@ describe("createProject", () => {
   });
 });
 
-describe("updateProject", () => {
+describe("updateConstruction", () => {
   test("убранное фото удаляется навсегда, новое добавляется", async () => {
     const { db, assets } = makeDb();
     const rt = runtimeWith(db);
-    const created = await createProject(
+    const created = await createConstruction(
       rt,
       {
-        name: "ЖК",
+        name: "СФ-014",
         status: "draft",
         images: [
           { kind: "new", uploadIndex: 0 },
@@ -218,11 +226,11 @@ describe("updateProject", () => {
     const removedId = created.images[1]!.id;
     expect(assets.size).toBe(2);
 
-    const updated = await updateProject(
+    const updated = await updateConstruction(
       rt,
       created.id,
       {
-        name: "ЖК",
+        name: "СФ-014",
         status: "draft",
         expectedUpdatedAt: created.updatedAt,
         images: [
@@ -244,18 +252,18 @@ describe("updateProject", () => {
   test("устаревшая версия → конфликт 409 (блокировка по версии)", async () => {
     const { db } = makeDb();
     const rt = runtimeWith(db);
-    const created = await createProject(
+    const created = await createConstruction(
       rt,
-      { name: "ЖК", status: "draft" } as any,
+      { name: "СФ-014", status: "draft" } as any,
       new Map(),
       "user_1",
     );
 
     await expect(
-      updateProject(
+      updateConstruction(
         rt,
         created.id,
-        { name: "ЖК 2", status: "draft", expectedUpdatedAt: "2000-01-01T00:00:00.000Z" } as any,
+        { name: "СФ-015", status: "draft", expectedUpdatedAt: "2000-01-01T00:00:00.000Z" } as any,
         new Map(),
         "user_1",
       ),

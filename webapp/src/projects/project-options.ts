@@ -1,7 +1,7 @@
-import type { Project } from "@noesis/contracts";
+import type { Construction } from "@noesis/contracts";
 import { api } from "../api/client";
 
-export async function listProjectOptions(): Promise<Project[]> {
+export async function listProjectOptions(): Promise<Construction[]> {
   const pageSize = 100;
   const first = await api.listProjects({ page: 1, pageSize });
   const items = [...first.items];

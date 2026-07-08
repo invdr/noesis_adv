@@ -37,7 +37,7 @@ import type {
   News,
   NewsLabel,
   ProgressAlbum,
-  Project,
+  Construction,
   SessionUser,
   SiteBuildStatus,
   SiteSettingsOverrides,
@@ -46,7 +46,7 @@ import type {
   UpdateDocumentInput,
   UpdateFunnelInput,
   UpdateLeadSourceInput,
-  UpdateLeadProjectInput,
+  UpdateLeadConstructionInput,
   UpdateLeadStageInput,
   UpdateNextContactInput,
   UpdateNoteInput,
@@ -56,7 +56,7 @@ import type {
   UpsertNewsInput,
   UpsertProgressAlbumInput,
   UpsertNewsLabelInput,
-  UpsertProjectInput,
+  UpsertConstructionInput,
 } from "@noesis/contracts";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -130,7 +130,7 @@ async function requestMultipart<T>(
 }
 
 /** FormData сохранения ЖК: JSON-данные + новые фото `image_0`, `image_1`, … */
-function projectForm(data: UpsertProjectInput, files: File[]): FormData {
+function projectForm(data: UpsertConstructionInput, files: File[]): FormData {
   const form = new FormData();
   form.append("data", JSON.stringify(data));
   files.forEach((file, i) => form.append(`image_${i}`, file));
@@ -151,7 +151,7 @@ export interface LeadStats {
 }
 
 export interface PaginatedProjects {
-  items: Project[];
+  items: Construction[];
   page: number;
   pageSize: number;
   total: number;
@@ -463,8 +463,8 @@ export const api = {
       body: JSON.stringify(input),
     });
   },
-  updateLeadProject(id: string, input: UpdateLeadProjectInput) {
-    return request<Lead>(`/api/leads/${id}/project`, {
+  updateLeadProject(id: string, input: UpdateLeadConstructionInput) {
+    return request<Lead>(`/api/leads/${id}/construction`, {
       method: "PATCH",
       body: JSON.stringify(input),
     });
@@ -516,26 +516,26 @@ export const api = {
       if (value !== undefined && value !== "") q.set(key, String(value));
     }
     const qs = q.toString();
-    return request<PaginatedProjects>(`/api/projects${qs ? `?${qs}` : ""}`);
+    return request<PaginatedProjects>(`/api/constructions${qs ? `?${qs}` : ""}`);
   },
   getProject(id: string) {
-    return request<Project>(`/api/projects/${id}`);
+    return request<Construction>(`/api/constructions/${id}`);
   },
-  saveProject(input: UpsertProjectInput, files: File[], id?: string) {
-    return requestMultipart<Project>(
-      id ? `/api/projects/${id}` : "/api/projects",
+  saveProject(input: UpsertConstructionInput, files: File[], id?: string) {
+    return requestMultipart<Construction>(
+      id ? `/api/constructions/${id}` : "/api/constructions",
       id ? "PATCH" : "POST",
       projectForm(input, files),
     );
   },
   archiveProject(id: string) {
-    return request<Project>(`/api/projects/${id}/archive`, { method: "POST" });
+    return request<Construction>(`/api/constructions/${id}/archive`, { method: "POST" });
   },
   restoreProject(id: string) {
-    return request<Project>(`/api/projects/${id}/restore`, { method: "POST" });
+    return request<Construction>(`/api/constructions/${id}/restore`, { method: "POST" });
   },
   deleteProject(id: string) {
-    return request<void>(`/api/projects/${id}`, { method: "DELETE" });
+    return request<void>(`/api/constructions/${id}`, { method: "DELETE" });
   },
 
   // --- Новости ---
@@ -642,48 +642,48 @@ export const api = {
 
   // --- Документы по ЖК (точечные операции в карточке) ---
   listProjectDocuments(projectId: string) {
-    return request<Document[]>(`/api/projects/${projectId}/documents`);
+    return request<Document[]>(`/api/constructions/${projectId}/documents`);
   },
   addDocument(projectId: string, input: CreateDocumentInput, file?: File) {
     const form = new FormData();
     form.append("data", JSON.stringify(input));
     if (file) form.append("file", file);
     return requestMultipart<Document>(
-      `/api/projects/${projectId}/documents`,
+      `/api/constructions/${projectId}/documents`,
       "POST",
       form,
     );
   },
   updateDocument(projectId: string, id: string, input: UpdateDocumentInput) {
-    return request<Document>(`/api/projects/${projectId}/documents/${id}`, {
+    return request<Document>(`/api/constructions/${projectId}/documents/${id}`, {
       method: "PATCH",
       body: JSON.stringify(input),
     });
   },
   deleteDocument(projectId: string, id: string) {
-    return request<void>(`/api/projects/${projectId}/documents/${id}`, {
+    return request<void>(`/api/constructions/${projectId}/documents/${id}`, {
       method: "DELETE",
     });
   },
 
   // --- Ход строительства по ЖК (точечные операции в карточке) ---
   listProjectProgress(projectId: string) {
-    return request<ProgressAlbum[]>(`/api/projects/${projectId}/progress`);
+    return request<ProgressAlbum[]>(`/api/constructions/${projectId}/progress`);
   },
   createProgressAlbum(projectId: string, input: UpsertProgressAlbumInput) {
-    return request<ProgressAlbum>(`/api/projects/${projectId}/progress`, {
+    return request<ProgressAlbum>(`/api/constructions/${projectId}/progress`, {
       method: "POST",
       body: JSON.stringify(input),
     });
   },
   updateProgressAlbum(projectId: string, id: string, input: UpsertProgressAlbumInput) {
-    return request<ProgressAlbum>(`/api/projects/${projectId}/progress/${id}`, {
+    return request<ProgressAlbum>(`/api/constructions/${projectId}/progress/${id}`, {
       method: "PATCH",
       body: JSON.stringify(input),
     });
   },
   deleteProgressAlbum(projectId: string, id: string) {
-    return request<void>(`/api/projects/${projectId}/progress/${id}`, {
+    return request<void>(`/api/constructions/${projectId}/progress/${id}`, {
       method: "DELETE",
     });
   },
@@ -691,14 +691,14 @@ export const api = {
     const form = new FormData();
     files.forEach((file, i) => form.append(`photo_${i}`, file));
     return requestMultipart<ProgressAlbum>(
-      `/api/projects/${projectId}/progress/${albumId}/photos`,
+      `/api/constructions/${projectId}/progress/${albumId}/photos`,
       "POST",
       form,
     );
   },
   deleteProgressPhoto(projectId: string, albumId: string, photoId: string) {
     return request<void>(
-      `/api/projects/${projectId}/progress/${albumId}/photos/${photoId}`,
+      `/api/constructions/${projectId}/progress/${albumId}/photos/${photoId}`,
       { method: "DELETE" },
     );
   },
@@ -746,7 +746,7 @@ export interface LeadListParams {
   stageId?: string;
   funnelId?: string;
   source?: string;
-  projectId?: string;
+  constructionId?: string;
   assigneeId?: string;
   from?: string;
   to?: string;

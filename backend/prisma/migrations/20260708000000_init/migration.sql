@@ -14,7 +14,7 @@ CREATE TYPE "ContactKind" AS ENUM ('client', 'realtor', 'agency');
 CREATE TYPE "StageKind" AS ENUM ('in_progress', 'won', 'lost');
 
 -- CreateEnum
-CREATE TYPE "ProjectStatus" AS ENUM ('draft', 'published');
+CREATE TYPE "ConstructionStatus" AS ENUM ('draft', 'published');
 
 -- CreateEnum
 CREATE TYPE "NewsStatus" AS ENUM ('draft', 'published');
@@ -157,7 +157,7 @@ CREATE TABLE "Lead" (
     "phone" TEXT NOT NULL,
     "source" TEXT NOT NULL DEFAULT 'hero_form',
     "stageId" TEXT NOT NULL,
-    "projectId" TEXT,
+    "constructionId" TEXT,
     "message" TEXT,
     "contactId" TEXT,
     "referrerId" TEXT,
@@ -248,37 +248,44 @@ CREATE TABLE "Developer" (
 );
 
 -- CreateTable
-CREATE TABLE "Project" (
+CREATE TABLE "Construction" (
     "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "code" TEXT,
     "address" TEXT,
-    "developerId" TEXT,
-    "priceFrom" INTEGER,
-    "rooms" JSONB NOT NULL DEFAULT '[]',
+    "district" TEXT,
+    "lat" DOUBLE PRECISION,
+    "lng" DOUBLE PRECISION,
+    "ownerId" TEXT,
+    "format" TEXT NOT NULL DEFAULT 'cityFormat',
+    "size" TEXT,
+    "side" TEXT,
+    "lighting" TEXT NOT NULL DEFAULT 'none',
+    "grp" DOUBLE PRECISION,
+    "trafficPerDay" INTEGER,
+    "pricePerMonth" INTEGER,
     "description" TEXT,
     "coverId" TEXT,
     "badges" JSONB NOT NULL DEFAULT '[]',
-    "tools" JSONB NOT NULL DEFAULT '{}',
-    "status" "ProjectStatus" NOT NULL DEFAULT 'draft',
-    "comingSoon" BOOLEAN NOT NULL DEFAULT false,
+    "status" "ConstructionStatus" NOT NULL DEFAULT 'draft',
     "archivedAt" TIMESTAMP(3),
     "createdById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Construction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "ProjectImage" (
+CREATE TABLE "ConstructionImage" (
     "id" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "constructionId" TEXT NOT NULL,
     "assetId" TEXT NOT NULL,
     "position" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "ProjectImage_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ConstructionImage_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -329,7 +336,7 @@ CREATE TABLE "DocumentCategory" (
 -- CreateTable
 CREATE TABLE "Document" (
     "id" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "constructionId" TEXT NOT NULL,
     "categoryId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "kind" "DocumentKind" NOT NULL DEFAULT 'file',
@@ -376,7 +383,7 @@ CREATE TABLE "SiteSettings" (
 -- CreateTable
 CREATE TABLE "ProgressAlbum" (
     "id" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "constructionId" TEXT NOT NULL,
     "year" INTEGER NOT NULL,
     "month" INTEGER NOT NULL,
     "note" TEXT,
@@ -489,7 +496,7 @@ CREATE INDEX "Lead_referrerId_idx" ON "Lead"("referrerId");
 CREATE INDEX "Lead_source_idx" ON "Lead"("source");
 
 -- CreateIndex
-CREATE INDEX "Lead_projectId_idx" ON "Lead"("projectId");
+CREATE INDEX "Lead_constructionId_idx" ON "Lead"("constructionId");
 
 -- CreateIndex
 CREATE INDEX "LeadNote_leadId_idx" ON "LeadNote"("leadId");
@@ -513,22 +520,25 @@ CREATE INDEX "Developer_archivedAt_idx" ON "Developer"("archivedAt");
 CREATE INDEX "Developer_order_idx" ON "Developer"("order");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Project_slug_key" ON "Project"("slug");
+CREATE UNIQUE INDEX "Construction_slug_key" ON "Construction"("slug");
 
 -- CreateIndex
-CREATE INDEX "Project_status_idx" ON "Project"("status");
+CREATE INDEX "Construction_status_idx" ON "Construction"("status");
 
 -- CreateIndex
-CREATE INDEX "Project_archivedAt_idx" ON "Project"("archivedAt");
+CREATE INDEX "Construction_archivedAt_idx" ON "Construction"("archivedAt");
 
 -- CreateIndex
-CREATE INDEX "Project_developerId_idx" ON "Project"("developerId");
+CREATE INDEX "Construction_ownerId_idx" ON "Construction"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "ProjectImage_projectId_idx" ON "ProjectImage"("projectId");
+CREATE INDEX "Construction_format_idx" ON "Construction"("format");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectImage_projectId_assetId_key" ON "ProjectImage"("projectId", "assetId");
+CREATE INDEX "ConstructionImage_constructionId_idx" ON "ConstructionImage"("constructionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ConstructionImage_constructionId_assetId_key" ON "ConstructionImage"("constructionId", "assetId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "NewsLabel_slug_key" ON "NewsLabel"("slug");
@@ -564,16 +574,16 @@ CREATE INDEX "DocumentCategory_archivedAt_idx" ON "DocumentCategory"("archivedAt
 CREATE INDEX "DocumentCategory_order_idx" ON "DocumentCategory"("order");
 
 -- CreateIndex
-CREATE INDEX "Document_projectId_idx" ON "Document"("projectId");
+CREATE INDEX "Document_constructionId_idx" ON "Document"("constructionId");
 
 -- CreateIndex
 CREATE INDEX "Document_categoryId_idx" ON "Document"("categoryId");
 
 -- CreateIndex
-CREATE INDEX "ProgressAlbum_projectId_idx" ON "ProgressAlbum"("projectId");
+CREATE INDEX "ProgressAlbum_constructionId_idx" ON "ProgressAlbum"("constructionId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProgressAlbum_projectId_year_month_key" ON "ProgressAlbum"("projectId", "year", "month");
+CREATE UNIQUE INDEX "ProgressAlbum_constructionId_year_month_key" ON "ProgressAlbum"("constructionId", "year", "month");
 
 -- CreateIndex
 CREATE INDEX "ProgressPhoto_albumId_idx" ON "ProgressPhoto"("albumId");
@@ -603,7 +613,7 @@ ALTER TABLE "Lead" ADD CONSTRAINT "Lead_source_fkey" FOREIGN KEY ("source") REFE
 ALTER TABLE "Lead" ADD CONSTRAINT "Lead_stageId_fkey" FOREIGN KEY ("stageId") REFERENCES "Stage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Lead" ADD CONSTRAINT "Lead_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Lead" ADD CONSTRAINT "Lead_constructionId_fkey" FOREIGN KEY ("constructionId") REFERENCES "Construction"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Lead" ADD CONSTRAINT "Lead_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -651,19 +661,19 @@ ALTER TABLE "LeadContactEvent" ADD CONSTRAINT "LeadContactEvent_authorId_fkey" F
 ALTER TABLE "Developer" ADD CONSTRAINT "Developer_logoId_fkey" FOREIGN KEY ("logoId") REFERENCES "Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Project" ADD CONSTRAINT "Project_developerId_fkey" FOREIGN KEY ("developerId") REFERENCES "Developer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Construction" ADD CONSTRAINT "Construction_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "Developer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Project" ADD CONSTRAINT "Project_coverId_fkey" FOREIGN KEY ("coverId") REFERENCES "Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Construction" ADD CONSTRAINT "Construction_coverId_fkey" FOREIGN KEY ("coverId") REFERENCES "Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Project" ADD CONSTRAINT "Project_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Construction" ADD CONSTRAINT "Construction_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProjectImage" ADD CONSTRAINT "ProjectImage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ConstructionImage" ADD CONSTRAINT "ConstructionImage_constructionId_fkey" FOREIGN KEY ("constructionId") REFERENCES "Construction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProjectImage" ADD CONSTRAINT "ProjectImage_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ConstructionImage" ADD CONSTRAINT "ConstructionImage_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "News" ADD CONSTRAINT "News_labelId_fkey" FOREIGN KEY ("labelId") REFERENCES "NewsLabel"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -675,7 +685,7 @@ ALTER TABLE "News" ADD CONSTRAINT "News_coverId_fkey" FOREIGN KEY ("coverId") RE
 ALTER TABLE "News" ADD CONSTRAINT "News_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Document" ADD CONSTRAINT "Document_constructionId_fkey" FOREIGN KEY ("constructionId") REFERENCES "Construction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Document" ADD CONSTRAINT "Document_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "DocumentCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -687,7 +697,7 @@ ALTER TABLE "Document" ADD CONSTRAINT "Document_assetId_fkey" FOREIGN KEY ("asse
 ALTER TABLE "Document" ADD CONSTRAINT "Document_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProgressAlbum" ADD CONSTRAINT "ProgressAlbum_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProgressAlbum" ADD CONSTRAINT "ProgressAlbum_constructionId_fkey" FOREIGN KEY ("constructionId") REFERENCES "Construction"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProgressAlbum" ADD CONSTRAINT "ProgressAlbum_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

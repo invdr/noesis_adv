@@ -19,7 +19,7 @@ function runtimeWith(prisma: any): Runtime {
 
 const albumRow = (over: Record<string, unknown> = {}) => ({
   id: "a1",
-  projectId: "p1",
+  constructionId: "p1",
   year: 2026,
   month: 6,
   note: null,
@@ -32,7 +32,7 @@ const albumRow = (over: Record<string, unknown> = {}) => ({
 describe("createProgressAlbum", () => {
   test("создаёт альбом периода; note пустой строки → null", async () => {
     const prisma = {
-      project: { count: async () => 1 },
+      construction: { count: async () => 1 },
       progressAlbum: {
         count: async () => 0,
         create: async ({ data }: any) => albumRow(data),
@@ -51,7 +51,7 @@ describe("createProgressAlbum", () => {
 
   test("повтор периода в рамках ЖК отклоняется (409)", async () => {
     const prisma = {
-      project: { count: async () => 1 },
+      construction: { count: async () => 1 },
       progressAlbum: { count: async () => 1 },
     };
     await expect(
@@ -61,7 +61,7 @@ describe("createProgressAlbum", () => {
 
   test("гонка: P2002 от unique-констрейнта периода → 409, не 500", async () => {
     const prisma = {
-      project: { count: async () => 1 },
+      construction: { count: async () => 1 },
       progressAlbum: {
         count: async () => 0, // check-then-act пропустил оба запроса
         create: async () => {
@@ -324,13 +324,13 @@ describe("deleteProgressPhoto", () => {
 
 describe("listPublicProjectProgress", () => {
   test("неопубликованный/несуществующий ЖК → null", async () => {
-    const prisma = { project: { findFirst: async () => null } };
+    const prisma = { construction: { findFirst: async () => null } };
     expect(await listPublicProjectProgress(runtimeWith(prisma), "ghost")).toBeNull();
   });
 
   test("отдаёт альбомы с фото в DTO (url из publicBase)", async () => {
     const prisma = {
-      project: { findFirst: async () => ({ id: "p1" }) },
+      construction: { findFirst: async () => ({ id: "p1" }) },
       progressAlbum: {
         findMany: async ({ where }: any) => {
           // публичная выборка требует непустые альбомы

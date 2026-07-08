@@ -8,7 +8,7 @@ import {
   leadAgendaQuerySchema,
   listLeadsQuerySchema,
   setLeadReferrerSchema,
-  updateLeadProjectSchema,
+  updateLeadConstructionSchema,
   updateLeadSourceSchema,
   updateLeadStageSchema,
   updateNextContactSchema,
@@ -32,7 +32,7 @@ import {
   getLeadStats,
   listLeads,
   setLeadReferrer,
-  updateLeadProject,
+  updateLeadConstruction,
   updateLeadSource,
   updateLeadStage,
   updateNextContact,
@@ -132,10 +132,10 @@ export function leadRoutes(rt: Runtime): Hono<AppEnv> {
     return c.json(lead);
   });
 
-  // CRM: смена/снятие ЖК сделки.
-  app.patch("/:id/project", auth, async (c) => {
-    const input = updateLeadProjectSchema.parse(await c.req.json().catch(() => ({})));
-    const lead = await updateLeadProject(rt, c.get("user"), c.req.param("id"), input);
+  // CRM: смена/снятие конструкции сделки.
+  app.patch("/:id/construction", auth, async (c) => {
+    const input = updateLeadConstructionSchema.parse(await c.req.json().catch(() => ({})));
+    const lead = await updateLeadConstruction(rt, c.get("user"), c.req.param("id"), input);
     if (!lead) throw new HttpError(404, "not_found", "Заявка не найдена");
     return c.json(lead);
   });

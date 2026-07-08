@@ -82,7 +82,7 @@ export function LeadsView({
     funnelId: funnelId || undefined,
     stageId: stageId || undefined,
     source: source || undefined,
-    projectId: projectFilter || undefined,
+    constructionId: projectFilter || undefined,
     assigneeId: assigneeParam,
     from: from ? new Date(from).toISOString() : undefined,
     to: to ? new Date(to).toISOString() : undefined,
@@ -93,7 +93,7 @@ export function LeadsView({
   const boardFilters: BoardFilters = {
     funnelId: funnelId || undefined,
     source: source || undefined,
-    projectId: projectFilter || undefined,
+    constructionId: projectFilter || undefined,
     assigneeId: assigneeParam,
     from: from ? new Date(from).toISOString() : undefined,
     to: to ? new Date(to).toISOString() : undefined,
@@ -426,7 +426,7 @@ export function LeadsView({
                       </td>
                       <td className="tnum">{lead.phone}</td>
                       <td>{lead.sourceName ?? sourceLabel(lead.source)}</td>
-                      <td>{lead.projectName ?? <span className="subtle">—</span>}</td>
+                      <td>{lead.constructionName ?? <span className="subtle">—</span>}</td>
                       <td>
                         <select
                           aria-label={`Этап заявки: ${lead.name}`}

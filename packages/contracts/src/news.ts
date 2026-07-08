@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { paginationQuerySchema } from "./common";
+import { paginationQuerySchema, SLUG_RE } from "./common";
 import { assetSchema } from "./file";
-import { SLUG_RE } from "./project";
 
 // --- Метки новостей (управляемый справочник, ведёт admin) ---
 

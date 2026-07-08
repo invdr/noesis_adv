@@ -65,7 +65,8 @@ export async function notifyNewLead(
     `Телефон: ${escapeHtml(lead.phone)}`,
     `Источник: ${escapeHtml(sourceLabel(lead))}`,
   ];
-  if (lead.projectId) lines.push(`ЖК: ${escapeHtml(lead.projectId)}`);
+  if (lead.constructionId)
+    lines.push(`Конструкция: ${escapeHtml(lead.constructionId)}`);
   if (lead.isRepeat) lines.push("⚠️ Повторная заявка");
   lines.push(`Время: ${lead.createdAt.toLocaleString("ru-RU")}`);
   if (rt.env.CRM_BASE_URL) {

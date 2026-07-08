@@ -13,7 +13,7 @@ import type {
   ListLeadsQuery,
   SessionUser,
   SetLeadReferrerInput,
-  UpdateLeadProjectInput,
+  UpdateLeadConstructionInput,
   UpdateLeadSourceInput,
   UpdateLeadStageInput,
   UpdateNextContactInput,
@@ -44,10 +44,10 @@ const REPEAT_WINDOW_DAYS = 30;
 const stageSelect = {
   select: { id: true, name: true, kind: true, funnelId: true },
 } as const;
-/** Стандартный include DTO заявки: этап + названия ЖК и источника. */
+/** Стандартный include DTO заявки: этап + названия конструкции и источника. */
 const leadInclude = {
   stage: stageSelect,
-  project: { select: { name: true } },
+  construction: { select: { name: true } },
   sourceOption: { select: { name: true } },
   contact: { select: { fullName: true } },
 } as const;
@@ -97,7 +97,7 @@ export async function createLead(
         phone: input.phone,
         source: input.source,
         stageId,
-        projectId: input.projectId ?? null,
+        constructionId: input.constructionId ?? null,
         message: input.message ?? null,
         contactId,
         assigneeId,
@@ -229,7 +229,7 @@ export async function createManualLead(
         phone: leadPhone,
         source: input.source,
         stageId,
-        projectId: input.projectId ?? null,
+        constructionId: input.constructionId ?? null,
         message: input.message ?? null,
         contactId,
         referrerId,
@@ -443,7 +443,7 @@ export async function listLeads(
   // Фильтр по воронке — через этап заявки (без денормализации funnelId на Lead).
   if (query.funnelId) filters.push({ stage: { funnelId: query.funnelId } });
   if (query.source) filters.push({ source: query.source });
-  if (query.projectId) filters.push({ projectId: query.projectId });
+  if (query.constructionId) filters.push({ constructionId: query.constructionId });
   // "none" — только очередь (не назначенные); иначе конкретный ответственный.
   if (query.assigneeId) {
     filters.push({ assigneeId: query.assigneeId === "none" ? null : query.assigneeId });
@@ -561,7 +561,7 @@ export async function exportLeadsCsv(
       l.name,
       l.phone,
       l.sourceName ?? l.source,
-      l.projectName ?? "",
+      l.constructionName ?? "",
       l.stage.name,
       l.assigneeId ? emailById.get(l.assigneeId) ?? "" : "",
       l.isRepeat ? "да" : "нет",
@@ -957,27 +957,32 @@ export async function updateLeadSource(
   return toLeadDto(lead);
 }
 
-/** Сменить или снять ЖК сделки. Требует прав на редактирование заявки. */
-export async function updateLeadProject(
+/** Сменить или снять конструкцию сделки. Требует прав на редактирование заявки. */
+export async function updateLeadConstruction(
   rt: Runtime,
   user: SessionUser,
   id: string,
-  input: UpdateLeadProjectInput,
+  input: UpdateLeadConstructionInput,
 ): Promise<Lead | null> {
   const existing = await rt.prisma.lead.findUnique({ where: { id } });
   if (!existing) return null;
   assertCanEdit(user, existing);
 
-  if (input.projectId !== null && input.projectId !== existing.projectId) {
-    const project = await rt.prisma.project.findUnique({ where: { id: input.projectId } });
-    if (!project || project.archivedAt) {
-      throw new HttpError(422, "invalid_project", "ЖК не найден");
+  if (
+    input.constructionId !== null &&
+    input.constructionId !== existing.constructionId
+  ) {
+    const construction = await rt.prisma.construction.findUnique({
+      where: { id: input.constructionId },
+    });
+    if (!construction || construction.archivedAt) {
+      throw new HttpError(422, "invalid_construction", "Конструкция не найдена");
     }
   }
 
   const lead = await rt.prisma.lead.update({
     where: { id },
-    data: { projectId: input.projectId },
+    data: { constructionId: input.constructionId },
     include: leadInclude,
   });
   return toLeadDto(lead);

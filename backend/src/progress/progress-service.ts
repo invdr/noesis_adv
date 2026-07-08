@@ -18,11 +18,11 @@ const albumOrderBy = [{ year: "desc" as const }, { month: "desc" as const }];
 /** Альбомы хода строительства одного ЖК для CRM (включая пустые). */
 export async function listProjectProgress(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
 ): Promise<ProgressAlbum[]> {
-  await requireProject(rt, projectId);
+  await requireProject(rt, constructionId);
   const rows = await rt.prisma.progressAlbum.findMany({
-    where: { projectId },
+    where: { constructionId },
     include: progressAlbumInclude,
     orderBy: albumOrderBy,
   });
@@ -32,16 +32,16 @@ export async function listProjectProgress(
 /** Создать альбом периода. Один альбом на месяц — повтор периода отклоняется. */
 export async function createProgressAlbum(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   input: UpsertProgressAlbumInput,
   userId: string,
 ): Promise<ProgressAlbum> {
-  await requireProject(rt, projectId);
-  await requireFreePeriod(rt, projectId, input.year, input.month);
+  await requireProject(rt, constructionId);
+  await requireFreePeriod(rt, constructionId, input.year, input.month);
   try {
     const album = await rt.prisma.progressAlbum.create({
       data: {
-        projectId,
+        constructionId,
         year: input.year,
         month: input.month,
         note: input.note?.trim() || null,
@@ -58,13 +58,13 @@ export async function createProgressAlbum(
 /** Правка периода/комментария альбома. */
 export async function updateProgressAlbum(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   id: string,
   input: UpsertProgressAlbumInput,
 ): Promise<ProgressAlbum> {
-  const album = await requireAlbum(rt, projectId, id);
+  const album = await requireAlbum(rt, constructionId, id);
   if (album.year !== input.year || album.month !== input.month) {
-    await requireFreePeriod(rt, projectId, input.year, input.month);
+    await requireFreePeriod(rt, constructionId, input.year, input.month);
   }
   try {
     const updated = await rt.prisma.progressAlbum.update({
@@ -85,10 +85,10 @@ export async function updateProgressAlbum(
 /** Удалить альбом со всеми фото — сразу и навсегда (файлы чистит файловый сервис). */
 export async function deleteProgressAlbum(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   id: string,
 ): Promise<void> {
-  await requireAlbum(rt, projectId, id);
+  await requireAlbum(rt, constructionId, id);
   const photos = await rt.prisma.progressPhoto.findMany({
     where: { albumId: id },
     select: { assetId: true },
@@ -108,12 +108,12 @@ export async function deleteProgressAlbum(
  */
 export async function addProgressPhotos(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   albumId: string,
   files: File[],
   userId: string,
 ): Promise<ProgressAlbum> {
-  await requireAlbum(rt, projectId, albumId);
+  await requireAlbum(rt, constructionId, albumId);
   if (files.length === 0) {
     throw new HttpError(422, "missing_file", "Не переданы фотографии");
   }
@@ -153,11 +153,11 @@ export async function addProgressPhotos(
 /** Удалить фото из альбома — сразу и навсегда. */
 export async function deleteProgressPhoto(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   albumId: string,
   photoId: string,
 ): Promise<void> {
-  await requireAlbum(rt, projectId, albumId);
+  await requireAlbum(rt, constructionId, albumId);
   const photo = await rt.prisma.progressPhoto.findFirst({
     where: { id: photoId, albumId },
   });
@@ -177,13 +177,13 @@ export async function listPublicProjectProgress(
   rt: Runtime,
   slug: string,
 ): Promise<ProgressAlbum[] | null> {
-  const project = await rt.prisma.project.findFirst({
-    where: { slug, status: "published", comingSoon: false, archivedAt: null },
+  const project = await rt.prisma.construction.findFirst({
+    where: { slug, status: "published", archivedAt: null },
     select: { id: true },
   });
   if (!project) return null;
   const rows = await rt.prisma.progressAlbum.findMany({
-    where: { projectId: project.id, photos: { some: {} } },
+    where: { constructionId: project.id, photos: { some: {} } },
     include: progressAlbumInclude,
     orderBy: albumOrderBy,
   });
@@ -197,17 +197,17 @@ function dto(rt: Runtime, album: ProgressAlbumRow): ProgressAlbum {
 }
 
 async function requireProject(rt: Runtime, id: string): Promise<void> {
-  const exists = await rt.prisma.project.count({ where: { id } });
+  const exists = await rt.prisma.construction.count({ where: { id } });
   if (!exists) throw new HttpError(404, "not_found", "ЖК не найден");
 }
 
 async function requireAlbum(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   id: string,
 ): Promise<{ year: number; month: number }> {
   const album = await rt.prisma.progressAlbum.findFirst({
-    where: { id, projectId },
+    where: { id, constructionId },
     select: { year: true, month: true },
   });
   if (!album) throw new HttpError(404, "not_found", "Альбом не найден");
@@ -216,7 +216,7 @@ async function requireAlbum(
 
 /**
  * Гонка двух запросов на один период: check-then-act в `requireFreePeriod`
- * пропускает оба, второй падает на unique-констрейнте `projectId+year+month`
+ * пропускает оба, второй падает на unique-констрейнте `constructionId+year+month`
  * (Prisma P2002) — отдаём тот же 409, что и проверка, а не 500.
  */
 function mapPeriodConflict(err: unknown): unknown {
@@ -233,12 +233,12 @@ function mapPeriodConflict(err: unknown): unknown {
 /** Один альбом на период: повтор года+месяца в рамках ЖК отклоняется. */
 async function requireFreePeriod(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   year: number,
   month: number,
 ): Promise<void> {
   const exists = await rt.prisma.progressAlbum.count({
-    where: { projectId, year, month },
+    where: { constructionId, year, month },
   });
   if (exists) {
     throw new HttpError(

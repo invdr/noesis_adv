@@ -10,7 +10,7 @@ import {
   normalizePhoneSearch,
   setLeadReferrer,
   updateNextContact,
-  updateLeadProject,
+  updateLeadConstruction,
   updateLeadSource,
   updateLeadStage,
 } from "../src/leads/lead-service";
@@ -33,7 +33,7 @@ const leadRow = (over: Partial<LeadRow> = {}): LeadRow =>
     source: "hero_form",
     stageId: "s_new",
     stage,
-    projectId: null,
+    constructionId: null,
     message: null,
     assigneeId: null,
     isRepeat: false,
@@ -226,58 +226,58 @@ describe("updateLeadSource", () => {
   });
 });
 
-describe("updateLeadProject", () => {
+describe("updateLeadConstruction", () => {
   test("меняет ЖК заявки", async () => {
     let updateData: any;
     const prisma = {
       lead: {
-        findUnique: async () => leadRow({ projectId: null }),
+        findUnique: async () => leadRow({ constructionId: null }),
         update: async ({ data }: any) => {
           updateData = data;
-          return leadRow({ projectId: data.projectId, project: { name: "ЖК Башня" } });
+          return leadRow({ constructionId: data.constructionId, construction: { name: "ЖК Башня" } });
         },
       },
-      project: { findUnique: async () => ({ id: "p1", archivedAt: null }) },
+      construction: { findUnique: async () => ({ id: "p1", archivedAt: null }) },
     };
-    const res = await updateLeadProject(runtimeWith(prisma), admin, "lead1", {
-      projectId: "p1",
+    const res = await updateLeadConstruction(runtimeWith(prisma), admin, "lead1", {
+      constructionId: "p1",
     });
-    expect(updateData.projectId).toBe("p1");
-    expect(res?.projectId).toBe("p1");
-    expect(res?.projectName).toBe("ЖК Башня");
+    expect(updateData.constructionId).toBe("p1");
+    expect(res?.constructionId).toBe("p1");
+    expect(res?.constructionName).toBe("ЖК Башня");
   });
 
   test("снимает ЖК без проверки справочника", async () => {
     let updateData: any;
     const prisma = {
       lead: {
-        findUnique: async () => leadRow({ projectId: "p1" }),
+        findUnique: async () => leadRow({ constructionId: "p1" }),
         update: async ({ data }: any) => {
           updateData = data;
-          return leadRow({ projectId: data.projectId, project: null });
+          return leadRow({ constructionId: data.constructionId, construction: null });
         },
       },
-      project: {
+      construction: {
         findUnique: async () => {
           throw new Error("не должно вызываться");
         },
       },
     };
-    const res = await updateLeadProject(runtimeWith(prisma), admin, "lead1", {
-      projectId: null,
+    const res = await updateLeadConstruction(runtimeWith(prisma), admin, "lead1", {
+      constructionId: null,
     });
-    expect(updateData.projectId).toBeNull();
-    expect(res?.projectId).toBeNull();
+    expect(updateData.constructionId).toBeNull();
+    expect(res?.constructionId).toBeNull();
   });
 
   test("архивный ЖК отклоняется (422)", async () => {
     const prisma = {
       lead: { findUnique: async () => leadRow() },
-      project: { findUnique: async () => ({ id: "p1", archivedAt: new Date() }) },
+      construction: { findUnique: async () => ({ id: "p1", archivedAt: new Date() }) },
     };
     await expect(
-      updateLeadProject(runtimeWith(prisma), admin, "lead1", { projectId: "p1" }),
-    ).rejects.toMatchObject({ status: 422, code: "invalid_project" });
+      updateLeadConstruction(runtimeWith(prisma), admin, "lead1", { constructionId: "p1" }),
+    ).rejects.toMatchObject({ status: 422, code: "invalid_construction" });
   });
 });
 
@@ -873,8 +873,8 @@ describe("exportLeadsCsv", () => {
       lead: {
         findMany: async () => [
           // Название ЖК приходит развёрнутым в самой выборке (leadInclude).
-          leadRow({ projectId: "p1", assigneeId: "m1", project: { name: "ЖК «Башня»" } }),
-          leadRow({ id: "lead2", name: "=HYPERLINK(...)", projectId: null }),
+          leadRow({ constructionId: "p1", assigneeId: "m1", construction: { name: "ЖК «Башня»" } }),
+          leadRow({ id: "lead2", name: "=HYPERLINK(...)", constructionId: null }),
         ],
         count: async () => 2,
       },
@@ -897,7 +897,7 @@ describe("exportLeadsCsv", () => {
     const csv = await exportLeadsCsv(
       csvRuntime({
         lead: {
-          findMany: async () => [leadRow({ projectId: null, assigneeId: null })],
+          findMany: async () => [leadRow({ constructionId: null, assigneeId: null })],
           count: async () => 9001,
         },
       }),

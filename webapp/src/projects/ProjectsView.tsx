@@ -2,44 +2,49 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BADGE_PALETTE,
-  EMPTY_PROJECT_TOOLS,
+  CONSTRUCTION_FORMAT_LABEL,
+  CONSTRUCTION_LIGHTING_LABEL,
   MAX_BADGES,
   MAX_GALLERY_IMAGES,
-  ROOM_FORMAT_LABEL,
   type Asset,
   type Badge,
   type BadgeColor,
+  type Construction,
+  type ConstructionFormat,
+  type ConstructionLighting,
+  type ConstructionSide,
+  type ConstructionStatus,
   type Developer,
-  type Project,
-  type ProjectStatus,
-  type ProjectTools,
-  type RoomFormat,
-  type UpsertProjectInput,
+  type UpsertConstructionInput,
 } from "@noesis/contracts";
-
-/** Инструменты «Выбор квартиры»: подписи карточек лендинга. */
-const TOOL_DEFS: { key: keyof ProjectTools; label: string; hint: string }[] = [
-  { key: "chessboardUrl", label: "Интерактивная шахматка", hint: "«Открыть →»" },
-  { key: "plansUrl", label: "Планировки", hint: "«Смотреть →»" },
-  { key: "tour3dUrl", label: "3D тур", hint: "«Запустить →»" },
-];
 import { api, ApiError } from "../api/client";
 import { ProjectDocuments } from "../documents/ProjectDocuments";
 import { ProjectProgress } from "./ProjectProgress";
 
-const KEY = ["projects"];
-const ROOM_ORDER = Object.keys(ROOM_FORMAT_LABEL) as RoomFormat[];
+const KEY = ["constructions"];
+const FORMAT_KEYS = Object.keys(CONSTRUCTION_FORMAT_LABEL) as ConstructionFormat[];
+const LIGHTING_KEYS = Object.keys(
+  CONSTRUCTION_LIGHTING_LABEL,
+) as ConstructionLighting[];
 const BADGE_KEYS = Object.keys(BADGE_PALETTE) as BadgeColor[];
 
-const STATUS_LABEL: Record<ProjectStatus, string> = {
+const STATUS_LABEL: Record<ConstructionStatus, string> = {
   draft: "Черновик",
-  published: "Опубликован",
+  published: "Опубликована",
 };
 
-/** Раздел ЖК: список со списком/фильтрами или форма редактирования. */
+/** Строка «» / число → number | null (пусто = не задано). */
+const num = (s: string): number | null => {
+  const t = s.trim();
+  if (t === "") return null;
+  const n = Number(t.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
+
+/** Раздел конструкций: список с фильтрами или форма редактирования. */
 export function ProjectsView({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
-  // undefined — список; null — новый ЖК; string — редактирование по id.
+  // undefined — список; null — новая конструкция; string — правка по id.
   const [editing, setEditing] = useState<string | null | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -77,7 +82,7 @@ export function ProjectsView({ isAdmin }: { isAdmin: boolean }) {
     <section>
       <div className="toolbar">
         <button onClick={() => setEditing(null)} className="btn-primary">
-          + Новый ЖК
+          + Новая конструкция
         </button>
         <input placeholder="Поиск по названию" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -104,8 +109,9 @@ export function ProjectsView({ isAdmin }: { isAdmin: boolean }) {
           <thead>
             <tr>
               <th>Название</th>
-              <th style={{ width: 170 }}>Застройщик</th>
-              <th style={{ width: 170 }}>Статус</th>
+              <th style={{ width: 150 }}>Формат</th>
+              <th style={{ width: 160 }}>Владелец сети</th>
+              <th style={{ width: 150 }}>Статус</th>
               <th style={{ width: 240 }}>Действия</th>
             </tr>
           </thead>
@@ -116,15 +122,15 @@ export function ProjectsView({ isAdmin }: { isAdmin: boolean }) {
                   <button onClick={() => setEditing(p.id)} className="link-btn">
                     {p.name}
                   </button>
-                  <div className="subtle" style={{ fontSize: 12 }}>/zhk/{p.slug}</div>
+                  <div className="subtle" style={{ fontSize: 12 }}>/construction/{p.slug}</div>
                 </td>
-                <td>{p.developer?.name ?? <span className="subtle">нет</span>}</td>
+                <td>{CONSTRUCTION_FORMAT_LABEL[p.format]}</td>
+                <td>{p.owner?.name ?? <span className="subtle">нет</span>}</td>
                 <td>
                   <span className="row wrap" style={{ gap: 6 }}>
                     <span className={`badge ${p.status === "published" ? "badge-success" : "badge-neutral"}`}>
                       {STATUS_LABEL[p.status]}
                     </span>
-                    {p.comingSoon && <span className="badge badge-info">Скоро</span>}
                     {p.isArchived && <span className="badge badge-neutral">архив</span>}
                   </span>
                 </td>
@@ -145,7 +151,7 @@ export function ProjectsView({ isAdmin }: { isAdmin: boolean }) {
               </tr>
             ))}
             {items.length === 0 && (
-              <tr><td colSpan={4} className="empty" style={{ textAlign: "center" }}>Пока нет ЖК.</td></tr>
+              <tr><td colSpan={5} className="empty" style={{ textAlign: "center" }}>Пока нет конструкций.</td></tr>
             )}
           </tbody>
         </table>
@@ -182,56 +188,55 @@ function ProjectForm({
   if (id !== null && !loaded.data)
     return (
       <p className="alert alert-error">
-        ЖК не найден. <button className="link-btn" onClick={onClose}>назад</button>
+        Конструкция не найдена. <button className="link-btn" onClick={onClose}>назад</button>
       </p>
     );
 
-  return <ProjectFormBody id={id} project={loaded.data ?? null} developers={developers} onClose={onClose} />;
+  return <ProjectFormBody id={id} construction={loaded.data ?? null} developers={developers} onClose={onClose} />;
 }
 
 function ProjectFormBody({
   id,
-  project,
+  construction,
   developers,
   onClose,
 }: {
   id: string | null;
-  project: Project | null;
+  construction: Construction | null;
   developers: Developer[];
   onClose: () => void;
 }) {
-  const [name, setName] = useState(project?.name ?? "");
-  const [slug, setSlug] = useState(project?.slug ?? "");
-  const [address, setAddress] = useState(project?.address ?? "");
-  const [developerId, setDeveloperId] = useState(project?.developer?.id ?? "");
-  const [priceFrom, setPriceFrom] = useState(project?.priceFrom != null ? String(project.priceFrom) : "");
-  const [rooms, setRooms] = useState<RoomFormat[]>(project?.rooms ?? []);
-  const [description, setDescription] = useState(project?.description ?? "");
-  const [status, setStatus] = useState<ProjectStatus>(project?.status ?? "draft");
-  const [comingSoon, setComingSoon] = useState(project?.comingSoon ?? false);
-  const [badges, setBadges] = useState<Badge[]>(project?.badges ?? []);
-  // Черновик инструментов: галочка + ссылка; сохраняется URL либо null.
-  const [tools, setTools] = useState<Record<keyof ProjectTools, { enabled: boolean; url: string }>>(() => {
-    const t = project?.tools ?? EMPTY_PROJECT_TOOLS;
-    return {
-      chessboardUrl: { enabled: t.chessboardUrl !== null, url: t.chessboardUrl ?? "" },
-      plansUrl: { enabled: t.plansUrl !== null, url: t.plansUrl ?? "" },
-      tour3dUrl: { enabled: t.tour3dUrl !== null, url: t.tour3dUrl ?? "" },
-    };
-  });
+  const [name, setName] = useState(construction?.name ?? "");
+  const [code, setCode] = useState(construction?.code ?? "");
+  const [slug, setSlug] = useState(construction?.slug ?? "");
+  const [address, setAddress] = useState(construction?.address ?? "");
+  const [district, setDistrict] = useState(construction?.district ?? "");
+  const [ownerId, setOwnerId] = useState(construction?.owner?.id ?? "");
+  const [format, setFormat] = useState<ConstructionFormat>(construction?.format ?? "cityFormat");
+  const [size, setSize] = useState(construction?.size ?? "");
+  const [side, setSide] = useState<"" | ConstructionSide>(construction?.side ?? "");
+  const [lighting, setLighting] = useState<ConstructionLighting>(construction?.lighting ?? "none");
+  const [grp, setGrp] = useState(construction?.grp != null ? String(construction.grp) : "");
+  const [trafficPerDay, setTrafficPerDay] = useState(construction?.trafficPerDay != null ? String(construction.trafficPerDay) : "");
+  const [pricePerMonth, setPricePerMonth] = useState(construction?.pricePerMonth != null ? String(construction.pricePerMonth) : "");
+  const [lat, setLat] = useState(construction?.lat != null ? String(construction.lat) : "");
+  const [lng, setLng] = useState(construction?.lng != null ? String(construction.lng) : "");
+  const [description, setDescription] = useState(construction?.description ?? "");
+  const [status, setStatus] = useState<ConstructionStatus>(construction?.status ?? "draft");
+  const [badges, setBadges] = useState<Badge[]>(construction?.badges ?? []);
   const [items, setItems] = useState<GalleryItem[]>(
-    (project?.images ?? []).map((asset) => ({ kind: "existing" as const, asset })),
+    (construction?.images ?? []).map((asset) => ({ kind: "existing" as const, asset })),
   );
   const [coverKey, setCoverKey] = useState<string>(
-    project?.cover?.id ?? (project?.images?.[0]?.id ?? ""),
+    construction?.cover?.id ?? (construction?.images?.[0]?.id ?? ""),
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
 
-  const liveDevelopers = useMemo(
-    // Текущий застройщик мог уйти в архив — оставим его в списке выбора.
-    () => developers.filter((d) => !d.isArchived || d.id === developerId),
-    [developers, developerId],
+  const liveOwners = useMemo(
+    // Текущий владелец мог уйти в архив — оставим его в списке выбора.
+    () => developers.filter((d) => !d.isArchived || d.id === ownerId),
+    [developers, ownerId],
   );
 
   const addFiles = (files: FileList | null) => {
@@ -277,25 +282,30 @@ function ProjectFormBody({
         return { kind: "new" as const, uploadIndex };
       });
       const coverIndex = items.findIndex((it) => keyOf(it) === coverKey);
-      const priceTrim = priceFrom.trim();
-      const price = priceTrim === "" ? null : Math.round(Number(priceTrim));
-      const data: UpsertProjectInput = {
+      const price = num(pricePerMonth);
+      const traffic = num(trafficPerDay);
+      const data: UpsertConstructionInput = {
         name: name.trim(),
         slug: slug.trim() || undefined,
+        code: code.trim() || undefined,
         address: address.trim() || undefined,
-        developerId: developerId || undefined,
-        priceFrom: Number.isFinite(price) ? price : null,
-        rooms: ROOM_ORDER.filter((r) => rooms.includes(r)),
+        district: district.trim() || undefined,
+        ownerId: ownerId || undefined,
+        lat: num(lat),
+        lng: num(lng),
+        format,
+        size: size.trim() || undefined,
+        side: side || null,
+        lighting,
+        grp: num(grp),
+        trafficPerDay: traffic != null ? Math.round(traffic) : null,
+        pricePerMonth: price != null ? Math.round(price) : null,
         description: description.trim() || undefined,
         badges,
-        tools: Object.fromEntries(
-          TOOL_DEFS.map((t) => [t.key, tools[t.key].enabled ? tools[t.key].url.trim() : null]),
-        ) as ProjectTools,
         status,
-        comingSoon,
         images,
         coverIndex: coverIndex >= 0 ? coverIndex : undefined,
-        expectedUpdatedAt: project?.updatedAt,
+        expectedUpdatedAt: construction?.updatedAt,
       };
       return api.saveProject(data, newFiles, id ?? undefined);
     },
@@ -313,22 +323,7 @@ function ProjectFormBody({
   const err = (field: string) =>
     fieldErrors[field] ? <span className="field-error">{fieldErrors[field]}</span> : null;
 
-  // Включённый инструмент обязан иметь http(s)-ссылку — иначе на сайте была бы
-  // «мёртвая» карточка (ровно от этого ушли от глобальных флагов).
   const submit = () => {
-    const toolErrors: Record<string, string> = {};
-    for (const t of TOOL_DEFS) {
-      const draft = tools[t.key];
-      if (!draft.enabled) continue;
-      if (!/^https?:\/\//i.test(draft.url.trim())) {
-        toolErrors[`tools.${t.key}`] = "Укажите ссылку (http:// или https://)";
-      }
-    }
-    if (Object.keys(toolErrors).length > 0) {
-      setFieldErrors(toolErrors);
-      setError("Проверьте ссылки инструментов «Выбор квартиры».");
-      return;
-    }
     setFieldErrors({});
     setError("");
     save.mutate();
@@ -337,7 +332,7 @@ function ProjectFormBody({
   return (
     <section className="page-narrow">
       <div className="row" style={{ justifyContent: "space-between", marginBottom: "1rem" }}>
-        <h2 style={{ margin: 0 }}>{id ? "Редактирование ЖК" : "Новый ЖК"}</h2>
+        <h2 style={{ margin: 0 }}>{id ? "Редактирование конструкции" : "Новая конструкция"}</h2>
         <button className="btn-ghost" onClick={onClose}>← к списку</button>
       </div>
 
@@ -354,6 +349,11 @@ function ProjectFormBody({
             {err("name")}
           </Field>
 
+          <Field label="Инвентарный код">
+            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="напр. СФ-014" />
+            {err("code")}
+          </Field>
+
           <Field label="Адрес страницы (slug)">
             <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="генерируется из названия" />
             {err("slug")}
@@ -364,39 +364,94 @@ function ProjectFormBody({
             {err("address")}
           </Field>
 
-          <Field label="Застройщик">
-            <select value={developerId} onChange={(e) => setDeveloperId(e.target.value)}>
+          <Field label="Район">
+            <input value={district} onChange={(e) => setDistrict(e.target.value)} />
+            {err("district")}
+          </Field>
+
+          <Field label="Владелец сети">
+            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
               <option value="">Не выбран</option>
-              {liveDevelopers.map((d) => (
+              {liveOwners.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
-            {err("developerId")}
+            {err("ownerId")}
           </Field>
+        </div>
+      </div>
 
-          <Field label="Цена «от», ₽">
-            <input value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} inputMode="numeric" placeholder="пусто → «Цена по запросу»" />
-            {err("priceFrom")}
-          </Field>
-
-          <Field label="Комнатность">
-            <div className="row wrap" style={{ gap: 12 }}>
-              {ROOM_ORDER.map((r) => (
-                <label key={r} className="check">
-                  <input
-                    type="checkbox"
-                    checked={rooms.includes(r)}
-                    onChange={(e) =>
-                      setRooms((prev) => (e.target.checked ? [...prev, r] : prev.filter((x) => x !== r)))
-                    }
-                  />
-                  {ROOM_FORMAT_LABEL[r]}
-                </label>
+      <div className="card" style={{ marginTop: "1.25rem" }}>
+        <div className="card-body">
+          <h3 className="section-title">Характеристики</h3>
+          <Field label="Формат">
+            <select value={format} onChange={(e) => setFormat(e.target.value as ConstructionFormat)}>
+              {FORMAT_KEYS.map((f) => (
+                <option key={f} value={f}>{CONSTRUCTION_FORMAT_LABEL[f]}</option>
               ))}
-            </div>
-            {err("rooms")}
+            </select>
+            {err("format")}
           </Field>
 
+          <Field label="Габариты">
+            <input value={size} onChange={(e) => setSize(e.target.value)} placeholder="напр. 1,2 × 1,8 м" />
+            {err("size")}
+          </Field>
+
+          <Field label="Сторона">
+            <select value={side} onChange={(e) => setSide(e.target.value as "" | ConstructionSide)}>
+              <option value="">Односторонняя</option>
+              <option value="A">Сторона A</option>
+              <option value="B">Сторона B</option>
+            </select>
+            {err("side")}
+          </Field>
+
+          <Field label="Подсветка">
+            <select value={lighting} onChange={(e) => setLighting(e.target.value as ConstructionLighting)}>
+              {LIGHTING_KEYS.map((l) => (
+                <option key={l} value={l}>{CONSTRUCTION_LIGHTING_LABEL[l]}</option>
+              ))}
+            </select>
+            {err("lighting")}
+          </Field>
+
+          <Field label="GRP (охват)">
+            <input value={grp} onChange={(e) => setGrp(e.target.value)} inputMode="decimal" placeholder="если известен" />
+            {err("grp")}
+          </Field>
+
+          <Field label="Суточный трафик">
+            <input value={trafficPerDay} onChange={(e) => setTrafficPerDay(e.target.value)} inputMode="numeric" placeholder="пассажиро-/автопоток" />
+            {err("trafficPerDay")}
+          </Field>
+
+          <Field label="Цена, ₽/мес">
+            <input value={pricePerMonth} onChange={(e) => setPricePerMonth(e.target.value)} inputMode="numeric" placeholder="пусто → «Цена по запросу»" />
+            {err("pricePerMonth")}
+          </Field>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: "1.25rem" }}>
+        <div className="card-body">
+          <h3 className="section-title">Расположение на карте</h3>
+          <p className="hint" style={{ marginTop: 0 }}>Координаты для карты города. Заполняются парой.</p>
+          <div className="row wrap" style={{ gap: 12 }}>
+            <Field label="Широта (lat)">
+              <input value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" placeholder="43.3169" />
+              {err("lat")}
+            </Field>
+            <Field label="Долгота (lng)">
+              <input value={lng} onChange={(e) => setLng(e.target.value)} inputMode="decimal" placeholder="45.6942" />
+              {err("lng")}
+            </Field>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: "1.25rem" }}>
+        <div className="card-body">
           <Field label="Описание">
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
             {err("description")}
@@ -475,65 +530,11 @@ function ProjectFormBody({
         <div className="card-body">
           <h3 className="section-title">Публикация</h3>
           <Field label="Статус">
-            <select value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
+            <select value={status} onChange={(e) => setStatus(e.target.value as ConstructionStatus)}>
               <option value="draft">Черновик (только в CRM)</option>
-              <option value="published">Опубликован</option>
+              <option value="published">Опубликована</option>
             </select>
           </Field>
-          <label className="check">
-            <input type="checkbox" checked={comingSoon} onChange={(e) => setComingSoon(e.target.checked)} />
-            «Скоро на сайте» (тизер-карточка без страницы)
-          </label>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: "1.25rem" }}>
-        <div className="card-body">
-          <h3 className="section-title">Инструменты «Выбор квартиры»</h3>
-          <p className="hint" style={{ marginTop: 0 }}>
-            Карточки «Интерактивная шахматка / Планировки / 3D тур» на странице этого ЖК
-            и в карточке на главной. Карточка показывается только с заполненной
-            ссылкой (открывается в новой вкладке); без ссылки — скрыта.
-          </p>
-          {TOOL_DEFS.map((t) => {
-            const draft = tools[t.key];
-            return (
-              <div key={t.key} style={{ marginBottom: 10 }}>
-                <label className="check" style={{ display: "flex", gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={draft.enabled}
-                    onChange={(e) =>
-                      setTools((prev) => ({
-                        ...prev,
-                        [t.key]: { ...prev[t.key], enabled: e.target.checked },
-                      }))
-                    }
-                  />
-                  <span>
-                    {t.label} <span className="hint">{t.hint}</span>
-                  </span>
-                </label>
-                {draft.enabled && (
-                  <div style={{ marginTop: 6, marginLeft: 26 }}>
-                    <input
-                      type="url"
-                      value={draft.url}
-                      onChange={(e) =>
-                        setTools((prev) => ({
-                          ...prev,
-                          [t.key]: { ...prev[t.key], url: e.target.value },
-                        }))
-                      }
-                      placeholder="https://…"
-                      style={{ width: "100%", maxWidth: 480 }}
-                    />
-                    {err(`tools.${t.key}`)}
-                  </div>
-                )}
-              </div>
-            );
-          })}
         </div>
       </div>
 
@@ -542,8 +543,8 @@ function ProjectFormBody({
           <h3 className="section-title">Документы</h3>
           {id === null ? (
             <p className="hint" style={{ marginTop: 0 }}>
-              Сохраните ЖК, затем добавьте документы — они привязываются к карточке и
-              сохраняются сразу.
+              Сохраните конструкцию, затем добавьте документы — они привязываются к
+              карточке и сохраняются сразу.
             </p>
           ) : (
             <ProjectDocuments projectId={id} />
@@ -553,11 +554,11 @@ function ProjectFormBody({
 
       <div className="card" style={{ marginTop: "1.25rem" }}>
         <div className="card-body">
-          <h3 className="section-title">Ход строительства</h3>
+          <h3 className="section-title">Фотоотчёты</h3>
           {id === null ? (
             <p className="hint" style={{ marginTop: 0 }}>
-              Сохраните ЖК, затем добавьте фотоотчёты по месяцам — они привязываются
-              к карточке и сохраняются сразу.
+              Сохраните конструкцию, затем добавьте фотоотчёты по месяцам — они
+              привязываются к карточке и сохраняются сразу.
             </p>
           ) : (
             <ProjectProgress projectId={id} />

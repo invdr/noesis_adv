@@ -9,8 +9,7 @@
 // (оригинал + WebP-производные). Дедуп по URL — одни и те же снимки
 // переиспользуются в карточках ЖК и в новостях. Сбой загрузки логируется и не
 // роняет сид (карточка просто останется без обложки).
-import { Prisma } from "@prisma/client";
-import { slugify, type RoomFormat } from "@noesis/contracts";
+import { slugify, type ConstructionFormat } from "@noesis/contracts";
 import type { Runtime } from "../src/runtime";
 import { storeUpload } from "../src/files/file-service";
 
@@ -35,25 +34,26 @@ const DEVELOPERS: DeveloperSeed[] = [
 ];
 
 /** ЖК каталога. `developer` — имя застройщика из `DEVELOPERS`. */
-interface ProjectSeed {
+// Демо-каталог (плейсхолдер до редизайна домена): имена/фото пока про
+// недвижимость, но поля уже конструкции — формат, владелец сети, цена за месяц.
+interface ConstructionSeed {
   name: string;
-  developer: string;
+  owner: string;
   address: string;
-  rooms: RoomFormat[];
-  priceFrom: number | null;
-  comingSoon?: boolean;
+  format: ConstructionFormat;
+  pricePerMonth: number | null;
   image: string;
 }
 
-const PROJECTS: ProjectSeed[] = [
-  { name: "AURUM", developer: "Империя", address: "г. Грозный", rooms: ["one", "two", "three"], priceFrom: 1_000_000, image: "image_67f78a99726f2.webp" },
-  { name: "GREEN City", developer: "Империя", address: "г. Грозный", rooms: ["one", "two"], priceFrom: 3_700_000, image: "image_67f78a9a76a4f.webp" },
-  { name: "ROYAL TOWER", developer: "Империя", address: "г. Грозный", rooms: ["one", "two"], priceFrom: 2_600_000, image: "image_67f78a9a261d6.webp" },
-  { name: "SKY TOWN", developer: "Смарт-Строй", address: "г. Грозный", rooms: ["one", "two", "three"], priceFrom: null, image: "image_683700316825f.webp" },
-  { name: "АНГЛИЙСКИЙ КВАРТАЛ", developer: "Смарт-Строй", address: "г. Грозный, пр-кт Исаева, 42", rooms: ["studio", "one", "two", "three"], priceFrom: null, image: "image_68cab19528d88.webp" },
-  { name: "RAMADA", developer: "Смарт-Строй", address: "г. Грозный, ул. Э.Э. Исмаилова", rooms: ["one", "two"], priceFrom: null, image: "image_687a40bb12498.webp" },
-  { name: "PLAZA", developer: "Иволга", address: "г. Грозный", rooms: ["one", "two", "three"], priceFrom: null, image: "image_687e23156f398.webp" },
-  { name: "TRIUMPH", developer: "Иволга", address: "г. Грозный", rooms: [], priceFrom: null, comingSoon: true, image: "image_687a40ba9d3c1.webp" },
+const CONSTRUCTIONS: ConstructionSeed[] = [
+  { name: "AURUM", owner: "Империя", address: "г. Грозный", format: "cityFormat", pricePerMonth: 45_000, image: "image_67f78a99726f2.webp" },
+  { name: "GREEN City", owner: "Империя", address: "г. Грозный", format: "cityFormat", pricePerMonth: 52_000, image: "image_67f78a9a76a4f.webp" },
+  { name: "ROYAL TOWER", owner: "Империя", address: "г. Грозный", format: "billboard", pricePerMonth: 90_000, image: "image_67f78a9a261d6.webp" },
+  { name: "SKY TOWN", owner: "Смарт-Строй", address: "г. Грозный", format: "cityFormat", pricePerMonth: null, image: "image_683700316825f.webp" },
+  { name: "АНГЛИЙСКИЙ КВАРТАЛ", owner: "Смарт-Строй", address: "г. Грозный, пр-кт Исаева, 42", format: "superSite", pricePerMonth: null, image: "image_68cab19528d88.webp" },
+  { name: "RAMADA", owner: "Смарт-Строй", address: "г. Грозный, ул. Э.Э. Исмаилова", format: "cityFormat", pricePerMonth: null, image: "image_687a40bb12498.webp" },
+  { name: "PLAZA", owner: "Иволга", address: "г. Грозный", format: "pillar", pricePerMonth: null, image: "image_687e23156f398.webp" },
+  { name: "TRIUMPH", owner: "Иволга", address: "г. Грозный", format: "mediaScreen", pricePerMonth: null, image: "image_687a40ba9d3c1.webp" },
 ];
 
 /** Метка новости: имя задаёт slug и порядок. */
@@ -209,26 +209,25 @@ async function seedDevelopers(rt: Runtime): Promise<Map<string, string>> {
   return byName;
 }
 
-/** ЖК: создаём недостающие по slug; обложка = одно фото (ProjectImage + coverId). */
-async function seedProjects(
+/** Конструкции: создаём недостающие по slug; обложка = одно фото. */
+async function seedConstructions(
   rt: Runtime,
-  developers: Map<string, string>,
+  owners: Map<string, string>,
   cache: Map<string, string>,
 ): Promise<void> {
-  for (const p of PROJECTS) {
+  for (const p of CONSTRUCTIONS) {
     const slug = slugify(p.name);
-    if (await rt.prisma.project.findUnique({ where: { slug } })) continue;
+    if (await rt.prisma.construction.findUnique({ where: { slug } })) continue;
     const coverId = await ensureAsset(rt, p.image, cache);
-    await rt.prisma.project.create({
+    await rt.prisma.construction.create({
       data: {
         slug,
         name: p.name,
         address: p.address,
-        developerId: developers.get(p.developer) ?? null,
-        priceFrom: p.priceFrom,
-        rooms: p.rooms as unknown as Prisma.InputJsonValue,
+        ownerId: owners.get(p.owner) ?? null,
+        format: p.format,
+        pricePerMonth: p.pricePerMonth,
         status: "published",
-        comingSoon: p.comingSoon ?? false,
         coverId,
         images: coverId
           ? { create: [{ assetId: coverId, position: 0 }] }
@@ -297,29 +296,29 @@ async function seedDocumentCategories(rt: Runtime): Promise<void> {
  * застройщики → ЖК → метки → новости → категории документов.
  */
 export async function seedContent(rt: Runtime): Promise<void> {
-  const existingProjects = await rt.prisma.project.count();
-  if (existingProjects > 0) {
+  const existingConstructions = await rt.prisma.construction.count();
+  if (existingConstructions > 0) {
     console.log(
-      `Контент лендинга уже есть (ЖК: ${existingProjects}) — пропускаем бутстрап-сид.`,
+      `Контент лендинга уже есть (конструкций: ${existingConstructions}) — пропускаем бутстрап-сид.`,
     );
     return;
   }
 
   const assetCache = new Map<string, string>();
   const developers = await seedDevelopers(rt);
-  await seedProjects(rt, developers, assetCache);
+  await seedConstructions(rt, developers, assetCache);
   const labels = await seedNewsLabels(rt);
   await seedNews(rt, labels, assetCache);
   await seedDocumentCategories(rt);
 
-  const [devCount, projCount, newsCount, catCount] = await Promise.all([
+  const [devCount, constrCount, newsCount, catCount] = await Promise.all([
     rt.prisma.developer.count(),
-    rt.prisma.project.count(),
+    rt.prisma.construction.count(),
     rt.prisma.news.count(),
     rt.prisma.documentCategory.count(),
   ]);
   console.log(
-    `Контент лендинга: застройщиков ${devCount}, ЖК ${projCount}, ` +
+    `Контент лендинга: владельцев сети ${devCount}, конструкций ${constrCount}, ` +
       `новостей ${newsCount}, категорий документов ${catCount}.`,
   );
 }

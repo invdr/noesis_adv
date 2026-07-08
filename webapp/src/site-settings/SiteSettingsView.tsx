@@ -6,7 +6,7 @@ import {
   orderHomepageProjects,
   SITE_SETTINGS_DEFAULTS,
   SITE_SETTINGS_LIMITS,
-  type Project,
+  type Construction,
   type SecondaryContactKind,
   type SiteSettingsOverrides,
   type UpdateSiteSettingsInput,
@@ -141,7 +141,7 @@ function Editor({
 }: {
   initial: SiteSettingsOverrides;
   updatedAt: string;
-  published: Project[];
+  published: Construction[];
 }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<Record<TextKey, string>>(() => {

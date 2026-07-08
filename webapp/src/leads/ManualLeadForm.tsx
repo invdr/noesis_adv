@@ -40,7 +40,7 @@ export function ManualLeadForm({
   const [selectedClientId, setSelectedClientId] = useState("");
   const [source, setSource] = useState("offline");
   const [funnelId, setFunnelId] = useState(() => defaultFunnelId ?? funnels[0]?.id ?? "");
-  const [projectId, setProjectId] = useState("");
+  const [constructionId, setProjectId] = useState("");
   const [referrerId, setReferrerId] = useState("");
   const [assigneeId, setAssigneeId] = useState(""); // "" — не назначать/авто
   const [takeSelf, setTakeSelf] = useState(false);
@@ -94,7 +94,7 @@ export function ManualLeadForm({
         consent, // реальный стейт чекбокса; сервер требует true (иначе 422)
         source,
         funnelId: funnelId || undefined,
-        projectId: projectId || undefined,
+        constructionId: constructionId || undefined,
         message: message.trim() || undefined,
         contactId: selectedClientId || undefined,
         referrerId: referrerId || undefined,
@@ -254,7 +254,7 @@ export function ManualLeadForm({
         </div>
 
         <Field label="ЖК (необязательно)">
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <select value={constructionId} onChange={(e) => setProjectId(e.target.value)}>
             <option value="">— не выбран —</option>
             {(projects.data ?? []).map((p) => (
               <option key={p.id} value={p.id}>

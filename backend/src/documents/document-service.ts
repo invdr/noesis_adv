@@ -28,11 +28,11 @@ const documentOrderBy: Prisma.DocumentOrderByWithRelationInput[] = [
 /** Документы одного ЖК для CRM (все категории, включая архивные). */
 export async function listProjectDocuments(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
 ): Promise<Document[]> {
-  await requireProject(rt, projectId);
+  await requireProject(rt, constructionId);
   const rows = await rt.prisma.document.findMany({
-    where: { projectId },
+    where: { constructionId },
     include: documentInclude,
     orderBy: documentOrderBy,
   });
@@ -46,19 +46,19 @@ export async function listProjectDocuments(
  */
 export async function addDocument(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   input: CreateDocumentInput,
   file: File | undefined,
   userId: string,
 ): Promise<Document> {
-  await requireProject(rt, projectId);
+  await requireProject(rt, constructionId);
   await requireLiveCategory(rt, input.categoryId);
-  const position = await nextPosition(rt, projectId, input.categoryId);
+  const position = await nextPosition(rt, constructionId, input.categoryId);
 
   if (input.kind === "link") {
     const doc = await rt.prisma.document.create({
       data: {
-        projectId,
+        constructionId,
         categoryId: input.categoryId,
         name: input.name,
         kind: "link",
@@ -90,7 +90,7 @@ export async function addDocument(
     const name = input.name?.trim() || stripExtension(file.name);
     const doc = await rt.prisma.document.create({
       data: {
-        projectId,
+        constructionId,
         categoryId: input.categoryId,
         name,
         kind: "file",
@@ -110,12 +110,12 @@ export async function addDocument(
 /** Правка метаданных документа (название, категория; для ссылки — url/подпись). */
 export async function updateDocument(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   id: string,
   input: UpdateDocumentInput,
 ): Promise<Document> {
   const doc = await rt.prisma.document.findFirst({
-    where: { id, projectId },
+    where: { id, constructionId },
     include: documentInclude,
   });
   if (!doc) throw new HttpError(404, "not_found", "Документ не найден");
@@ -143,10 +143,10 @@ export async function updateDocument(
 /** Удалить документ из ЖК — сразу и навсегда (файл с диска чистит файловый сервис). */
 export async function deleteDocument(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   id: string,
 ): Promise<void> {
-  const doc = await rt.prisma.document.findFirst({ where: { id, projectId } });
+  const doc = await rt.prisma.document.findFirst({ where: { id, constructionId } });
   if (!doc) throw new HttpError(404, "not_found", "Документ не найден");
   await rt.prisma.document.delete({ where: { id } });
   if (doc.kind === "file" && doc.assetId) {
@@ -165,14 +165,14 @@ export async function listPublicProjectDocuments(
   rt: Runtime,
   slug: string,
 ): Promise<DocumentGroup[] | null> {
-  const project = await rt.prisma.project.findFirst({
-    where: { slug, status: "published", comingSoon: false, archivedAt: null },
+  const project = await rt.prisma.construction.findFirst({
+    where: { slug, status: "published", archivedAt: null },
     select: { id: true },
   });
   if (!project) return null;
 
   const rows = await rt.prisma.document.findMany({
-    where: { projectId: project.id, category: { archivedAt: null } },
+    where: { constructionId: project.id, category: { archivedAt: null } },
     include: documentInclude,
     orderBy: documentOrderBy,
   });
@@ -205,10 +205,9 @@ export async function listPublicDocumentCategories(
 
   const result: DocumentCategoryProjects[] = [];
   for (const cat of categories) {
-    const projects = await rt.prisma.project.findMany({
+    const projects = await rt.prisma.construction.findMany({
       where: {
         status: "published",
-        comingSoon: false,
         archivedAt: null,
         documents: { some: { categoryId: cat.id } },
       },
@@ -238,7 +237,7 @@ function dto(rt: Runtime, doc: DocumentRow): Document {
 }
 
 async function requireProject(rt: Runtime, id: string): Promise<void> {
-  const exists = await rt.prisma.project.count({ where: { id } });
+  const exists = await rt.prisma.construction.count({ where: { id } });
   if (!exists) throw new HttpError(404, "not_found", "ЖК не найден");
 }
 
@@ -254,11 +253,11 @@ async function requireLiveCategory(rt: Runtime, id: string): Promise<void> {
 /** Следующая позиция документа внутри категории конкретного ЖК. */
 async function nextPosition(
   rt: Runtime,
-  projectId: string,
+  constructionId: string,
   categoryId: string,
 ): Promise<number> {
   const last = await rt.prisma.document.findFirst({
-    where: { projectId, categoryId },
+    where: { constructionId, categoryId },
     orderBy: { position: "desc" },
     select: { position: true },
   });

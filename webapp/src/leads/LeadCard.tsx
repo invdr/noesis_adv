@@ -137,7 +137,7 @@ export function LeadCard({
     onSuccess: invalidate,
   });
   const changeProject = useMutation({
-    mutationFn: (projectId: string | null) => api.updateLeadProject(leadId, { projectId }),
+    mutationFn: (constructionId: string | null) => api.updateLeadProject(leadId, { constructionId }),
     onSuccess: invalidate,
   });
   const setReferrer = useMutation({
@@ -216,7 +216,7 @@ export function LeadCard({
   const funnelName = funnels.find((f) => f.id === d.stage.funnelId)?.name ?? null;
   const projectOptions = projects.data ?? [];
   const projectMissing =
-    d.projectId !== null && !projectOptions.some((p) => p.id === d.projectId);
+    d.constructionId !== null && !projectOptions.some((p) => p.id === d.constructionId);
   // Цвет этапа для пилюли в шапке (у архивного этапа токена нет — без точки).
   const stageColor = stages.find((s) => s.id === d.stageId)?.color;
   const isActive = d.stage.kind === "in_progress";
@@ -472,7 +472,7 @@ export function LeadCard({
             </button>
           </span>
           <span>{d.sourceName ?? sourceLabel(d.source)}</span>
-          {d.projectName && <span>{d.projectName}</span>}
+          {d.constructionName && <span>{d.constructionName}</span>}
           <span className="subtle">
             от {formatDateTime(d.createdAt)}
             {isActive ? ` · в работе ${ageDays} дн.` : " · закрыта"}
@@ -581,13 +581,13 @@ export function LeadCard({
                 {editable ? (
                   <>
                     <select
-                      value={d.projectId ?? ""}
+                      value={d.constructionId ?? ""}
                       onChange={(e) => changeProject.mutate(e.target.value || null)}
                       disabled={changeProject.isPending || projects.isLoading}
                     >
                       <option value="">— не выбран —</option>
-                      {projectMissing && d.projectId && (
-                        <option value={d.projectId}>{d.projectName ?? d.projectId} (архив)</option>
+                      {projectMissing && d.constructionId && (
+                        <option value={d.constructionId}>{d.constructionName ?? d.constructionId} (архив)</option>
                       )}
                       {projectOptions.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -603,7 +603,7 @@ export function LeadCard({
                   </>
                 ) : (
                   <div className="field-value">
-                    {d.projectId ? d.projectName ?? d.projectId : <span className="muted">—</span>}
+                    {d.constructionId ? d.constructionName ?? d.constructionId : <span className="muted">—</span>}
                   </div>
                 )}
               </div>

@@ -26,7 +26,7 @@ type StageRefRow = Pick<PrismaStage, "id" | "name" | "kind" | "funnelId">;
 /** Строка заявки вместе с этапом и (опционально) названиями ЖК/источника. */
 export type LeadRow = PrismaLead & {
   stage: StageRefRow;
-  project?: { name: string } | null;
+  construction?: { name: string } | null;
   sourceOption?: { name: string } | null;
   contact?: { fullName: string } | null;
 };
@@ -72,8 +72,8 @@ export function toLeadDto(lead: LeadRow): Lead {
     sourceName: lead.sourceOption?.name ?? null,
     stageId: lead.stageId,
     stage: toStageRef(lead.stage),
-    projectId: lead.projectId,
-    projectName: lead.project?.name ?? null,
+    constructionId: lead.constructionId,
+    constructionName: lead.construction?.name ?? null,
     message: lead.message,
     contactId: lead.contactId,
     contactName: lead.contact?.fullName ?? null,

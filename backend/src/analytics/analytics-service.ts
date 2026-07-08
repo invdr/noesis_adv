@@ -159,7 +159,7 @@ export async function getAnalytics(
     select: {
       id: true,
       source: true,
-      projectId: true,
+      constructionId: true,
       createdAt: true,
       assigneeId: true,
       stage: { select: { id: true, name: true, kind: true } },
@@ -204,15 +204,15 @@ export async function getAnalytics(
     }))
     .sort((a, b) => b.count - a.count);
 
-  // По ЖК (только заявки с привязкой).
+  // По конструкции (только заявки с привязкой).
   const projectCounts = new Map<string, number>();
   for (const l of leads) {
-    if (l.projectId) {
-      projectCounts.set(l.projectId, (projectCounts.get(l.projectId) ?? 0) + 1);
+    if (l.constructionId) {
+      projectCounts.set(l.constructionId, (projectCounts.get(l.constructionId) ?? 0) + 1);
     }
   }
   const projects = projectCounts.size
-    ? await rt.prisma.project.findMany({
+    ? await rt.prisma.construction.findMany({
         where: { id: { in: [...projectCounts.keys()] } },
         select: { id: true, name: true },
       })

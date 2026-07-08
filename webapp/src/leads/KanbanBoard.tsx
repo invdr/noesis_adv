@@ -21,7 +21,7 @@ import { canEditLead, formatDateTime, sourceLabel } from "./shared";
 export interface BoardFilters {
   funnelId?: string;
   source?: string;
-  projectId?: string;
+  constructionId?: string;
   assigneeId?: string;
   from?: string;
   to?: string;
