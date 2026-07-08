@@ -34,11 +34,11 @@ export const ROOM_FORMAT_LABEL: Record<RoomFormat, string> = {
  * `.badge-soon`. `bg` — фон, `fg` — контрастный текст.
  */
 export const BADGE_PALETTE = {
-  blue: { label: "Синий", bg: "#0062FF", fg: "#ffffff" },
+  blue: { label: "Красный", bg: "#A4161A", fg: "#ffffff" },
   graphite: { label: "Графит", bg: "#262C35", fg: "#ffffff" },
   gray: { label: "Серый", bg: "#54555E", fg: "#ffffff" },
-  light: { label: "Голубой", bg: "#5b9bff", fg: "#11151c" },
-  soft: { label: "Светлый", bg: "#EEF3FF", fg: "#0062FF" },
+  light: { label: "Светло-красный", bg: "#D46A6A", fg: "#3a0d12" },
+  soft: { label: "Розовый", bg: "#FBEAEA", fg: "#A4161A" },
 } as const;
 export type BadgeColor = keyof typeof BADGE_PALETTE;
 

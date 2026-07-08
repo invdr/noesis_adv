@@ -29,7 +29,7 @@ export type StageColor = z.infer<typeof stageColorSchema>;
 /** Цвета для пикера в CRM (значение + подпись). */
 export const STAGE_COLORS: { value: StageColor; label: string }[] = [
   { value: "slate", label: "Серый" },
-  { value: "blue", label: "Синий" },
+  { value: "blue", label: "Бордовый" },
   { value: "green", label: "Зелёный" },
   { value: "amber", label: "Янтарный" },
   { value: "red", label: "Красный" },
@@ -41,7 +41,7 @@ export const STAGE_COLORS: { value: StageColor; label: string }[] = [
 /** Акцентный hex по токену цвета — для инлайновых мест (бары аналитики). */
 export const STAGE_COLOR_HEX: Record<StageColor, string> = {
   slate: "#64748b",
-  blue: "#2563eb",
+  blue: "#A4161A",
   green: "#059669",
   amber: "#d97706",
   red: "#dc2626",

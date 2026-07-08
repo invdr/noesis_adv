@@ -23,11 +23,11 @@
   --border-strong: #d3d9e2;
 
   /* Акценты */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  --primary: #A4161A;
+  --primary-hover: #7B1113;
   --primary-fg: #ffffff;
-  --primary-soft: #eff6ff;
-  --primary-soft-border: #bfdbfe;
+  --primary-soft: #FBEAEA;
+  --primary-soft-border: #F0C9C9;
 
   --success: #047857;
   --success-soft: #ecfdf5;
@@ -42,7 +42,7 @@
   --danger-soft: #fef2f2;
   --danger-border: #fecaca;
 
-  --ring: rgba(37, 99, 235, 0.35);
+  --ring: rgba(164, 22, 26, 0.35);
 
   --radius-sm: 8px;
   --radius: 10px;
@@ -1186,7 +1186,7 @@ td select {
 /* ── Цвета этапов (палитра StageColor) ───────────────────────────────────── */
 
 .stage-c-slate  { --st-accent: #64748b; --st-soft: #f1f5f9; --st-border: #e2e8f0; --st-text: #475569; }
-.stage-c-blue   { --st-accent: #2563eb; --st-soft: #eff6ff; --st-border: #bfdbfe; --st-text: #1d4ed8; }
+.stage-c-blue   { --st-accent: #A4161A; --st-soft: #FBEAEA; --st-border: #F0C9C9; --st-text: #7B1113; }
 .stage-c-green  { --st-accent: #059669; --st-soft: #ecfdf5; --st-border: #a7f3d0; --st-text: #047857; }
 .stage-c-amber  { --st-accent: #d97706; --st-soft: #fffbeb; --st-border: #fde68a; --st-text: #b45309; }
 .stage-c-red    { --st-accent: #dc2626; --st-soft: #fef2f2; --st-border: #fecaca; --st-text: #b91c1c; }

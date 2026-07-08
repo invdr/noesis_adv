@@ -233,7 +233,7 @@ function Dashboard({
               label: m.name || m.email || "Не распределено",
               value: m.leads,
               sublabel: `сделок ${m.won} · контактов ${m.contacts}`,
-              color: m.assigneeId === null ? "#94a3b8" : "#2563eb",
+              color: m.assigneeId === null ? "#94a3b8" : "#A4161A",
             }))}
           />
         </Panel>
@@ -375,8 +375,8 @@ function DailyChart({ points }: { points: { date: string; count: number }[] }) {
   return (
     <>
       <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ maxWidth: w, display: "block" }}>
-        <polygon points={area} fill="#dbeafe" />
-        <polyline points={line} fill="none" stroke="#2563eb" strokeWidth={2} />
+        <polygon points={area} fill="#F0C9C9" />
+        <polyline points={line} fill="none" stroke="#A4161A" strokeWidth={2} />
       </svg>
       <div className="row" style={{ justifyContent: "space-between", fontSize: 11, color: "var(--fg-subtle)" }}>
         <span>{points[0]?.date}</span>
@@ -395,7 +395,7 @@ function WeeklyChart({ points }: { points: WeeklyPoint[] }) {
   const labelH = 16;
   const chartH = h - labelH;
   const series = [
-    { key: "created", color: "#2563eb", label: "Создано" },
+    { key: "created", color: "#A4161A", label: "Создано" },
     { key: "won", color: "#16a34a", label: "Сделки" },
     { key: "lost", color: "#dc2626", label: "Отказы" },
   ] as const;
