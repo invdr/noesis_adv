@@ -17,7 +17,7 @@ const link = (hash: string) => `${base}${hash}`;
 ---
 <nav class={navClass} id="nav">
   <a href={homeHref} class="nav-logo">
-    <img src="/assets/logo-white.png" alt={s.siteName}>
+    <span class="brand-word">{s.siteName}</span>
   </a>
 
   <div class="nav-links">
@@ -39,7 +39,7 @@ const link = (hash: string) => `${base}${hash}`;
 
 <div class="mobile-menu" id="mobileMenu">
   <div class="mobile-menu-top">
-    <img src="/assets/logo-white.png" alt={s.siteName}>
+    <span class="brand-word">{s.siteName}</span>
     <button class="mobile-close" id="mobileCloseBtn" aria-label="Закрыть">×</button>
   </div>
   <div class="mobile-menu-links">

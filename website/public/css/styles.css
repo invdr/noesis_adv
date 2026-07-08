@@ -72,6 +72,10 @@ a,button,input,[role=button]{touch-action:manipulation}
 .nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px clamp(20px,5vw,72px);background:transparent;background-image:linear-gradient(180deg,rgba(38,44,53,.55),rgba(38,44,53,0) 100%);transition:background .4s ease,padding .4s ease,box-shadow .4s ease}
 .nav.scrolled{background:rgba(38,44,53,.92);background-image:none;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 1px 0 rgba(255,255,255,.07);padding-top:14px;padding-bottom:14px}
 .nav-logo img{height:38px;width:auto}
+.brand-word{font-family:var(--display);font-size:32px;line-height:1;letter-spacing:.09em;text-transform:uppercase;color:#fff}
+.brand-word--ink{color:var(--graphite)}
+.footer-brand .brand-word{font-size:38px;color:#fff}
+.mobile-menu-top .brand-word{color:#fff}
 .nav-links{display:flex;align-items:center;gap:clamp(14px,1.8vw,34px)}
 .nav-links a{font-size:14px;font-weight:500;letter-spacing:.01em;color:#fff;padding:6px 0;opacity:.86;transition:opacity .25s ease}
 .nav-links a:hover{opacity:1}
