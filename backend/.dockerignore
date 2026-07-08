@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/.astro
+**/.output
+**/build
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.scratch
+webapp
+website
+project
+chats

@@ -1,0 +1,60 @@
+---
+// Блок «Выбор квартиры» (шахматка / планировки / 3D-тур). Ссылки настраиваются
+// per-ЖК в CRM: карточка инструмента рендерится только с заполненной ссылкой,
+// без «мёртвых» href="#"; пустой блок скрыт целиком.
+import type { ProjectTools } from "@gsk-tower/contracts";
+
+interface Props {
+  tools?: ProjectTools | null;
+}
+const { tools = null } = Astro.props;
+
+const CARDS = [
+  {
+    key: "chessboardUrl",
+    title: "Интерактивная шахматка",
+    desc: "Выбор квартиры по этажам, статусу и цене в реальном времени",
+    cta: "Открыть →",
+    icon: '<rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect>',
+  },
+  {
+    key: "plansUrl",
+    title: "Планировки",
+    desc: "Все типы планировок с площадями и расстановкой мебели",
+    cta: "Смотреть →",
+    icon: '<path d="M3 4h18v16H3z"></path><path d="M9 4v9H3M21 13h-6v7"></path>',
+  },
+  {
+    key: "tour3dUrl",
+    title: "3D тур",
+    desc: "Виртуальная прогулка по двору и видовым этажам комплекса",
+    cta: "Запустить →",
+    icon: '<path d="M12 2l9 5v10l-9 5-9-5V7z"></path><path d="M12 12l9-5M12 12v10M12 12L3 7"></path>',
+  },
+] as const;
+
+const cards = CARDS.map((c) => ({
+  ...c,
+  url: tools?.[c.key] ?? "",
+})).filter((c) => c.url);
+---
+{cards.length > 0 && (
+<div>
+  <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Выбор квартиры</span></div>
+  <div class="project-tools">
+    {cards.map((c) => (
+    <a
+      href={c.url}
+      class="project-tool"
+      target="_blank"
+      rel="noopener"
+    >
+      <span class="project-tool-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" set:html={c.icon} /></span>
+      <span class="project-tool-t">{c.title}</span>
+      <span class="project-tool-d">{c.desc}</span>
+      <span class="project-tool-link">{c.cta}</span>
+    </a>
+    ))}
+  </div>
+</div>
+)}

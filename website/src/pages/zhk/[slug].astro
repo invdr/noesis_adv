@@ -1,0 +1,226 @@
+---
+// Реальная страница ЖК /zhk/<slug>: SEO-meta, прямой доступ и индексация.
+// Только опубликованные обычные ЖК — «скоро» (тизер без страницы) и архив сюда
+// не попадают (фильтр в getStaticPaths).
+import SiteHead from "../../components/SiteHead.astro";
+import Footer from "../../components/Footer.astro";
+import CookieBanner from "../../components/CookieBanner.astro";
+import Header from "../../components/Header.astro";
+import ProjectTools from "../../components/ProjectTools.astro";
+import {
+  fetchProjects,
+  fetchDocumentCategories,
+  fetchProjectDocuments,
+  fetchProjectProgress,
+  fetchSiteSettings,
+  toProjectView,
+  documentHref,
+  documentMeta,
+  type Project,
+} from "../../lib/api";
+import { progressPeriodLabel } from "@gsk-tower/contracts";
+import { buildChrome } from "../../lib/chrome";
+
+export async function getStaticPaths() {
+  const projects = await fetchProjects();
+  return projects
+    .filter((p) => !p.comingSoon)
+    .map((p) => ({ params: { slug: p.slug }, props: { project: p } }));
+}
+
+interface Props {
+  project: Project;
+}
+const { project } = Astro.props;
+const view = toProjectView(project);
+const [groups, progress, docCategories, settings] = await Promise.all([
+  fetchProjectDocuments(project.slug),
+  fetchProjectProgress(project.slug),
+  fetchDocumentCategories(),
+  fetchSiteSettings(),
+]);
+const chrome = buildChrome(settings);
+const s = chrome.s;
+const hasDocs = groups.length > 0;
+const hasProgress = progress.length > 0;
+const homeDocsHiddenSet = new Set(s.homepageHidden);
+const hasHomeDocs = docCategories.some((c) =>
+  c.projects.some((p) => !homeDocsHiddenSet.has(p.id)),
+);
+
+// URL API в браузере (для формы заявки) — как на главной, через PUBLIC_API_URL.
+const apiUrl = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3000";
+
+const about =
+  project.description ||
+  "Современный жилой комплекс в Грозном от ГСК TOWER. Удобные планировки, продуманная инфраструктура и современные инженерные решения. Покупка напрямую от застройщика — без посредников и переплат, с поддержкой на всех этапах сделки.";
+
+const displayName = `ЖК ${view.name}`;
+const title = `${displayName} — квартиры в Грозном | ГСК TOWER`;
+const description = project.description
+  ? project.description.slice(0, 200)
+  : `${displayName} — жилой комплекс в Грозном от ГСК TOWER. ${view.roomsLabel}${project.priceFrom ? `, ${view.priceLabel}` : ""}. Квартиры напрямую от застройщика, без посредников.`;
+---
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<SiteHead
+  title={title}
+  description={description}
+  path={`/zhk/${project.slug}`}
+  image={view.img || "/assets/og-default.jpg"}
+  siteName={s.siteName}
+  metrikaId={chrome.metrikaId}
+/>
+</head>
+<body>
+<Header chrome={chrome} showDocs={hasHomeDocs} solid />
+
+<div class="project-hero">
+  <img src={view.img} srcset={view.imgSrcset || undefined} sizes={view.imgSrcset ? "100vw" : undefined} alt={view.name}>
+  <div class="project-hero-gradient"></div>
+  <div class="project-hero-content">
+    <div class="wrap-narrow">
+      {view.badges.length > 0 && (
+        <div class="project-hero-badges">
+          {view.badges.map((b) => (
+            <span class="project-badge" style={`background:${b.bg};color:${b.fg}`}>{b.text}</span>
+          ))}
+        </div>
+      )}
+      <h1 id="projectName">{displayName}</h1>
+      <p id="projectAddress">{view.address}</p>
+    </div>
+  </div>
+</div>
+
+<div class="wrap-narrow project-body">
+  <ProjectTools tools={project.tools} />
+
+  <div class="project-about-grid">
+    <div>
+      <h2 class="h2 h2-md">О комплексе</h2>
+      <p>{about}</p>
+      <div class="project-about-actions">
+        <button type="button" class="btn btn-primary" data-lead-open>{s.contactsLeaveCta}</button>
+        <a href={chrome.phoneHref} class="btn btn-outline-dark">{s.ctaOrderCall}</a>
+      </div>
+    </div>
+    <div class="project-specs">
+      <div class="project-spec project-spec-wide">
+        <span class="mono">Адрес</span>
+        <span>{view.address}</span>
+      </div>
+      <div class="project-spec">
+        <span class="mono">Комнатность</span>
+        <span>{view.roomsLabel}</span>
+      </div>
+      <div class="project-spec">
+        <span class="mono">Покупка</span>
+        <span>Без посредников</span>
+      </div>
+      <div class="project-spec project-spec-wide">
+        <span class="mono">Стоимость</span>
+        <span class="project-spec-price">{view.priceLabel}</span>
+      </div>
+    </div>
+  </div>
+
+  {hasProgress && (
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Ход строительства</span></div>
+    {progress.map((album) => (
+      <div class="progress-album">
+        <h2 class="h2 docs-category-title">{progressPeriodLabel(album.year, album.month)}</h2>
+        {album.note && <p class="progress-note">{album.note}</p>}
+        <div class="progress-grid">
+          {album.photos.map((photo) => (
+            <a class="progress-photo" href={photo.url} target="_blank" rel="noopener" aria-label={`Фото: ${progressPeriodLabel(album.year, album.month)}`}>
+              <img
+                src={photo.renditions?.thumbnailUrl ?? photo.url}
+                srcset={photo.renditions?.srcset || undefined}
+                sizes={photo.renditions?.srcset ? "(max-width: 700px) 50vw, 25vw" : undefined}
+                alt={`${view.name} — ход строительства, ${progressPeriodLabel(album.year, album.month)}`}
+                loading="lazy"
+              >
+            </a>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+  )}
+
+  {hasDocs && (
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Документы</span></div>
+    {groups.map((g) => (
+      <div class="docs-category">
+        <h2 class="h2 docs-category-title">{g.category.name}</h2>
+        <div class="docs-grid">
+          {g.documents.map((d) => (
+            <a class="doc-card" href={documentHref(d)} target="_blank" rel="noopener">
+              <span class="doc-card-icon"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H5a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9z"></path><path d="M14 2v7h7"></path></svg></span>
+              <span class="doc-card-text"><span class="doc-card-name">{d.name}</span><span class="doc-card-meta mono">{documentMeta(d)}</span></span>
+              <span class="doc-card-dl">↓</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+  )}
+
+  <div class="project-cta">
+    <div class="pattern-overlay pattern-overlay-cta"></div>
+    <div class="project-cta-text">
+      <h3>Заинтересовал {view.name}?</h3>
+      <p>Оставьте заявку — подберём квартиру и условия рассрочки под ваш бюджет.</p>
+    </div>
+    <div class="project-cta-actions">
+      <button type="button" class="btn btn-white" data-lead-open>{s.contactsLeaveCta}</button>
+      <a href="/#catalog" class="btn btn-outline-white">К другим ЖК</a>
+    </div>
+  </div>
+</div>
+
+<div class="lead-modal" id="leadModal" role="dialog" aria-modal="true" aria-labelledby="leadModalTitle" hidden>
+  <div class="lead-modal-overlay" data-lead-close></div>
+  <div class="lead-modal-card hero-card" role="document">
+    <button type="button" class="lead-modal-close" aria-label="Закрыть" data-lead-close>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+    </button>
+    <span class="mono hero-card-label">{view.name}</span>
+    <p class="hero-card-title" id="leadModalTitle">Оставьте номер — перезвоним за 15 минут и подберём квартиру в «{view.name}»</p>
+    <form class="hero-card-form" id="modalLeadForm" novalidate>
+      <label class="visually-hidden" for="modalLeadName">Как к вам обращаться</label>
+      <input id="modalLeadName" type="text" placeholder="Как к вам обращаться" name="name" autocomplete="name" minlength="2" maxlength="120" required>
+      <label class="visually-hidden" for="modalLeadPhone">Номер телефона</label>
+      <input id="modalLeadPhone" type="tel" placeholder="+7 (___) ___-__-__" name="phone" autocomplete="tel" inputmode="tel" maxlength="18" required>
+      <input class="lead-hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <label class="hero-card-consent">
+        <input type="checkbox" id="modalLeadConsent" name="consent" required>
+        <span class="hero-card-consent-box" aria-hidden="true">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"></path></svg>
+        </span>
+        <span class="hero-card-consent-text">Нажимая кнопку, вы соглашаетесь с <a href="/privacy" target="_blank" rel="noopener">обработкой персональных данных</a></span>
+      </label>
+      <button type="submit" class="btn btn-primary">{s.ctaOrderCall}</button>
+      <p class="hero-card-success" id="modalLeadSuccess" role="status" aria-live="polite" hidden>Спасибо! Перезвоним в течение 15 минут.</p>
+    </form>
+  </div>
+</div>
+
+<Footer chrome={chrome} showDocs={hasHomeDocs} />
+<CookieBanner />
+
+<script is:inline define:vars={{ apiUrl, zhkSlug: project.slug, zhkId: project.id, zhkName: view.name }}>
+  window.GSK_API_URL = apiUrl;
+  // Контекст для формы заявки: привязка лида к этому ЖК (source=project).
+  window.GSK_PROJECT = { id: zhkId, name: zhkName, slug: zhkSlug };
+  // Цель Метрики «просмотр ЖК» (Веха 4.3); no-op, если счётчик не задан.
+  if (window.ymGoal) window.ymGoal('zhk_view', { slug: zhkSlug });
+</script>
+<script is:inline src="/js/page.js"></script>
+</body>
+</html>

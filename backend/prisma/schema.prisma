@@ -1,0 +1,696 @@
+// Единый источник модели данных. Миграции генерируются через
+// `bun run --cwd backend prisma:migrate` — SQL руками не пишем.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  manager
+}
+
+/// Учётная запись CRM. Создаётся только администратором (публичной
+/// регистрации нет). Вход по email; пароль хранится только в виде хеша.
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  /// Отображаемое имя (ФИО) сотрудника. Показывается в CRM вместо почты
+  /// (ответственный по заявке, автор события). null — показываем email.
+  name               String?
+  passwordHash       String
+  role               UserRole  @default(manager)
+  /// Заблокированный пользователь не может войти; его сессии прекращаются.
+  isActive           Boolean   @default(true)
+  /// Требуется сменить пароль при следующем входе (первый вход / сброс).
+  mustChangePassword Boolean   @default(false)
+  /// Telegram chat id для личных уведомлений о назначении заявки (опционально).
+  telegramChatId     String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  sessions           Session[]
+  /// Заявки, где пользователь — ответственный менеджер.
+  assignedLeads      Lead[]            @relation("LeadAssignee")
+  /// Заметки, оставленные пользователем в карточках заявок.
+  authoredNotes      LeadNote[]
+  /// События смены статуса заявок, инициированные пользователем.
+  authoredEvents     LeadStatusEvent[]
+  /// События назначения, где пользователь — новый ответственный.
+  assignEventsAsAssignee LeadAssignEvent[] @relation("AssignEventAssignee")
+  /// События назначения, инициированные пользователем.
+  authoredAssignEvents   LeadAssignEvent[] @relation("AssignEventAuthor")
+  /// События задач «следующий контакт», инициированные пользователем.
+  authoredContactEvents  LeadContactEvent[] @relation("ContactEventAuthor")
+  /// Файлы, загруженные пользователем (фото ЖК, документы и т. п.).
+  uploadedAssets     Asset[]
+  /// ЖК, заведённые пользователем.
+  authoredProjects   Project[]         @relation("ProjectAuthor")
+  /// Новости, заведённые пользователем.
+  authoredNews       News[]            @relation("NewsAuthor")
+  /// Документы, загруженные пользователем.
+  authoredDocuments  Document[]        @relation("DocumentAuthor")
+  /// Альбомы хода строительства, заведённые пользователем.
+  authoredProgress   ProgressAlbum[]   @relation("ProgressAlbumAuthor")
+  /// Контакты CRM, заведённые пользователем вручную.
+  authoredContacts   Contact[]         @relation("ContactAuthor")
+
+  @@index([email])
+}
+
+/// Серверная сессия. В cookie уходит «сырой» токен, в БД — его хеш.
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  /// Время последней активности — для продления TTL при работе в CRM.
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Тип загружаемого файла. Изображения проходят обработку (размеры + WebP),
+/// документы хранятся как есть.
+enum AssetKind {
+  image
+  document
+}
+
+/// Загруженный файл (фото ЖК, обложка новости, документ). Бинарь лежит на
+/// диске (постоянный том VPS, раздаётся nginx), в БД — только метаданные и
+/// ключи хранения. Имена на диске обезличены; исходное имя — в `originalName`.
+model Asset {
+  id           String    @id @default(cuid())
+  kind         AssetKind
+  /// Исходное имя файла (для отображения/скачивания документа).
+  originalName String
+  mimeType     String
+  /// Размер оригинала в байтах.
+  size         Int
+  /// Обезличенный ключ оригинала на томе (относительный путь с подпапкой,
+  /// напр. `ab/abcd….webp`). Уникален.
+  storageKey   String    @unique
+  /// Производные изображения под `srcset`: массив `{ width, key }` (WebP).
+  /// Для документов — пустой массив.
+  renditions   Json      @default("[]")
+  /// Кто загрузил; null — система/сид. При удалении пользователя обнуляется.
+  createdById  String?
+  createdBy    User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+  /// Обратные связи: где файл используется в контенте.
+  developerLogos Developer[]    @relation("DeveloperLogo")
+  projectCovers  Project[]      @relation("ProjectCover")
+  projectImages  ProjectImage[] @relation("ProjectImageAsset")
+  newsCovers     News[]         @relation("NewsCover")
+  documentFiles  Document[]     @relation("DocumentFile")
+  progressPhotos ProgressPhoto[] @relation("ProgressPhotoAsset")
+
+  @@index([kind])
+  @@index([createdById])
+}
+
+/// Источник заявки — управляемый справочник (ведёт admin). Системные строки
+/// создаются миграцией/сидом со стабильными id-слагами: 4 веб-источника
+/// (isWeb) зашиты в формы лендинга — их нельзя менять вовсе; «Оффлайн»/«Прочее»
+/// (isSystem) можно переименовать, но не удалить/архивировать (дефолты ручного
+/// приёма). Кастомные — полный CRUD, удаление блокируется использованием.
+model LeadSource {
+  id         String    @id @default(cuid())
+  name       String
+  /// Позиция в списках выбора (меньше — раньше).
+  order      Int       @default(0)
+  /// Встроенный: нельзя удалить/архивировать.
+  isSystem   Boolean   @default(false)
+  /// Веб-источник лендинга: id-слаг шлют формы сайта, нельзя и переименовать.
+  isWeb      Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  leads      Lead[]
+
+  @@index([order])
+  @@index([archivedAt])
+}
+
+/// Тип контакта CRM. `client` — покупатель (к нему привязаны заявки),
+/// `realtor`/`agency` — партнёр, приводящий покупателей (реферер заявок).
+enum ContactKind {
+  client
+  realtor
+  agency
+}
+
+/// Тип (исход) этапа воронки. Определяет поведение заявки: in_progress —
+/// активна; won/lost — сделка закрыта. Используется в аналитике конверсии.
+enum StageKind {
+  in_progress
+  won
+  lost
+}
+
+/// Воронка продаж: именованный набор этапов. Несколько воронок позволяют вести
+/// разные процессы (например, «Продажа» и «Постпродажа»). Ровно одна воронка
+/// помечена `isDefault` — в её входной этап падают новые заявки с лендинга.
+/// Инварианты (по каждой живой воронке ≥1 won, ≥1 lost, ровно 1 isEntry)
+/// поддерживает сервис.
+model Funnel {
+  id         String    @id @default(cuid())
+  name       String
+  /// Позиция в списке воронок (меньше — раньше).
+  order      Int       @default(0)
+  /// Воронка по умолчанию: сюда попадают новые заявки. Ровно одна среди живых.
+  isDefault  Boolean   @default(false)
+  /// Архивация вместо удаления: воронка скрыта, её этапы тоже уходят в архив.
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  stages     Stage[]
+
+  @@index([order])
+  @@index([archivedAt])
+}
+
+/// Этап воронки CRM. Динамический справочник (не enum) — состав воронки
+/// настраивает администратор. Инварианты (≥1 won, ≥1 lost, ровно 1 isEntry
+/// среди живых этапов воронки) поддерживает сервис, а не БД.
+model Stage {
+  id         String    @id @default(cuid())
+  name       String
+  /// Воронка, которой принадлежит этап.
+  funnelId   String
+  funnel     Funnel    @relation(fields: [funnelId], references: [id], onDelete: Restrict)
+  /// Позиция в воронке (плоский список): меньше — раньше.
+  order      Int
+  kind       StageKind @default(in_progress)
+  /// Цвет блока этапа (токен палитры StageColor в контракте): колонка доски,
+  /// чипы в CRM. Независим от kind — выбирает admin.
+  color      String    @default("slate")
+  /// Этап входа: сюда попадают новые заявки. Ровно один среди живых.
+  isEntry    Boolean   @default(false)
+  /// Архивация вместо удаления: этап скрыт из воронки, история сохранена.
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  leads      Lead[]
+  /// События истории, ссылающиеся на этот этап.
+  statusEvents LeadStatusEvent[]
+
+  @@index([order])
+  @@index([archivedAt])
+  @@index([funnelId])
+}
+
+/// Тип следующего контакта по заявке (звонок / сообщение / встреча …).
+/// Управляемый справочник (ведёт admin). «Удаление» = архивация: на тип
+/// ссылаются заявки через `nextContactTypeId`.
+model ContactType {
+  id         String    @id @default(cuid())
+  name       String
+  /// Позиция в списке (меньше — раньше).
+  order      Int       @default(0)
+  /// Архивация вместо удаления: тип скрыт из выбора, ссылки заявок целы.
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  leads      Lead[]
+
+  @@index([archivedAt])
+  @@index([order])
+}
+
+/// Контакт CRM: покупатель (client) или партнёр (realtor/agency). Заменяет
+/// прежний эфемерный «клиент»-агрегат. Клиенты заводятся автоматически при
+/// приёме заявки (дедуп по телефону в сервисе); партнёры — вручную.
+model Contact {
+  id          String      @id @default(cuid())
+  kind        ContactKind @default(client)
+  fullName    String
+  /// Нормализованный телефон; у клиента — ключ дедупликации.
+  phone       String?
+  /// Название агентства (для kind=agency).
+  companyName String?
+  /// Агентство риелтора (kind=realtor → Contact kind=agency).
+  agencyId    String?
+  agency      Contact?    @relation("ContactAgency", fields: [agencyId], references: [id], onDelete: SetNull)
+  realtors    Contact[]   @relation("ContactAgency")
+  /// Пользователь, вручную заведший контакт. Для свободных клиентов задаёт видимость менеджеру.
+  createdById String?
+  createdBy   User?       @relation("ContactAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  note        String?
+  /// Паспортные данные клиента для будущего мастера сделок. Для партнёров не
+  /// используются, но остаются nullable ради единой таблицы контактов.
+  birthDate              String?
+  birthPlace             String?
+  passportSeries         String?
+  passportNumber         String?
+  passportIssuedBy       String?
+  passportIssuedAt       String?
+  passportDepartmentCode String?
+  registrationAddress    String?
+  actualAddress          String?
+  /// Ручное переопределение «последнего взаимодействия»; иначе считается по заявкам.
+  lastInteractionAt DateTime?
+  /// Архивация вместо удаления: скрыт из выбора, ссылки заявок целы.
+  archivedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  /// Заявки, где контакт — покупатель.
+  leads         Lead[]    @relation("LeadContact")
+  /// Заявки, приведённые этим контактом (реферер).
+  referredLeads Lead[]    @relation("LeadReferrer")
+
+  @@index([kind])
+  @@index([phone])
+  @@index([agencyId])
+  @@index([createdById])
+  @@index([archivedAt])
+}
+
+/// Заявка с сайта (лид). Обрабатывается в мини-CRM.
+model Lead {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String
+  /// Источник (FK на справочник LeadSource; id системных строк — слаги).
+  source       String     @default("hero_form")
+  sourceOption LeadSource @relation(fields: [source], references: [id], onDelete: Restrict)
+  /// Текущий этап воронки. Перевод заявки между этапами — свободный.
+  stageId   String
+  stage     Stage      @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  /// ЖК заявки (необязателен); при удалении ЖК ссылка обнуляется.
+  projectId String?
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  message   String?
+  /// Контакт-покупатель (Contact kind=client); ставится при приёме по телефону.
+  contactId String?
+  contact   Contact?  @relation("LeadContact", fields: [contactId], references: [id], onDelete: SetNull)
+  /// Реферер — контакт-партнёр (realtor/agency), приведший заявку; ставится в CRM.
+  referrerId String?
+  referrer   Contact? @relation("LeadReferrer", fields: [referrerId], references: [id], onDelete: SetNull)
+  /// Ответственный менеджер; null — заявка в общей очереди.
+  assigneeId String?
+  assignee   User?     @relation("LeadAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  /// Заявка с телефона, по которому уже была заявка за последние 30 дней.
+  isRepeat   Boolean   @default(false)
+  /// Дата следующего контакта (напоминание); снимается при закрытии заявки.
+  nextContactAt DateTime?
+  /// Тип следующего контакта (звонок/сообщение/встреча); справочник ContactType.
+  nextContactTypeId String?
+  nextContactType   ContactType? @relation(fields: [nextContactTypeId], references: [id], onDelete: SetNull)
+  /// Согласие на обработку ПДн (152-ФЗ): время и IP отправителя.
+  consentAt  DateTime  @default(now())
+  consentIp  String    @default("")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  notes        LeadNote[]
+  statusEvents LeadStatusEvent[]
+  assignEvents LeadAssignEvent[]
+  contactEvents LeadContactEvent[]
+
+  @@index([stageId])
+  @@index([createdAt])
+  @@index([phone])
+  @@index([assigneeId])
+  @@index([nextContactTypeId])
+  @@index([contactId])
+  @@index([referrerId])
+  @@index([source])
+  @@index([projectId])
+}
+
+/// Заметка менеджера в карточке заявки (несколько записей, автор и время).
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+}
+
+/// История смены этапа заявки: какой этап, кем и когда установлен. Автор
+/// null — системное событие (создание заявки, перенос при архивации этапа).
+model LeadStatusEvent {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  stageId   String
+  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+}
+
+/// История назначений заявки: кто стал ответственным (null — возврат в общую
+/// очередь), кем назначен (null — система: авто-назначение повторной заявки).
+model LeadAssignEvent {
+  id         String   @id @default(cuid())
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assigneeId String?
+  assignee   User?    @relation("AssignEventAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  authorId   String?
+  author     User?    @relation("AssignEventAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([leadId])
+}
+
+/// История задач «следующий контакт»: назначение/перенос (at + снимок имени
+/// типа) и снятие (at = null). Имя типа снимком — архивация справочника не
+/// ломает историю. Автор всегда пользователь (системных записей нет).
+model LeadContactEvent {
+  id        String    @id @default(cuid())
+  leadId    String
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  /// Вид события: scheduled (назначен/перенесён) | cleared (снято) |
+  /// done (состоялся) | cancelled (отменён) | missed (старый недозвон).
+  kind      String    @default("scheduled")
+  /// Дата контакта события; для cleared — null.
+  at        DateTime?
+  /// Название типа контакта на момент события (снимок), null — без типа.
+  typeName  String?
+  authorId  String?
+  author    User?     @relation("ContactEventAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+
+  @@index([leadId])
+}
+
+/// Статус публикации ЖК. Черновик виден только в CRM.
+enum ProjectStatus {
+  draft
+  published
+}
+
+/// Застройщик — справочник (ведёт admin, менеджер выбирает из него при
+/// заведении ЖК). «Удаление» = архивация: на застройщика ссылаются ЖК, из БД
+/// его не стираем.
+model Developer {
+  id         String    @id @default(cuid())
+  name       String
+  /// Юридические реквизиты ООО для будущих договорных документов.
+  legalName            String?
+  inn                  String?
+  kpp                  String?
+  ogrn                 String?
+  legalAddress         String?
+  postalAddress        String?
+  bankName             String?
+  bankBik              String?
+  bankAccount          String?
+  correspondentAccount String?
+  directorTitle        String?
+  directorFullName     String?
+  directorBasis        String?
+  /// Стабильный человеко-понятный идентификатор. Уникален.
+  slug       String    @unique
+  logoId     String?
+  logo       Asset?    @relation("DeveloperLogo", fields: [logoId], references: [id], onDelete: SetNull)
+  /// Позиция в списке (меньше — раньше).
+  order      Int       @default(0)
+  /// Архивация вместо удаления: скрыт из выбора, ссылки из ЖК сохранены.
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  projects   Project[]
+
+  @@index([archivedAt])
+  @@index([order])
+}
+
+/// Жилой комплекс (ЖК). Карточка каталога лендинга и страницы комплекса.
+/// «Удаление» = архивация (на ЖК ссылаются заявки через projectId). Фото —
+/// через Asset; обложка — одно из фото галереи (coverId).
+model Project {
+  id          String        @id @default(cuid())
+  /// Человеко-понятный URL `/zhk/<slug>`. Заморожен, уникален.
+  slug        String        @unique
+  name        String
+  address     String?
+  developerId String?
+  developer   Developer?    @relation(fields: [developerId], references: [id], onDelete: SetNull)
+  /// Цена «от» в рублях; null → на сайте «Цена по запросу».
+  priceFrom   Int?
+  /// Форматы квартир (комнатность) структурно: ["studio","one",…].
+  rooms       Json          @default("[]")
+  description String?
+  coverId     String?
+  cover       Asset?        @relation("ProjectCover", fields: [coverId], references: [id], onDelete: SetNull)
+  /// Бейджи: [{ text, color }] (цвет — токен палитры).
+  badges      Json          @default("[]")
+  /// Ссылки инструментов «Выбор квартиры»: { chessboardUrl, plansUrl, tour3dUrl }.
+  tools       Json          @default("{}")
+  status      ProjectStatus @default(draft)
+  /// Анонс «Скоро на сайте» — тизер-карточка без отдельной страницы.
+  comingSoon  Boolean       @default(false)
+  archivedAt  DateTime?
+  createdById String?
+  createdBy   User?         @relation("ProjectAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  images      ProjectImage[]
+  documents   Document[]
+  progress    ProgressAlbum[]
+  leads       Lead[]
+
+  @@index([status])
+  @@index([archivedAt])
+  @@index([developerId])
+}
+
+/// Фото галереи ЖК — упорядоченная связь Project↔Asset. Обложка задаётся
+/// полем Project.coverId (одно из этих фото).
+model ProjectImage {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     Asset    @relation("ProjectImageAsset", fields: [assetId], references: [id], onDelete: Cascade)
+  /// Позиция в галерее (меньше — раньше).
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, assetId])
+  @@index([projectId])
+}
+
+/// Статус публикации новости. Черновик виден только в CRM.
+enum NewsStatus {
+  draft
+  published
+}
+
+/// Метка/категория новости — управляемый справочник (ведёт admin). На лендинге
+/// метки рендерятся единым стилем, поэтому цвет не храним. «Удаление» =
+/// архивация: на метку ссылаются новости.
+model NewsLabel {
+  id         String    @id @default(cuid())
+  name       String
+  /// Стабильный человеко-понятный идентификатор. Уникален.
+  slug       String    @unique
+  /// Позиция в списке (меньше — раньше).
+  order      Int       @default(0)
+  /// Архивация вместо удаления: метка скрыта из выбора, новости с ней целы.
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  news       News[]
+
+  @@index([archivedAt])
+  @@index([order])
+}
+
+/// Новость/акция. Карточка блока «Акции и новости» и страница-статья лендинга.
+/// «Удаление» = архивация. Обложка — через Asset; текст — простые абзацы
+/// (разделены пустой строкой), краткое описание — отдельным полем для карточки.
+model News {
+  id          String     @id @default(cuid())
+  /// Человеко-понятный URL `/news/<slug>`. Заморожен, уникален.
+  slug        String     @unique
+  title       String
+  labelId     String?
+  label       NewsLabel? @relation(fields: [labelId], references: [id], onDelete: SetNull)
+  /// Дата публикации (редактируемая, по умолчанию — день создания); сортировка.
+  date        DateTime   @default(now())
+  /// Краткое описание для карточки каталога (отдельно от текста статьи).
+  excerpt     String?
+  /// Полный текст статьи; абзацы разделяются пустой строкой.
+  body        String     @default("")
+  coverId     String?
+  cover       Asset?     @relation("NewsCover", fields: [coverId], references: [id], onDelete: SetNull)
+  status      NewsStatus @default(draft)
+  archivedAt  DateTime?
+  createdById String?
+  createdBy   User?      @relation("NewsAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status])
+  @@index([archivedAt])
+  @@index([date])
+  @@index([labelId])
+}
+
+/// Категория документов — общий справочник (ведёт admin, задаёт порядок), един
+/// для всех ЖК: на главной лендинга навигация идёт от категории к ЖК. «Удаление»
+/// = архивация: на категорию ссылаются документы.
+model DocumentCategory {
+  id         String     @id @default(cuid())
+  name       String
+  /// Стабильный человеко-понятный идентификатор. Уникален.
+  slug       String     @unique
+  /// Позиция в списке (меньше — раньше); задаёт порядок плиток на главной.
+  order      Int        @default(0)
+  /// Архивация вместо удаления: категория скрыта, документы целы.
+  archivedAt DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  documents  Document[]
+
+  @@index([archivedAt])
+  @@index([order])
+}
+
+/// Вид документа по ЖК: загруженный файл или внешняя ссылка.
+enum DocumentKind {
+  file
+  link
+}
+
+/// Документ по ЖК: загруженный файл (asset) или внешняя ссылка (url + подпись).
+/// Привязан к ЖК и категории справочника. Удаление документа — сразу и навсегда
+/// (файл с диска чистит сервис); жёсткое удаление ЖК сносит документы каскадом.
+model Document {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    DocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name        String
+  kind        DocumentKind     @default(file)
+  /// Для kind=file: загруженный файл; снос файла каскадом убирает документ.
+  assetId     String?
+  asset       Asset?           @relation("DocumentFile", fields: [assetId], references: [id], onDelete: Cascade)
+  /// Для kind=link: внешний адрес (http/https) и ручная подпись.
+  url         String?
+  caption     String?
+  /// Позиция внутри категории (по добавлению).
+  position    Int              @default(0)
+  createdById String?
+  createdBy   User?            @relation("DocumentAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+
+  @@index([projectId])
+  @@index([categoryId])
+}
+
+/// Состояние сборки сайта для очереди автопересборки лендинга (Веха 4.2).
+enum SiteBuildState {
+  idle
+  building
+  failed
+}
+
+/// Singleton-состояние публикации лендинга. Ровно одна строка (фиксированный id).
+/// Мутации публичного контента сначала помечают черновые правки
+/// (`unpublishedSince`/`lastContentChangeAt`), а отдельное действие «Опубликовать»
+/// переводит их в очередь сборки (`pendingSince`/`lastChangeAt`). Сборщик на
+/// хосте через внутренние ручки «забирает» сборку (claim) и отчитывается о
+/// результате (result).
+model SiteBuild {
+  /// Фиксированный id единственной строки (см. SITE_BUILD_ID в сервисе).
+  id            String         @id
+  status        SiteBuildState @default(idle)
+  /// Самая ранняя сохранённая правка публичного контента, ещё не опубликованная на сайте.
+  unpublishedSince DateTime?
+  /// Последняя сохранённая правка публичного контента (для детекта правок во время сборки).
+  lastContentChangeAt DateTime?
+  /// Самая ранняя правка, уже отправленная в очередь публикации.
+  pendingSince  DateTime?
+  /// Время последней правки, включённой в текущую заявку на публикацию; от него
+  /// отсчитывается дебаунс («собираем после ~2 мин тишины»).
+  lastChangeAt  DateTime?
+  /// Когда стартовала текущая сборка (для детекта зависшей сборки).
+  buildingSince DateTime?
+  /// Метка текущей взятой в работу сборки (buildId) — сверяется в result.
+  buildId       String?
+  /// Снимок pendingSince на момент claim: что покрывает текущая сборка.
+  claimedFor    DateTime?
+  /// Время последней УСПЕШНОЙ публикации сайта.
+  lastSuccessAt DateTime?
+  /// Время последней попытки сборки (успешной или нет).
+  lastBuildAt   DateTime?
+  /// Текст ошибки последней упавшей сборки.
+  lastError     String?
+  /// Когда отправлен алерт «сборка упала» (чтобы не слать повторно).
+  failNotifiedAt DateTime?
+  /// Когда отправлен алерт «сборка зависла/простой» (одноразово).
+  stallNotifiedAt DateTime?
+  updatedAt     DateTime       @updatedAt
+}
+
+/// Singleton-настройки «обвязки» лендинга (Веха 4.3): навигация, контакты,
+/// реквизиты, подписи кнопок/секций, параметры блока новостей, видимость/порядок
+/// ЖК на главной, ID Яндекс.Метрики. Ровно одна строка (фиксированный id).
+/// Хранится разреженным набором переопределений в JSON `data` (валидируется Zod
+/// по siteSettingsBaseSchema); пустое поле = берётся дефолт из кода. Admin-only,
+/// блокировка по версии через `updatedAt`.
+model SiteSettings {
+  /// Фиксированный id единственной строки (см. SITE_SETTINGS_ID в сервисе).
+  id        String   @id
+  /// Переопределения поверх дефолтов (только изменённые админом поля).
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+/// Ход строительства: фотоальбом за месяц по ЖК. Управляется в карточке ЖК
+/// точечными операциями (как документы); на лендинге — секция на /zhk/<slug>
+/// от новых месяцев к старым. Один альбом на период (`projectId+year+month`).
+model ProgressAlbum {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// Период отчёта: год и месяц (1–12).
+  year        Int
+  month       Int
+  /// Необязательный комментарий к этапу («Смонтированы окна…»).
+  note        String?
+  createdById String?
+  createdBy   User?    @relation("ProgressAlbumAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  photos      ProgressPhoto[]
+
+  @@unique([projectId, year, month])
+  @@index([projectId])
+}
+
+/// Фото в альбоме хода строительства (порядок — по добавлению).
+model ProgressPhoto {
+  id        String        @id @default(cuid())
+  albumId   String
+  album     ProgressAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     Asset         @relation("ProgressPhotoAsset", fields: [assetId], references: [id], onDelete: Cascade)
+  /// Позиция в альбоме (меньше — раньше).
+  position  Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  @@unique([albumId, assetId])
+  @@index([albumId])
+}

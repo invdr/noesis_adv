@@ -1,0 +1,62 @@
+import { describe, expect, test } from "bun:test";
+import { upsertContactSchema } from "../src/contact";
+
+const base = { kind: "realtor" as const, fullName: "Иван Петров" };
+
+describe("upsertContactSchema: телефон", () => {
+  test("нормализует ввод к +7XXXXXXXXXX (ключ дедупа с заявками)", () => {
+    const parsed = upsertContactSchema.parse({
+      ...base,
+      phone: "8 (912) 345-67-89",
+    });
+    expect(parsed.phone).toBe("+79123456789");
+  });
+
+  test("null/отсутствие телефона допустимы (телефон необязателен)", () => {
+    expect(upsertContactSchema.parse({ ...base, phone: null }).phone).toBeNull();
+    expect(upsertContactSchema.parse(base).phone).toBeUndefined();
+  });
+
+  test("международный телефон партнёра сохраняется без РФ-нормализации", () => {
+    const parsed = upsertContactSchema.parse({
+      ...base,
+      phone: "+1 555 123 4567",
+    });
+    expect(parsed.phone).toBe("+1 555 123 4567");
+  });
+
+  test("произвольная строка отклоняется", () => {
+    const res = upsertContactSchema.safeParse({ ...base, phone: "позвонить после 18" });
+    expect(res.success).toBe(false);
+  });
+
+  test("неполный номер отклоняется", () => {
+    const res = upsertContactSchema.safeParse({ ...base, phone: "+7 912 345" });
+    expect(res.success).toBe(false);
+  });
+});
+
+describe("upsertContactSchema: паспортные данные", () => {
+  test("даты принимаются только в формате ГГГГ-ММ-ДД", () => {
+    expect(
+      upsertContactSchema.parse({
+        ...base,
+        birthDate: "1990-02-03",
+        passportIssuedAt: "2020-04-05",
+      }).birthDate,
+    ).toBe("1990-02-03");
+
+    const res = upsertContactSchema.safeParse({ ...base, birthDate: "03.02.1990" });
+    expect(res.success).toBe(false);
+  });
+
+  test("пробельные паспортные поля схлопываются в пустую строку для сервиса", () => {
+    const parsed = upsertContactSchema.parse({
+      ...base,
+      passportSeries: " 8212 ",
+      registrationAddress: "   ",
+    });
+    expect(parsed.passportSeries).toBe("8212");
+    expect(parsed.registrationAddress).toBe("");
+  });
+});

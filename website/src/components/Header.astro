@@ -1,0 +1,57 @@
+---
+import type { Chrome } from "../lib/chrome";
+
+interface Props {
+  chrome: Chrome;
+  home?: boolean;
+  showDocs?: boolean;
+  solid?: boolean;
+}
+
+const { chrome, home = false, showDocs = false, solid = false } = Astro.props;
+const { s } = chrome;
+const navClass = solid ? "nav scrolled" : "nav";
+const homeHref = home ? "#top" : "/";
+const base = home ? "" : "/";
+const link = (hash: string) => `${base}${hash}`;
+---
+<nav class={navClass} id="nav">
+  <a href={homeHref} class="nav-logo">
+    <img src="/assets/logo-white.png" alt={s.siteName}>
+  </a>
+
+  <div class="nav-links">
+    <a href={link("#catalog")}>{s.navCatalog}</a>
+    <a href={link("#flats")}>{s.navFlats}</a>
+    <a href={link("#about")}>{s.navAbout}</a>
+    {showDocs && <a href={link("#docs")}>{s.navDocs}</a>}
+    <a href={link("#contacts")}>{s.navContacts}</a>
+  </div>
+  <div class="nav-right">
+    <a href={chrome.phoneHref} class="nav-phone">{chrome.phoneDisplay}</a>
+    <a href={link("#catalog")} class="btn btn-primary">{s.ctaSelectFlat}</a>
+  </div>
+
+  <button class="burger" id="burgerBtn" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu-top">
+    <img src="/assets/logo-white.png" alt={s.siteName}>
+    <button class="mobile-close" id="mobileCloseBtn" aria-label="Закрыть">×</button>
+  </div>
+  <div class="mobile-menu-links">
+    <a href={homeHref}>Главная</a>
+    <a href={link("#catalog")}>{s.navCatalog}</a>
+    <a href={link("#flats")}>{s.navFlats}</a>
+    <a href={link("#about")}>{s.navAbout}</a>
+    {showDocs && <a href={link("#docs")}>{s.navDocs}</a>}
+    <a href={link("#contacts")}>{s.navContacts}</a>
+  </div>
+  <div class="mobile-menu-bottom">
+    <a href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
+    <a href={link("#catalog")} class="btn btn-primary">{s.ctaSelectFlat}</a>
+  </div>
+</div>

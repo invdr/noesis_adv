@@ -1,0 +1,75 @@
+# Прод-стек для VPS sweb.ru. Запуск из корня репозитория:
+#   docker compose -f infra/docker-compose.prod.yml up -d --build
+#
+# Переменные берутся из infra/.env (см. infra/.env.example).
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gsk_tower}
+      POSTGRES_USER: ${POSTGRES_USER:-gsk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в infra/.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gsk} -d ${POSTGRES_DB:-gsk_tower}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gsk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gsk_tower}?schema=public
+      PORT: 3000
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://gsktower.com}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+      # В проде Secure включается автоматически по NODE_ENV; оставляем для явности.
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Каталог загруженных файлов на постоянном томе (раздаётся nginx как /files).
+      FILES_DIR: /srv/files
+      # Автопересборка лендинга (Веха 4.2): токен внутренних ручек сборщика и
+      # дебаунс. Если токен пуст — внутренние ручки выключены (404).
+      BUILD_WORKER_TOKEN: ${BUILD_WORKER_TOKEN:-}
+      REBUILD_DEBOUNCE_SECONDS: ${REBUILD_DEBOUNCE_SECONDS:-120}
+    # Порт публикуется ТОЛЬКО на localhost — чтобы website мог зафетчить данные
+    # с backend на этапе сборки на хосте (см. infra/deploy.sh, BUILD_API_URL).
+    # Наружу API доступен через nginx (/api), а не напрямую.
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - files_data:/srv/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # Собранная статика (заполняется infra/deploy.sh / автосборщиком).
+      # Лендинг — каталог релизов с симлинком current (Веха 4.2): nginx раздаёт
+      # /srv/website/current, который указывает на актуальный успешный релиз.
+      - ../website/web:/srv/website:ro
+      - ../webapp/dist:/srv/webapp:ro
+      # Загруженные файлы — тот же том, что у backend (только чтение):
+      - files_data:/srv/files:ro
+      # TLS-сертификаты (например, от certbot):
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  files_data:

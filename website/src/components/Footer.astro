@@ -1,0 +1,44 @@
+---
+// Подвал лендинга. Якорные ссылки разделов работают на главной как `#id`, а на
+// отдельных страницах (ЖК/новость) — как `/#id` (через `home`). Пункт
+// «Документы» скрывается, если документов нет (`showDocs`). Тексты/контакты —
+// из настроек сайта (Веха 4.3), дизайн 1:1.
+import type { Chrome } from "../lib/chrome";
+interface Props {
+  chrome: Chrome;
+  home?: boolean;
+  showDocs?: boolean;
+}
+const { chrome, home = false, showDocs = false } = Astro.props;
+const { s } = chrome;
+const base = home ? "" : "/";
+---
+<footer class="footer" id="contacts">
+  <div class="wrap footer-top">
+    <div class="footer-brand">
+      <img src="/assets/logo-white.png" alt={s.siteName}>
+      <p>{s.footerBrand}</p>
+    </div>
+    <div class="footer-cols">
+      <div class="footer-col">
+        <span class="mono footer-col-title">Разделы</span>
+        <a href={`${base}#catalog`}>{s.navCatalog}</a>
+        <a href={`${base}#flats`}>{s.navFlats}</a>
+        <a href={`${base}#about`}>{s.navAbout}</a>
+        {showDocs && <a href={`${base}#docs`}>{s.navDocs}</a>}
+      </div>
+      <div class="footer-col">
+        <span class="mono footer-col-title">{s.navContacts}</span>
+        <a href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
+        <a href={`mailto:${s.email}`}>{s.email}</a>
+        <span>{s.address}</span>
+        <span>{s.workHoursWeekday}<br>{s.workHoursSaturday}</span>
+        <a href="/privacy">Политика обработки персональных данных</a>
+      </div>
+    </div>
+  </div>
+  <div class="wrap footer-bottom">
+    <span>{s.copyright}</span>
+    <span>{s.slogan}</span>
+  </div>
+</footer>

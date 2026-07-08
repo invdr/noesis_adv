@@ -1,0 +1,54 @@
+.dictionary-admin {
+  max-width: 760px;
+}
+
+.dictionary-admin__table-card,
+.dictionary-admin__form {
+  margin-top: 1rem;
+}
+
+.dictionary-admin__order-col {
+  width: 84px;
+}
+
+.dictionary-admin__actions-col {
+  width: 220px;
+}
+
+.dictionary-admin__order-controls,
+.dictionary-admin__name-row,
+.dictionary-admin__actions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.dictionary-admin__order-controls {
+  gap: 0.25rem;
+}
+
+.dictionary-admin__name-row {
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.dictionary-admin__name-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.dictionary-admin__actions {
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dictionary-admin__archived-row {
+  opacity: 0.55;
+}
+
+.dictionary-admin__empty-cell {
+  text-align: center;
+}
+
+.dictionary-admin__new-name {
+  min-width: 280px;
+}

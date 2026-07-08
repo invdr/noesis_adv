@@ -1,0 +1,25 @@
+.agenda-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.agenda-view__empty {
+  text-align: center;
+}
+
+.agenda-group__count {
+  margin-left: 0.375rem;
+}
+
+.agenda-group__hint {
+  margin: 0 1.25rem 0.75rem;
+}
+
+.agenda-group__date-col {
+  width: 170px;
+}
+
+.agenda-group__stage-col {
+  width: 180px;
+}

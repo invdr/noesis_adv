@@ -1,0 +1,85 @@
+---
+// Единый <head> для всех страниц лендинга: метаданные, canonical, Open Graph /
+// Twitter Card, шрифты и стили. Дизайн не меняем — это только SEO-обвязка.
+import { SITE_SETTINGS_DEFAULTS } from "@gsk-tower/contracts";
+import { absUrl } from "../lib/site";
+
+interface Props {
+  title: string;
+  description: string;
+  /** Путь страницы для canonical/OG (например, "/zhk/aurum"). */
+  path: string;
+  /** Картинка для OG/Twitter (относительная или абсолютная). */
+  image?: string;
+  /** Тип Open Graph: website (по умолчанию) или article. */
+  type?: "website" | "article";
+  /** Произвольный JSON-LD (Schema.org), если нужен на странице. */
+  jsonLd?: unknown;
+  /** Название сайта для og:site_name (из настроек). */
+  siteName?: string;
+  /** ID счётчика Яндекс.Метрики (пусто = не грузим). */
+  metrikaId?: string;
+}
+
+const {
+  title,
+  description,
+  path,
+  // JPG-обложка по умолчанию (WebP некоторые соцскрейперы не разворачивают в OG).
+  image = "/assets/og-default.jpg",
+  type = "website",
+  jsonLd,
+  siteName = SITE_SETTINGS_DEFAULTS.siteName,
+  metrikaId = "",
+} = Astro.props;
+
+const canonical = absUrl(path);
+const ogImage = absUrl(image);
+
+// Сниппет Яндекс.Метрики (Веха 4.3). Грузим всегда, когда задан ID; cookie-баннер
+// информирующий, согласие не гейтит загрузку (продуктовое решение). Анонимизация:
+// `webvisor:false` (без записи сессий); точная анонимизация IP — настройка
+// счётчика в кабинете Метрики. Заодно вешаем глобальные `window.ymGoal` (цели из
+// main.js/page.js) и делегированный клик по телефону — работает на всех страницах.
+const counter = Number(metrikaId);
+const metrikaScript = metrikaId
+  ? `(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");` +
+    `ym(${counter},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:false});` +
+    `window.GSK_METRIKA_ID=${counter};` +
+    `window.ymGoal=function(n,p){try{if(window.ym)ym(${counter},"reachGoal",n,p||{});}catch(e){}};` +
+    `document.addEventListener("click",function(ev){var a=ev.target&&ev.target.closest&&ev.target.closest('a[href^="tel:"]');if(a)window.ymGoal("phone_click");});`
+  : "";
+const metrikaNoscript = metrikaId
+  ? `<div><img src="https://mc.yandex.ru/watch/${counter}" style="position:absolute; left:-9999px;" alt="" /></div>`
+  : "";
+---
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:locale" content="ru_RU" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/css/styles.css" />
+
+{jsonLd && (
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+)}
+
+{metrikaScript && <script is:inline set:html={metrikaScript} />}
+{metrikaNoscript && <noscript set:html={metrikaNoscript} />}

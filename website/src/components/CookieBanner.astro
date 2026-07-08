@@ -1,0 +1,30 @@
+---
+// Cookie-баннер (152-ФЗ): показывается один раз, согласие хранится в
+// localStorage. Не перекрывает контент (полоса снизу), со ссылкой на Политику.
+---
+<div class="cookie-banner" id="cookieBanner" role="region" aria-label="Уведомление о файлах cookie" hidden>
+  <p class="cookie-banner-text">
+    Мы используем файлы cookie и обрабатываем персональные данные для работы
+    сайта и улучшения сервиса. Оставаясь на сайте, вы соглашаетесь с
+    <a href="/privacy">Политикой обработки персональных данных</a>.
+  </p>
+  <div class="cookie-banner-actions">
+    <button type="button" class="btn btn-primary" id="cookieAcceptBtn">Принять</button>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    const KEY = "gsk_cookie_consent";
+    const banner = document.getElementById("cookieBanner");
+    if (!banner) return;
+    let consented = false;
+    try { consented = localStorage.getItem(KEY) === "1"; } catch (_) { /* private mode */ }
+    if (consented) return;
+    banner.hidden = false;
+    document.getElementById("cookieAcceptBtn").addEventListener("click", () => {
+      try { localStorage.setItem(KEY, "1"); } catch (_) { /* ignore */ }
+      banner.hidden = true;
+    });
+  })();
+</script>

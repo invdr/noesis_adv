@@ -1,0 +1,54 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# builds
+dist/
+build/
+.output/
+.astro/
+.vite/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# prisma generated client
+backend/src/generated/
+backend/prisma/dev.db*
+
+# logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# test / coverage
+coverage/
+playwright-report/
+test-results/
+
+# scratch
+.scratch/
+
+# загруженные файлы (фото ЖК, документы) — хранятся на томе, не в репозитории
+backend/uploads/
+uploads/
+
+# локально скачанные движки Prisma (обход офлайн-окружения)
+.engines/
+.prisma-engines/
+
+# релизы лендинга на VPS (сборка + симлинк current, Веха 4.2) — не в репозитории
+website/web/
+# рантайм-лок сериализации сборки (flock)
+infra/.site-build.lock

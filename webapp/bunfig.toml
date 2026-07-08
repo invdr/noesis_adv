@@ -1,0 +1,4 @@
+# Тесты webapp гоняем через `bun test` с DOM от happy-dom.
+# preload регистрирует глобальный window/document и гасит импорты *.css в компонентах.
+[test]
+preload = ["./test/setup.ts"]
