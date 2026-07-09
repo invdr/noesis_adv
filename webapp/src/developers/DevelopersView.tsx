@@ -45,7 +45,7 @@ function emptyToNull(value: string): string | null {
   return value.trim() || null;
 }
 
-/** Справочник застройщиков (admin): добавление, переименование, логотип, архив. */
+/** Справочник владельцев сети (admin): добавление, переименование, логотип, архив. */
 export function DevelopersView() {
   const qc = useQueryClient();
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -89,8 +89,8 @@ export function DevelopersView() {
   return (
     <section className="page-narrow">
       <p className="hint">
-        Справочник застройщиков. Менеджеры выбирают их при заведении ЖК. «Удалить»
-        навсегда можно, только если на застройщика не ссылается ни один ЖК — иначе
+        Справочник владельцев сети. Менеджеры выбирают их при заведении конструкции. «Удалить»
+        навсегда можно, только если на владельца не ссылается ни одна конструкция — иначе
         используйте архив.
       </p>
 
@@ -171,7 +171,7 @@ export function DevelopersView() {
             {devs.length === 0 && (
               <tr>
                 <td colSpan={3} className="empty" style={{ textAlign: "center" }}>
-                  Пока нет застройщиков.
+                  Пока нет владельцев сети.
                 </td>
               </tr>
             )}
@@ -187,7 +187,7 @@ export function DevelopersView() {
         className="toolbar"
         style={{ marginTop: "1rem" }}
       >
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Новый застройщик" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Новый владелец сети" />
         <input type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} />
         <button type="submit" className="btn-primary" disabled={create.isPending}>
           Добавить

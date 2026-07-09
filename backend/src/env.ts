@@ -7,6 +7,7 @@ const envSchema = z
       .default("development"),
     DATABASE_URL: z.string().url(),
     PORT: z.coerce.number().int().positive().default(3000),
+    HOST: z.string().optional(),
     CORS_ORIGINS: z
       .string()
       .default("http://localhost:4321,http://localhost:5173")
@@ -62,7 +63,7 @@ const envSchema = z
      */
     BUILD_WORKER_TOKEN: z.string().optional(),
     /**
-     * Каталог хранения загруженных файлов (фото ЖК, документы). На VPS —
+     * Каталог хранения загруженных файлов (фото конструкций, документы). На VPS —
      * постоянный том, который раздаёт nginx; в репозиторий не попадает.
      */
     FILES_DIR: z.string().default("uploads"),

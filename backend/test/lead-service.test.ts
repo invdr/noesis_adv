@@ -227,14 +227,14 @@ describe("updateLeadSource", () => {
 });
 
 describe("updateLeadConstruction", () => {
-  test("меняет ЖК заявки", async () => {
+  test("меняет конструкцию заявки", async () => {
     let updateData: any;
     const prisma = {
       lead: {
         findUnique: async () => leadRow({ constructionId: null }),
         update: async ({ data }: any) => {
           updateData = data;
-          return leadRow({ constructionId: data.constructionId, construction: { name: "ЖК Башня" } });
+          return leadRow({ constructionId: data.constructionId, construction: { name: "СФ-001" } });
         },
       },
       construction: { findUnique: async () => ({ id: "p1", archivedAt: null }) },
@@ -244,10 +244,10 @@ describe("updateLeadConstruction", () => {
     });
     expect(updateData.constructionId).toBe("p1");
     expect(res?.constructionId).toBe("p1");
-    expect(res?.constructionName).toBe("ЖК Башня");
+    expect(res?.constructionName).toBe("СФ-001");
   });
 
-  test("снимает ЖК без проверки справочника", async () => {
+  test("снимает конструкцию без проверки справочника", async () => {
     let updateData: any;
     const prisma = {
       lead: {
@@ -270,7 +270,7 @@ describe("updateLeadConstruction", () => {
     expect(res?.constructionId).toBeNull();
   });
 
-  test("архивный ЖК отклоняется (422)", async () => {
+  test("архивная конструкция отклоняется (422)", async () => {
     const prisma = {
       lead: { findUnique: async () => leadRow() },
       construction: { findUnique: async () => ({ id: "p1", archivedAt: new Date() }) },
@@ -872,8 +872,8 @@ describe("exportLeadsCsv", () => {
     runtimeWith({
       lead: {
         findMany: async () => [
-          // Название ЖК приходит развёрнутым в самой выборке (leadInclude).
-          leadRow({ constructionId: "p1", assigneeId: "m1", construction: { name: "ЖК «Башня»" } }),
+          // Название конструкции приходит развёрнутым в самой выборке (leadInclude).
+          leadRow({ constructionId: "p1", assigneeId: "m1", construction: { name: "СФ-001" } }),
           leadRow({ id: "lead2", name: "=HYPERLINK(...)", constructionId: null }),
         ],
         count: async () => 2,
@@ -882,12 +882,12 @@ describe("exportLeadsCsv", () => {
       ...over,
     });
 
-  test("колонка «ЖК» — название проекта, имя-формула нейтрализовано", async () => {
+  test("колонка «Конструкция» — название конструкции, имя-формула нейтрализовано", async () => {
     const csv = await exportLeadsCsv(csvRuntime(), admin, {
       page: 1,
       pageSize: 25,
     } as any);
-    expect(csv).toContain("ЖК «Башня»");
+    expect(csv).toContain("СФ-001");
     expect(csv).not.toContain(",p1,"); // сырой id в ячейку не попадает
     expect(csv).toContain("'=HYPERLINK"); // имя с лендинга обезврежено
     expect(csv).not.toContain("сузьте фильтры"); // всё влезло — отметки нет

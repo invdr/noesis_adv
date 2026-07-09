@@ -50,7 +50,7 @@ describe("upsertConstructionSchema — обязательность по сос�
     ).toBe(true);
   });
 
-  test("обычная публикация: требует полный набор (адрес, гео, цена, фото)", () => {
+  test("обычная публикация: требует адрес, гео и фото, но цена может быть по запросу", () => {
     const res = upsertConstructionSchema.safeParse({
       name: "СФ-014",
       status: "published",
@@ -58,12 +58,13 @@ describe("upsertConstructionSchema — обязательность по сос�
     });
     expect(res.success).toBe(false);
     const fields = res.success ? [] : res.error.issues.map((i) => i.path[0]);
-    for (const f of ["address", "lat", "pricePerMonth"]) {
+    for (const f of ["address", "lat"]) {
       expect(fields).toContain(f);
     }
+    expect(fields).not.toContain("pricePerMonth");
   });
 
-  test("обычная публикация: полный набор проходит", () => {
+  test("обычная публикация: полный набор с ценой проходит", () => {
     const res = upsertConstructionSchema.safeParse({
       name: "Сити-формат на пр. Путина, 14",
       status: "published",
@@ -71,6 +72,20 @@ describe("upsertConstructionSchema — обязательность по сос�
       lat: 43.317,
       lng: 45.694,
       pricePerMonth: 45_000,
+      format: "cityFormat",
+      lighting: "internal",
+      ...cover,
+    });
+    expect(res.success).toBe(true);
+  });
+
+  test("обычная публикация: без цены проходит как цена по запросу", () => {
+    const res = upsertConstructionSchema.safeParse({
+      name: "Сити-формат без цены",
+      status: "published",
+      address: "Грозный, пр. В. Путина, 14",
+      lat: 43.317,
+      lng: 45.694,
       format: "cityFormat",
       lighting: "internal",
       ...cover,

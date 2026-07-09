@@ -94,7 +94,7 @@ export async function restoreDocumentCategory(
 
 /**
  * Удалить категорию навсегда (admin). Запрещено, если в ней есть документы
- * (включая ЖК в архиве) — иначе осиротим их; для таких — архив.
+ * (включая архивные конструкции) — иначе осиротим их; для таких — архив.
  */
 export async function deleteDocumentCategory(rt: Runtime, id: string): Promise<void> {
   await requireCategory(rt, id);

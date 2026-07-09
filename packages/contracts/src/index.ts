@@ -12,7 +12,7 @@ export * from "./partner-analytics";
 export * from "./file";
 export * from "./developer";
 export * from "./construction";
-export * from "./legacy-site";
+export * from "./booking";
 export * from "./news";
 export * from "./document";
 export * from "./progress";

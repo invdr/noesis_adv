@@ -1,0 +1,22 @@
+[Unit]
+Description=Noesis backend API (no Docker)
+After=network-online.target postgresql@16-main.service postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{NOESIS_RUN_USER}}
+Group={{NOESIS_RUN_GROUP}}
+WorkingDirectory={{NOESIS_DEPLOY_DIR}}
+EnvironmentFile={{NOESIS_RUNTIME_ENV}}
+Environment=HOME={{NOESIS_HOME}}
+Environment=PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+ExecStartPre={{BUN_BIN}} run --cwd backend prisma:deploy
+ExecStart={{BUN_BIN}} run --cwd backend start
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

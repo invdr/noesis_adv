@@ -53,7 +53,7 @@ beforeEach(() => {
   spyOn(api, "listContacts").mockResolvedValue([]);
   spyOn(api, "listSources").mockResolvedValue([]);
   spyOn(api, "listProjects").mockResolvedValue({
-    items: [{ id: "p1", name: "ЖК «Башня»" } as any],
+    items: [{ id: "p1", name: "СФ-001" } as any],
     page: 1,
     pageSize: 100,
     total: 1,
@@ -78,14 +78,14 @@ describe("LeadCard", () => {
     expect(screen.getByText(/в работе \d+ дн\./)).toBeTruthy();
   });
 
-  test("карточка «Сделка»: воронка, этап-селект, ответственный, ЖК", async () => {
+  test("карточка «Сделка»: воронка, этап-селект, ответственный, конструкция", async () => {
     renderCard();
     await screen.findByRole("heading", { name: /Иван Петров/ });
     expect(screen.getByText("Сделка")).toBeTruthy();
     expect(screen.getByText("Клиенты")).toBeTruthy(); // имя воронки
     expect(screen.getByText("Не назначен (в общей очереди)")).toBeTruthy();
-    // Название ЖК есть в мета-строке шапки И в поле «ЖК» карточки «Сделка».
-    expect(screen.getAllByText("ЖК «Башня»").length).toBeGreaterThanOrEqual(2);
+    // Название конструкции есть в мета-строке шапки И в поле карточки «Сделка».
+    expect(screen.getAllByText("СФ-001").length).toBeGreaterThanOrEqual(2);
   });
 
   test("задача просрочена: бейдж и кнопки «Выполнен»/«Отмена»", async () => {

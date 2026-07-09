@@ -187,7 +187,7 @@ a,button,input,[role=button]{touch-action:manipulation}
 /* ============ SECTIONS ============ */
 .section{padding:clamp(32px,4.5vw,70px) 0;position:relative;overflow:hidden}
 #catalog{padding-bottom:clamp(16px,2.25vw,35px)}
-#flats{padding-top:clamp(16px,2.25vw,35px)}
+#map{padding-top:clamp(16px,2.25vw,35px)}
 .section-gray{background:var(--bg-light)}
 .section-white{background:#fff}
 .section-dark{background:var(--graphite);color:#fff}
@@ -241,13 +241,22 @@ a,button,input,[role=button]{touch-action:manipulation}
 .project-card-addr{font-size:13px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .project-card-rooms{font-family:var(--mono);font-size:12px;color:var(--graphite);letter-spacing:.04em}
 .project-card-price{flex:none;font-weight:600;font-size:14px;color:var(--accent);white-space:nowrap}
+.project-card-facts{display:flex;flex-wrap:wrap;gap:8px}
+.project-card-facts span{display:inline-flex;align-items:center;min-height:28px;padding:6px 9px;border:1px solid var(--border2);border-radius:3px;background:var(--bg-light);font-size:12px;color:var(--gray);line-height:1.2}
 .project-card-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
 .tool-btn{display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 6px;border:1px solid var(--border2);border-radius:5px;background:#fff;color:var(--accent);transition:border-color .2s ease,background .2s ease}
 .tool-btn:hover{border-color:var(--accent);background:#F4F8FF}
 .tool-btn span{font-size:12px;font-weight:600;color:var(--graphite);line-height:1.15;text-align:center}
 .project-card-media-static{cursor:default}
 
-/* ============ FLATS ============ */
+/* ============ MAP ============ */
+.map-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:clamp(18px,2.4vw,32px);align-items:stretch}
+.constructions-map{min-height:clamp(360px,46vw,560px);border-radius:6px;overflow:hidden;background:var(--bg-light);border:1px solid var(--border2);position:relative}
+.map-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--gray);font-size:15px;line-height:1.5}
+.map-side{display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+.map-stat{padding:clamp(22px,2.4vw,30px);border-radius:6px;background:var(--graphite);display:flex;flex-direction:column;gap:4px}
+.map-stat .flats-image-num{color:#fff}
+.map-stat .flats-image-cap{color:rgba(255,255,255,.7)}
 .flats-grid{display:flex;flex-wrap:wrap;gap:clamp(16px,2vw,28px);align-items:stretch}
 .flats-image{flex:1.6 1 380px;position:relative;border-radius:6px;overflow:hidden;min-height:clamp(360px,42vw,580px);background:linear-gradient(135deg,#A4161A,#262C35);transition:opacity 1s var(--ease),transform 1s var(--ease)}
 .flats-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 1.1s var(--ease)}
@@ -265,6 +274,7 @@ a,button,input,[role=button]{touch-action:manipulation}
 .flats-feature-d{font-size:14px;color:var(--gray);line-height:1.5}
 .flats-cta{margin-top:clamp(18px,2vw,26px);align-self:flex-start}
 .flats-feature:first-child{padding-top:0}
+@media (max-width:899px){.map-shell{grid-template-columns:1fr}.map-side{justify-content:flex-start}.constructions-map{min-height:380px}}
 
 /* ============ ADVANTAGES ============ */
 .advantages{border-top:1px solid rgba(255,255,255,.14)}
@@ -314,7 +324,7 @@ a,button,input,[role=button]{touch-action:manipulation}
 .docs-category:first-of-type{margin-top:32px}
 .docs-category-title{font-size:clamp(22px,2.4vw,28px);margin-bottom:16px}
 
-/* ============ PROGRESS (ход строительства) ============ */
+/* ============ PHOTO REPORTS ============ */
 .progress-album{margin-top:40px}
 .progress-album:first-of-type{margin-top:32px}
 .progress-note{font-size:15px;color:var(--gray);line-height:1.55;margin:-8px 0 16px;max-width:70ch}

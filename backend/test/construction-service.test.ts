@@ -53,7 +53,7 @@ function makeDb() {
       owner: null,
       format: data.format ?? "cityFormat",
       size: data.size ?? null,
-      side: data.side ?? null,
+      sideCount: data.sideCount ?? 1,
       lighting: data.lighting ?? "none",
       grp: data.grp ?? null,
       trafficPerDay: data.trafficPerDay ?? null,

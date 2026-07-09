@@ -53,3 +53,6 @@ uploads/
 website/web/
 # рантайм-лок сериализации сборки (flock)
 infra/.site-build.lock
+
+# секреты no-Docker деплоя для VPS с уже установленными nginx/PostgreSQL
+infra/no-docker.env

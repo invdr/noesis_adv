@@ -34,7 +34,7 @@ describe("ContactCard", () => {
     expect(phone.getAttribute("href")).toBe("tel:+79280000000");
     expect(screen.getByText(/Заявки клиента \(1\)/)).toBeTruthy();
     expect(screen.getByText("Главная форма")).toBeTruthy();
-    expect(screen.getByText("ЖК «Башня»")).toBeTruthy();
+    expect(screen.getByText("СФ-001")).toBeTruthy();
   });
 
   test("клиент: показывает заполненные паспортные данные", async () => {

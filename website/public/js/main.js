@@ -1,20 +1,21 @@
 (() => {
   // Данные лендинга запечены из API на сборке и прокинуты через window.NOESIS_DATA
-  // (см. website/src/pages/index.astro). Подписи (цена, комнатность, дата) уже
-  // готовы во view-моделях — здесь только рендер 1:1 с дизайном.
+  // (см. website/src/pages/index.astro). Подписи уже готовы во view-моделях —
+  // здесь только рендер и лёгкая интерактивность.
   const DATA = (typeof window !== 'undefined' && window.NOESIS_DATA) || {};
-  const PROJECTS = DATA.projects || [];   // {slug,name,address,img,isSoon,priceLabel,rooms,roomsLabel,href,tools,badges}
+  const CONSTRUCTIONS = DATA.constructions || [];
   const NEWS = DATA.news || [];           // {slug,tag,title,excerpt,img,date,body,href}
-  const DOC_CATEGORIES = DATA.docs || []; // [{name,slug,projects:[{slug,name,address,img}]}]
+  const DOC_CATEGORIES = DATA.docs || []; // [{name,slug,constructions:[{slug,name,address,img}]}]
+  const MAP = DATA.map || {};
   const API_BASE = (typeof window !== 'undefined' && window.NOESIS_API_URL) || '';
 
-  // Документы ЖК тянем лениво по slug (на запуске их нет — блок скрыт).
+  // Документы конструкции тянем лениво по slug (на запуске их нет — блок скрыт).
   const docsCache = new Map();
   async function loadProjectDocs(slug) {
     if (docsCache.has(slug)) return docsCache.get(slug);
     let groups = [];
     try {
-      const res = await fetch(API_BASE + '/api/public/documents/project/' + encodeURIComponent(slug));
+      const res = await fetch(API_BASE + '/api/public/documents/construction/' + encodeURIComponent(slug));
       if (res.ok) groups = await res.json();
     } catch (_) { /* нет связи — покажем как «без документов» */ }
     docsCache.set(slug, groups);
@@ -63,26 +64,6 @@
   }
   const CARD_SIZES = '(max-width:559px) 100vw, (max-width:899px) 50vw, 33vw';
   const NEWS_SIZES = '(max-width:719px) 100vw, 380px';
-  const PROJECT_TOOL_CARDS = [
-    {
-      key: 'chessboardUrl',
-      title: 'Интерактивная шахматка',
-      label: 'Шахматка',
-      icon: '<rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect>',
-    },
-    {
-      key: 'plansUrl',
-      title: 'Планировки',
-      label: 'Планировки',
-      icon: '<path d="M3 4h18v16H3z"></path><path d="M9 4v9H3M21 13h-6v7"></path>',
-    },
-    {
-      key: 'tour3dUrl',
-      title: '3D тур',
-      label: '3D-тур',
-      icon: '<path d="M12 2l9 5v10l-9 5-9-5V7z"></path><path d="M12 12l9-5M12 12v10M12 12L3 7"></path>',
-    },
-  ];
 
   const docCardHTML = (doc) => `
     <a href="${esc(docHref(doc))}" class="doc-card" target="_blank" rel="noopener">
@@ -94,7 +75,7 @@
   const docCategoryCardHTML = (cat, i) => `
     <button type="button" class="doc-card" data-doc-category="${i}">
       <span class="doc-card-icon"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H5a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9z"></path><path d="M14 2v7h7"></path></svg></span>
-      <span class="doc-card-text"><span class="doc-card-name">${esc(cat.name)}</span><span class="doc-card-meta mono">Документы по каждому ЖК</span></span>
+      <span class="doc-card-text"><span class="doc-card-name">${esc(cat.name)}</span><span class="doc-card-meta mono">Материалы по каждой конструкции</span></span>
       <span class="doc-card-dl">→</span>
     </button>`;
 
@@ -114,28 +95,12 @@
     </button>`;
 
   const projectBadgesHTML = (p) => {
-    const items = [
-      ...(p.isSoon ? [{ text: 'Скоро', bg: '', fg: '' }] : []),
-      ...((p.badges || []).filter((b) => b && b.text)),
-    ];
+    const items = (p.badges || []).filter((b) => b && b.text);
     if (!items.length) return '';
     return `<span class="project-card-badges">${items.map((b) => {
       const style = b.bg ? ` style="background:${esc(b.bg)};color:${esc(b.fg)}"` : '';
       return `<span class="project-badge${b.bg ? '' : ' project-badge-soon'}"${style}>${esc(b.text)}</span>`;
     }).join('')}</span>`;
-  };
-
-  const projectToolsHTML = (p) => {
-    const tools = p.tools || {};
-    const items = PROJECT_TOOL_CARDS
-      .map((t) => ({ ...t, href: tools[t.key] }))
-      .filter((t) => t.href);
-    if (!items.length) return '';
-    return `<div class="project-card-tools">${items.map((t) => `
-      <a class="tool-btn" href="${esc(t.href)}" target="_blank" rel="noopener" title="${esc(t.title)}">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${t.icon}</svg>
-        <span>${esc(t.label)}</span>
-      </a>`).join('')}</div>`;
   };
 
   const projectMediaHTML = (p) => {
@@ -161,20 +126,79 @@
   function renderCatalog() {
     const grid = document.getElementById('catalogGrid');
     if (!grid) return;
-    grid.innerHTML = PROJECTS.map((p, i) => `
+    grid.innerHTML = CONSTRUCTIONS.map((p, i) => `
       <div class="project-card" data-project-index="${i}">
         ${projectMediaHTML(p)}
         <div class="project-card-body">
           <div class="project-card-meta">
             <div class="project-card-addr-col">
               <span class="project-card-addr">${esc(p.address)}</span>
-              <span class="project-card-rooms mono">${esc(p.rooms)}</span>
+              <span class="project-card-rooms mono">${esc(p.formatLabel)} · ${esc(p.sideLabel)}</span>
             </div>
             <span class="project-card-price">${esc(p.priceLabel)}</span>
           </div>
-          ${projectToolsHTML(p)}
+          <div class="project-card-facts">
+            <span>${esc(p.sizeLabel)}</span>
+            <span>${esc(p.lightingLabel)}</span>
+            <span>${esc(p.reachLabel)}</span>
+          </div>
         </div>
       </div>`).join('');
+  }
+
+  // ---------- Yandex map ----------
+  function setupConstructionsMap() {
+    const el = document.getElementById('constructionsMap');
+    if (!el) return;
+    const points = CONSTRUCTIONS.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
+    const center = Array.isArray(MAP.center) && MAP.center.length === 2 ? MAP.center : [43.318, 45.698];
+    const zoom = typeof MAP.zoom === 'number' ? MAP.zoom : 12;
+    const setMessage = (text) => {
+      el.innerHTML = `<p class="map-placeholder">${esc(text)}</p>`;
+    };
+    if (!MAP.apiKey) {
+      setMessage('Для карты нужен PUBLIC_YANDEX_MAPS_API_KEY. Конструкции доступны в каталоге ниже.');
+      return;
+    }
+    if (!points.length) {
+      setMessage('У опубликованных конструкций пока нет координат.');
+      return;
+    }
+    const boot = () => {
+      const ymaps = window['ymaps'];
+      ymaps.ready(() => {
+        el.innerHTML = '';
+        const map = new ymaps.Map(el, {
+          center,
+          zoom,
+          controls: ['zoomControl', 'fullscreenControl'],
+        }, {
+          suppressMapOpenBlock: true,
+        });
+        points.forEach((p) => {
+          const placemark = new ymaps.Placemark([p.lat, p.lng], {
+            hintContent: p.name,
+            balloonContentHeader: esc(p.name),
+            balloonContentBody:
+              `<strong>${esc(p.priceLabel)}</strong><br>${esc(p.address)}<br>${esc(p.formatLabel)} · ${esc(p.sideLabel)}`,
+            balloonContentFooter: `<a href="${esc(p.href)}">Открыть карточку</a>`,
+          }, {
+            preset: 'islands#redIcon',
+          });
+          map.geoObjects.add(placemark);
+        });
+      });
+    };
+    if (window['ymaps'] && window['ymaps'].ready) {
+      boot();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://api-maps.yandex.ru/2.1/?apikey=' + encodeURIComponent(MAP.apiKey) + '&lang=ru_RU';
+    script.async = true;
+    script.onload = boot;
+    script.onerror = () => setMessage('Не удалось загрузить Яндекс.Карту. Конструкции доступны в каталоге ниже.');
+    document.head.appendChild(script);
   }
 
   const newsCardHTML = (n, i) => `
@@ -316,23 +340,23 @@
 
   function docsPageEl() { return document.getElementById('docsPage'); }
 
-  // Список ЖК выбранной категории (категория → ЖК с документами в ней).
+  // Список конструкций выбранной категории.
   function openDocsCategory(categoryIndex) {
     const cat = DOC_CATEGORIES[categoryIndex];
     const grid = document.getElementById('docsProjectGrid');
-    grid.innerHTML = cat.projects.map((p, i) => docsProjectCardHTML(p, i)).join('');
+    grid.innerHTML = cat.constructions.map((p, i) => docsProjectCardHTML(p, i)).join('');
     grid.querySelectorAll('.project-card').forEach(c => c.classList.add('in-view'));
     grid.querySelectorAll('[data-docs-open]').forEach(el => {
       el.addEventListener('click', () =>
-        openDocsProject(cat.projects[parseInt(el.getAttribute('data-docs-open'), 10)]));
+        openDocsProject(cat.constructions[parseInt(el.getAttribute('data-docs-open'), 10)]));
     });
-    document.getElementById('docsPageTitle').textContent = 'Выберите жилой комплекс';
+    document.getElementById('docsPageTitle').textContent = 'Выберите конструкцию';
     document.getElementById('docsPageDetail').hidden = true;
     document.getElementById('docsPageList').hidden = false;
     docsPageEl().scrollTop = 0;
   }
 
-  // Детальный список: документы ЖК, сгруппированные по категориям.
+  // Детальный список: документы конструкции, сгруппированные по категориям.
   async function openDocsProject(ref) {
     const groups = await loadProjectDocs(ref.slug);
     document.getElementById('docsProjectName').textContent = ref.name;
@@ -517,6 +541,7 @@
         company: form.elements.company ? form.elements.company.value : '',
       };
       if (ctx.message) payload.message = ctx.message;
+      if (ctx.constructionId) payload.constructionId = ctx.constructionId;
 
       if (submitBtn) submitBtn.disabled = true;
       try {
@@ -635,6 +660,7 @@
     renderCatalog();
     renderNews();
     renderDocs();
+    setupConstructionsMap();
     setupNavScroll();
     setupHeroParallax();
     setupMobileMenu();

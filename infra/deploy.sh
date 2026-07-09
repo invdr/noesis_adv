@@ -52,7 +52,7 @@ if [ -z "$ready" ]; then
 fi
 echo "backend готов (миграции применяются на старте контейнера)."
 
-echo "==> Сид контента (идемпотентно: застройщики, ЖК, новости, категории)"
+echo "==> Сид контента (идемпотентно: владельцы сети, конструкции, новости, категории)"
 $COMPOSE exec -T backend sh -c "bun run --cwd /app/backend db:seed"
 
 echo "==> Сборка фронтов на реальных данных API"
@@ -61,11 +61,13 @@ echo "==> Сборка фронтов на реальных данных API"
 # может не быть (напр. SITE_URL закомментирован), это не ошибка (set -e/pipefail).
 get_env() { grep -E "^$1=" infra/.env 2>/dev/null | tail -1 | cut -d= -f2- || true; }
 SITE_URL_VAL="$(get_env SITE_URL)"
+PUBLIC_YANDEX_MAPS_API_KEY_VAL="$(get_env PUBLIC_YANDEX_MAPS_API_KEY)"
 BUILD_TOKEN_VAL="$(get_env BUILD_WORKER_TOKEN)"
 
 # Лендинг — через общий скрипт сборки (релиз + атомарный свап current). Тот же
 # flock, что у автосборщика: одновременно не больше одной сборки.
 SITE_URL="${SITE_URL_VAL:-${SITE_URL:-http://168.222.140.78}}" \
+PUBLIC_YANDEX_MAPS_API_KEY="${PUBLIC_YANDEX_MAPS_API_KEY_VAL:-${PUBLIC_YANDEX_MAPS_API_KEY:-}}" \
   bash infra/build-website.sh
 # CRM (webapp) собирается как раньше (раздаётся nginx с ../webapp/dist).
 VITE_API_URL="${VITE_API_URL:-}" bun run build:webapp
@@ -83,7 +85,7 @@ echo "==> Поднимаем/обновляем nginx с новой статик
 # --force-recreate обязательно: default.conf подключён как bind-mount одного
 # файла. После git pull файл получает новый inode, а у работающего контейнера
 # mount держит старый — без пересоздания nginx читает старый конфиг (например,
-# не подхватит редиректы /zhk//news/). Статика (dist) читается с диска по
+# не подхватит редиректы /constructions//news/). Статика (dist) читается с диска по
 # запросу, ей пересоздание не нужно, но конфигу — нужно.
 $COMPOSE up -d --build --force-recreate nginx
 

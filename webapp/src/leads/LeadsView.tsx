@@ -281,7 +281,7 @@ export function LeadsView({
         </label>
 
         <label className="row" style={{ gap: 6 }}>
-          <span className="hint">ЖК</span>
+          <span className="hint">Конструкция</span>
           <select
             value={projectFilter}
             onChange={(e) => {
@@ -402,7 +402,7 @@ export function LeadsView({
                   <th>Имя</th>
                   <th>Телефон</th>
                   <th>Источник</th>
-                  <th>ЖК</th>
+                  <th>Конструкция</th>
                   <th style={{ width: 170 }}>Этап</th>
                   <th style={{ width: 150 }}>След. контакт</th>
                   <th>Ответственный</th>

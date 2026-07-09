@@ -1,6 +1,6 @@
-// Лёгкий скрипт отдельных страниц (ЖК, новости): reveal-анимации при скролле,
-// защита плейсхолдер-ссылок и — на странице ЖК — модальная форма заявки по
-// этому ЖК. Главная использует main.js; обвязка формы здесь повторяет его
+// Лёгкий скрипт отдельных страниц (конструкция, новости): reveal-анимации при
+// скролле, защита плейсхолдер-ссылок и модальная форма заявки по конструкции.
+// Главная использует main.js; обвязка формы здесь повторяет его
 // (public/js — отдельные бандлы без сборщика, поэтому код продублирован
 // осознанно, как и setupReveal).
 (() => {
@@ -88,7 +88,7 @@
 
   // ---------- лид-форма ----------
   // Обвязка лид-формы: маска телефона, валидация, отправка в API и состояния
-  // успеха/ошибки. Источник, сообщение и projectId задаются через getContext().
+  // успеха/ошибки. Источник, сообщение и constructionId задаются через getContext().
   function wireLeadForm(form, getContext) {
     const success = form.querySelector('.hero-card-success');
     const consent = form.querySelector('input[name="consent"]');
@@ -123,7 +123,7 @@
         company: form.elements.company ? form.elements.company.value : '',
       };
       if (ctx.message) payload.message = ctx.message;
-      if (ctx.projectId) payload.projectId = ctx.projectId;
+      if (ctx.constructionId) payload.constructionId = ctx.constructionId;
 
       const API_URL = (typeof window !== 'undefined' && window.NOESIS_API_URL) || '';
       if (submitBtn) submitBtn.disabled = true;
@@ -167,8 +167,8 @@
     });
   }
 
-  // Модальная форма заявки на странице ЖК: лид привязывается к этому ЖК
-  // (source=project, projectId из window.NOESIS_PROJECT).
+  // Модальная форма заявки на странице конструкции: лид привязывается к ней
+  // (source=project, constructionId из window.NOESIS_CONSTRUCTION).
   function setupLeadModal() {
     const modal = document.getElementById('leadModal');
     if (!modal) return;
@@ -192,11 +192,11 @@
     modal._close = () => { if (!modal.hidden) close(); };
 
     wireLeadForm(form, () => {
-      const p = window.NOESIS_PROJECT || {};
+      const p = window.NOESIS_CONSTRUCTION || {};
       return {
         source: 'project',
-        projectId: p.id || undefined,
-        message: p.name ? 'Заявка со страницы ЖК «' + p.name + '»' : undefined,
+        constructionId: p.id || undefined,
+        message: p.name ? 'Заявка со страницы конструкции «' + p.name + '»' : undefined,
         onSuccess: () => setTimeout(close, 1500),
       };
     });

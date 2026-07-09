@@ -11,6 +11,7 @@ import { navigate, useHashRoute } from "./router";
 // открывают вместе и они тянут тяжёлые зависимости (схемы, графики, калькулятор),
 // поэтому грузим их по требованию отдельными чанками (см. Suspense ниже).
 const ContactsView = lazy(() => import("./contacts/ContactsView").then((m) => ({ default: m.ContactsView })));
+const BookingsView = lazy(() => import("./bookings/BookingsView").then((m) => ({ default: m.BookingsView })));
 const FunnelsAdmin = lazy(() => import("./funnels/FunnelsAdmin").then((m) => ({ default: m.FunnelsAdmin })));
 const ProjectsView = lazy(() => import("./projects/ProjectsView").then((m) => ({ default: m.ProjectsView })));
 const DevelopersView = lazy(() => import("./developers/DevelopersView").then((m) => ({ default: m.DevelopersView })));
@@ -21,6 +22,12 @@ const DocumentCategoriesAdmin = lazy(() =>
 );
 const ContactTypesAdmin = lazy(() =>
   import("./contact-types/ContactTypesAdmin").then((m) => ({ default: m.ContactTypesAdmin })),
+);
+const BookingBrandsAdmin = lazy(() =>
+  import("./bookings/BookingBrandsAdmin").then((m) => ({ default: m.BookingBrandsAdmin })),
+);
+const BookingServiceReasonsAdmin = lazy(() =>
+  import("./bookings/BookingServiceReasonsAdmin").then((m) => ({ default: m.BookingServiceReasonsAdmin })),
 );
 const SourcesAdmin = lazy(() =>
   import("./sources/SourcesAdmin").then((m) => ({ default: m.SourcesAdmin })),
@@ -38,6 +45,7 @@ const FUNNELS_KEY = ["funnels"];
 type View =
   | "myday"
   | "leads"
+  | "bookings"
   | "contacts"
   | "analytics"
   | "projects"
@@ -45,6 +53,8 @@ type View =
   | "developers"
   | "stages"
   | "contactTypes"
+  | "bookingBrands"
+  | "bookingServiceReasons"
   | "sources"
   | "newsLabels"
   | "docCategories"
@@ -65,6 +75,7 @@ const NAV_GROUPS: { label: string; items: NavLink[] }[] = [
     items: [
       { id: "myday", label: "Мой день", icon: "calendar" },
       { id: "leads", label: "Заявки", icon: "inbox" },
+      { id: "bookings", label: "Брони", icon: "calendar" },
       { id: "contacts", label: "Контакты", icon: "user" },
       { id: "analytics", label: "Аналитика", icon: "chart" },
       { id: "stages", label: "Воронки", icon: "layers", admin: true },
@@ -74,7 +85,7 @@ const NAV_GROUPS: { label: string; items: NavLink[] }[] = [
     // Всё, что попадает на публичный лендинг: контент и его настройки.
     label: "Сайт",
     items: [
-      { id: "projects", label: "ЖК", icon: "building" },
+      { id: "projects", label: "Конструкции", icon: "building" },
       { id: "news", label: "Новости", icon: "news" },
       { id: "siteSettings", label: "Настройки", icon: "globe", admin: true },
     ],
@@ -84,8 +95,10 @@ const NAV_GROUPS: { label: string; items: NavLink[] }[] = [
     label: "Справочники",
     items: [
       { id: "contactTypes", label: "Тип след. контакта", icon: "phone", admin: true },
+      { id: "bookingBrands", label: "Бренды", icon: "tag", admin: true },
+      { id: "bookingServiceReasons", label: "Причины броней", icon: "folder", admin: true },
       { id: "sources", label: "Источники заявок", icon: "inbox", admin: true },
-      { id: "developers", label: "Застройщики", icon: "briefcase", admin: true },
+      { id: "developers", label: "Владельцы сети", icon: "briefcase", admin: true },
       { id: "newsLabels", label: "Метки новостей", icon: "tag", admin: true },
       { id: "docCategories", label: "Категории документов", icon: "folder", admin: true },
     ],
@@ -99,13 +112,16 @@ const NAV_GROUPS: { label: string; items: NavLink[] }[] = [
 const PAGE_TITLES: Record<View, string> = {
   myday: "Мой день",
   leads: "Заявки",
+  bookings: "Брони",
   contacts: "Контакты",
   analytics: "Аналитика",
-  projects: "Жилые комплексы",
+  projects: "Конструкции",
   news: "Новости",
-  developers: "Застройщики",
+  developers: "Владельцы сети",
   stages: "Воронки",
   contactTypes: "Тип следующего контакта",
+  bookingBrands: "Бренды",
+  bookingServiceReasons: "Причины служебных броней",
   sources: "Источники заявок",
   newsLabels: "Метки новостей",
   docCategories: "Категории документов",
@@ -436,6 +452,7 @@ function Dashboard({ user }: { user: SessionUser }) {
                 onCloseLead={() => navigate("/leads")}
               />
             )}
+            {view === "bookings" && <BookingsView user={user} />}
             {view === "contacts" && (
               <ContactsView
                 user={user}
@@ -450,6 +467,8 @@ function Dashboard({ user }: { user: SessionUser }) {
             {view === "developers" && isAdmin && <DevelopersView />}
             {view === "stages" && isAdmin && <FunnelsAdmin />}
             {view === "contactTypes" && isAdmin && <ContactTypesAdmin />}
+            {view === "bookingBrands" && isAdmin && <BookingBrandsAdmin />}
+            {view === "bookingServiceReasons" && isAdmin && <BookingServiceReasonsAdmin />}
             {view === "sources" && isAdmin && <SourcesAdmin />}
             {view === "newsLabels" && isAdmin && <NewsLabelsAdmin />}
             {view === "docCategories" && isAdmin && <DocumentCategoriesAdmin />}

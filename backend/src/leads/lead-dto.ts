@@ -23,7 +23,7 @@ import type {
 
 /** Минимум полей этапа, нужный DTO заявки. */
 type StageRefRow = Pick<PrismaStage, "id" | "name" | "kind" | "funnelId">;
-/** Строка заявки вместе с этапом и (опционально) названиями ЖК/источника. */
+/** Строка заявки вместе с этапом и (опционально) названиями конструкции/источника. */
 export type LeadRow = PrismaLead & {
   stage: StageRefRow;
   construction?: { name: string } | null;

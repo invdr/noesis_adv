@@ -12,6 +12,59 @@
 backend ──▶ postgres:5432
 ```
 
+## Вариант без Docker рядом с существующим сайтом
+
+Если VPS уже обслуживает другой проект через host-nginx и host-PostgreSQL
+(как `catlg.ru` на текущем сервере), Docker Compose из коробки применять нельзя:
+он хочет занять `80/443` своим nginx и `127.0.0.1:3000` backend-портом.
+Для такого сценария есть отдельный no-Docker путь:
+
+```
+Интернет ──▶ host nginx (80/443)
+                ├── catlg.ru             → существующий Next.js :3000
+                └── noesis.catlg.ru      → Noesis
+                        ├── /            → website/web/current
+                        ├── /crm/        → webapp/dist
+                        ├── /files/      → /var/lib/noesis/files
+                        └── /api/        → 127.0.0.1:3001
+Noesis backend ──▶ host PostgreSQL:5432, отдельная БД/роль
+```
+
+Файлы этого режима:
+
+- `infra/no-docker.env.example` — пример окружения для конкретного VPS.
+- `infra/deploy-no-docker.sh` — idempotent-деплой без Docker.
+- `infra/nginx/no-docker.conf.template` — server block для host-nginx.
+- `infra/systemd/*.no-docker.service.template` — backend и site-builder.
+
+Первый запуск на VPS:
+
+```bash
+cd /var/www/noesis_adv
+cp infra/no-docker.env.example infra/no-docker.env
+# заполнить POSTGRES_PASSWORD, ADMIN_PASSWORD, BUILD_WORKER_TOKEN
+bash infra/deploy-no-docker.sh   # первый запуск сам установит bun при необходимости
+# последующие запуски можно делать и так: bun run deploy:vps:no-docker
+```
+
+Что делает скрипт:
+
+- устанавливает/публикует `bun` в `/usr/local/bin/bun`, если его нет;
+- создаёт системного пользователя `noesis` и каталог файлов
+  `/var/lib/noesis/files`;
+- создаёт отдельную роль/БД PostgreSQL;
+- пишет runtime-env в `/etc/noesis/backend.env`;
+- ставит systemd-сервисы `noesis-backend` и `noesis-site-builder`;
+- запускает backend на `127.0.0.1:3001`, применяет Prisma migrations и сид;
+- собирает website/webapp и подключает nginx-site `noesis`;
+- не трогает существующий `catalog-noema.service` и его порт `3000`.
+
+Для текущего VPS дефолтный домен — `noesis.catlg.ru`: точный `server_name`
+выигрывает у существующего wildcard `*.catlg.ru`, а TLS использует уже выпущенный
+wildcard-сертификат `catlg.ru-0001`. Если используется другой домен, поменяйте
+`NOESIS_DOMAIN`, `NOESIS_SERVER_NAMES`, `SITE_URL`, `CORS_ORIGINS`,
+`NOESIS_SSL_CERT` и `NOESIS_SSL_KEY` в `infra/no-docker.env`.
+
 ## Деплой по IP без домена (HTTP)
 
 Пока домена нет, сайт открывается по голому IP — `http://<VPS_IP>/`
@@ -184,6 +237,9 @@ API и перезапускает nginx с новой статикой.
 
 - Лендинг (`website`): `PUBLIC_API_URL` — базовый URL API. На проде оставьте
   пустым, чтобы форма обращалась к относительному `/api` того же домена.
+- `PUBLIC_YANDEX_MAPS_API_KEY` — публичный browser key JavaScript API
+  Яндекс.Карт для блока карты на лендинге. Без ключа сайт собирается, но карта
+  показывает fallback-сообщение.
 - CRM (`webapp`): `VITE_API_URL` — аналогично; пусто → относительный `/api`.
 
 ## Бэкапы БД

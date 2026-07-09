@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   formatPhoneRu,
   normalizeRuPhone,
-  orderHomepageProjects,
+  orderHomepageConstructions,
   SITE_SETTINGS_DEFAULTS,
   SITE_SETTINGS_LIMITS,
   type Construction,
@@ -51,11 +51,11 @@ const GROUPS: { title: string; fields: FieldDef[] }[] = [
     title: "Навигация (только подписи)",
     fields: [
       { key: "navCatalog", label: "Каталог", limit: L.navItem },
-      { key: "navFlats", label: "Квартиры", limit: L.navItem },
+      { key: "navFlats", label: "Карта", limit: L.navItem },
       { key: "navAbout", label: "О нас", limit: L.navItem },
       { key: "navDocs", label: "Документы", limit: L.navItem },
       { key: "navContacts", label: "Контакты", limit: L.navItem },
-      { key: "ctaSelectFlat", label: "Кнопка «Выбрать квартиру»", limit: L.cta },
+      { key: "ctaSelectFlat", label: "Кнопка «Выбрать конструкцию»", limit: L.cta },
     ],
   },
   {
@@ -74,8 +74,8 @@ const GROUPS: { title: string; fields: FieldDef[] }[] = [
     fields: [
       { key: "catalogEyebrow", label: "Каталог — надзаголовок", limit: L.eyebrow },
       { key: "catalogTitle", label: "Каталог — заголовок", limit: L.title },
-      { key: "flatsEyebrow", label: "Квартиры — надзаголовок", limit: L.eyebrow },
-      { key: "flatsTitle", label: "Квартиры — заголовок", limit: L.title },
+      { key: "flatsEyebrow", label: "Карта — надзаголовок", limit: L.eyebrow },
+      { key: "flatsTitle", label: "Карта — заголовок", limit: L.title },
       { key: "newsEyebrow", label: "Новости — надзаголовок", limit: L.eyebrow },
       { key: "newsTitle", label: "Новости — заголовок", limit: L.title },
       { key: "docsEyebrow", label: "Документы — надзаголовок", limit: L.eyebrow },
@@ -87,7 +87,7 @@ const GROUPS: { title: string; fields: FieldDef[] }[] = [
   {
     title: "Кнопки",
     fields: [
-      { key: "flatsCta", label: "«Смотреть квартиры»", limit: L.cta },
+      { key: "flatsCta", label: "«К каталогу»", limit: L.cta },
       { key: "newsAllCta", label: "«Все акции и новости»", limit: L.cta },
       { key: "contactsLeaveCta", label: "«Оставить заявку»", limit: L.cta },
       { key: "ctaOrderCall", label: "«Заказать звонок»", limit: L.cta },
@@ -152,7 +152,7 @@ function Editor({
   const [kind, setKind] = useState<SecondaryContactKind>(initial.secondaryContactKind ?? "email");
   const [newsCount, setNewsCount] = useState<3 | 6>(initial.newsHomeCount ?? 3);
   const [order, setOrder] = useState<string[]>(() =>
-    orderHomepageProjects(published, initial.homepageOrder ?? [], []).map((p) => p.id),
+    orderHomepageConstructions(published, initial.homepageOrder ?? [], []).map((p) => p.id),
   );
   const [hidden, setHidden] = useState<Set<string>>(() => new Set(initial.homepageHidden ?? []));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -373,12 +373,12 @@ function Editor({
         </label>
       </CollapsibleFieldset>
 
-      <CollapsibleFieldset title="ЖК на главной">
+      <CollapsibleFieldset title="Конструкции на главной">
         <p className="hint" style={{ marginTop: 0 }}>
-          Порядок карточек в каталоге и видимость. «Скрыть» убирает ЖК с главной (и из блока
-          «Документы»), но страница ЖК и поисковая выдача остаются.
+          Порядок карточек в каталоге и видимость. «Скрыть» убирает конструкцию с главной,
+          карты и из блока «Документы».
         </p>
-        {order.length === 0 && <p className="empty">Опубликованных ЖК нет.</p>}
+        {order.length === 0 && <p className="empty">Опубликованных конструкций нет.</p>}
         <ol style={{ paddingLeft: 18 }}>
           {order.map((id, i) => {
             const p = byId.get(id);

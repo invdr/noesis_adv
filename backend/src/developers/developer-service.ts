@@ -31,7 +31,7 @@ function developerDetailsData(input: UpsertDeveloperInput) {
   };
 }
 
-/** Список застройщиков по порядку. По умолчанию — только живые (неархивные). */
+/** Список владельцев сети по порядку. По умолчанию — только живые (неархивные). */
 export async function listDevelopers(
   rt: Runtime,
   opts: { includeArchived?: boolean } = {},
@@ -44,7 +44,7 @@ export async function listDevelopers(
   return rows.map((d) => toDeveloperDto(d, { publicBase: rt.env.FILES_PUBLIC_BASE }));
 }
 
-/** Создать застройщика (admin). Логотип — необязательный файл `logo`. */
+/** Создать владельца сети (admin). Логотип — необязательный файл `logo`. */
 export async function createDeveloper(
   rt: Runtime,
   input: UpsertDeveloperInput,
@@ -78,7 +78,7 @@ export async function createDeveloper(
   }
 }
 
-/** Обновить застройщика (admin): имя и/или логотип (заменить/снять). */
+/** Обновить владельца сети (admin): имя и/или логотип (заменить/снять). */
 export async function updateDeveloper(
   rt: Runtime,
   id: string,
@@ -112,7 +112,7 @@ export async function updateDeveloper(
   }
 }
 
-/** Архивировать застройщика (скрыть из выбора; ссылки из ЖК сохраняются). */
+/** Архивировать владельца сети (скрыть из выбора; ссылки из конструкций сохраняются). */
 export async function archiveDeveloper(rt: Runtime, id: string): Promise<Developer> {
   await requireDeveloper(rt, id);
   const dev = await rt.prisma.developer.update({
@@ -123,7 +123,7 @@ export async function archiveDeveloper(rt: Runtime, id: string): Promise<Develop
   return toDeveloperDto(dev, { publicBase: rt.env.FILES_PUBLIC_BASE });
 }
 
-/** Восстановить застройщика из архива. */
+/** Восстановить владельца сети из архива. */
 export async function restoreDeveloper(rt: Runtime, id: string): Promise<Developer> {
   await requireDeveloper(rt, id);
   const dev = await rt.prisma.developer.update({
@@ -135,8 +135,8 @@ export async function restoreDeveloper(rt: Runtime, id: string): Promise<Develop
 }
 
 /**
- * Удалить застройщика навсегда (admin). Запрещено, если на него ссылается хотя
- * бы один ЖК (включая архивные) — иначе осиротим карточки; для таких — архив.
+ * Удалить владельца сети навсегда (admin). Запрещено, если на него ссылается
+ * хотя бы одна конструкция (включая архивные); для таких — архив.
  */
 export async function deleteDeveloper(rt: Runtime, id: string): Promise<void> {
   const dev = await requireDeveloper(rt, id);
@@ -145,7 +145,7 @@ export async function deleteDeveloper(rt: Runtime, id: string): Promise<void> {
     throw new HttpError(
       409,
       "developer_in_use",
-      `На застройщика ссылаются ЖК (${used}). Сначала перепривяжите их или используйте архив.`,
+      `На владельца сети ссылаются конструкции (${used}). Сначала перепривяжите их или используйте архив.`,
     );
   }
   await rt.prisma.developer.delete({ where: { id } });

@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import {
   type CreateDocumentInput,
   type Document,
-  type DocumentCategoryProjects,
+  type DocumentCategoryConstructions,
   type DocumentGroup,
   type UpdateDocumentInput,
 } from "@noesis/contracts";
@@ -25,7 +25,7 @@ const documentOrderBy: Prisma.DocumentOrderByWithRelationInput[] = [
   { createdAt: "asc" },
 ];
 
-/** Документы одного ЖК для CRM (все категории, включая архивные). */
+/** Документы одной конструкции для CRM (все категории, включая архивные). */
 export async function listProjectDocuments(
   rt: Runtime,
   constructionId: string,
@@ -40,8 +40,8 @@ export async function listProjectDocuments(
 }
 
 /**
- * Добавить документ в ЖК (отдельная мгновенная операция, не в снимке «Сохранить
- * ЖК»). Для `file` грузим файл через файловый сервис; при сбое записи —
+ * Добавить документ в конструкцию (отдельная мгновенная операция, не в снимке
+ * «Сохранить конструкцию»). Для `file` грузим файл через файловый сервис; при сбое записи —
  * подчищаем (ноль сирот). Для `link` — только запись.
  */
 export async function addDocument(
@@ -140,7 +140,7 @@ export async function updateDocument(
   return dto(rt, updated);
 }
 
-/** Удалить документ из ЖК — сразу и навсегда (файл с диска чистит файловый сервис). */
+/** Удалить документ из конструкции — сразу и навсегда (файл с диска чистит файловый сервис). */
 export async function deleteDocument(
   rt: Runtime,
   constructionId: string,
@@ -157,11 +157,11 @@ export async function deleteDocument(
 }
 
 /**
- * Документы опубликованного ЖК по slug, сгруппированные по живым категориям (в
- * порядке справочника). «Скоро» и архив страницы не имеют → null (вызывающий
- * отдаёт 404). Пустые категории не попадают.
+ * Документы опубликованной конструкции по slug, сгруппированные по живым
+ * категориям (в порядке справочника). Архив страницы не имеет → null
+ * (вызывающий отдаёт 404). Пустые категории не попадают.
  */
-export async function listPublicProjectDocuments(
+export async function listPublicConstructionDocuments(
   rt: Runtime,
   slug: string,
 ): Promise<DocumentGroup[] | null> {
@@ -189,23 +189,26 @@ export async function listPublicProjectDocuments(
   return [...groups.values()];
 }
 
+/** @deprecated Используйте listPublicConstructionDocuments. */
+export const listPublicProjectDocuments = listPublicConstructionDocuments;
+
 /**
- * Карта «категория → ЖК» для блока документов на главной: живые категории по
- * порядку, в каждой — опубликованные ЖК (без «скоро»), у которых есть документы
+ * Карта «категория → конструкция» для блока документов на главной: живые категории по
+ * порядку, в каждой — опубликованные конструкции, у которых есть документы
  * этой категории. Пустые категории пропускаются.
  */
 export async function listPublicDocumentCategories(
   rt: Runtime,
-): Promise<DocumentCategoryProjects[]> {
+): Promise<DocumentCategoryConstructions[]> {
   const cfg = { publicBase: rt.env.FILES_PUBLIC_BASE };
   const categories = await rt.prisma.documentCategory.findMany({
     where: { archivedAt: null },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   });
 
-  const result: DocumentCategoryProjects[] = [];
+  const result: DocumentCategoryConstructions[] = [];
   for (const cat of categories) {
-    const projects = await rt.prisma.construction.findMany({
+    const constructions = await rt.prisma.construction.findMany({
       where: {
         status: "published",
         archivedAt: null,
@@ -214,11 +217,11 @@ export async function listPublicDocumentCategories(
       include: { cover: true },
       orderBy: { createdAt: "asc" },
     });
-    if (projects.length === 0) continue; // пустые категории не показываем
+    if (constructions.length === 0) continue; // пустые категории не показываем
 
     result.push({
       category: toDocumentCategoryDto(cat),
-      projects: projects.map((p) => ({
+      constructions: constructions.map((p) => ({
         id: p.id,
         slug: p.slug,
         name: p.name,
@@ -238,7 +241,7 @@ function dto(rt: Runtime, doc: DocumentRow): Document {
 
 async function requireProject(rt: Runtime, id: string): Promise<void> {
   const exists = await rt.prisma.construction.count({ where: { id } });
-  if (!exists) throw new HttpError(404, "not_found", "ЖК не найден");
+  if (!exists) throw new HttpError(404, "not_found", "Конструкция не найдена");
 }
 
 /** Категория должна существовать и быть живой — в архивную добавлять нельзя. */
@@ -250,7 +253,7 @@ async function requireLiveCategory(rt: Runtime, id: string): Promise<void> {
   }
 }
 
-/** Следующая позиция документа внутри категории конкретного ЖК. */
+/** Следующая позиция документа внутри категории конкретной конструкции. */
 async function nextPosition(
   rt: Runtime,
   constructionId: string,

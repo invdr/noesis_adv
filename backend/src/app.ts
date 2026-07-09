@@ -17,7 +17,9 @@ import { fileRoutes } from "./files/file-routes";
 import { developerRoutes } from "./developers/developer-routes";
 import { constructionRoutes } from "./constructions/construction-routes";
 import { publicConstructionRoutes } from "./constructions/construction-public-routes";
-import { legacySiteRoutes } from "./constructions/legacy-site-routes";
+import { bookingRoutes } from "./bookings/booking-routes";
+import { bookingBrandRoutes } from "./bookings/booking-brand-routes";
+import { bookingServiceReasonRoutes } from "./bookings/booking-service-reason-routes";
 import { newsLabelRoutes } from "./news/news-label-routes";
 import { newsRoutes } from "./news/news-routes";
 import { publicNewsRoutes } from "./news/news-public-routes";
@@ -87,7 +89,10 @@ export function createApp(rt: Runtime): Hono<AppEnv> {
   app.route("/api/partner-analytics", partnerAnalyticsRoutes(rt));
   app.route("/api/files", fileRoutes(rt));
   app.route("/api/developers", developerRoutes(rt));
-  // Документы и ход строительства по конструкции — отдельные роутеры на том же
+  app.route("/api/bookings", bookingRoutes(rt));
+  app.route("/api/booking-brands", bookingBrandRoutes(rt));
+  app.route("/api/booking-service-reasons", bookingServiceReasonRoutes(rt));
+  // Документы и фотоотчёты по конструкции — отдельные роутеры на том же
   // префиксе; `:constructionId` в их путях, паттерны не пересекаются с `/:id`.
   app.route("/api/constructions", documentRoutes(rt));
   app.route("/api/constructions", progressRoutes(rt));
@@ -96,8 +101,6 @@ export function createApp(rt: Runtime): Hono<AppEnv> {
   app.route("/api/news-labels", newsLabelRoutes(rt));
   app.route("/api/news", newsRoutes(rt));
   app.route("/api/public/constructions", publicConstructionRoutes(rt));
-  // Унаследованный лендинг (недвижимость): ЖК-форма каталога до Этапа 5.
-  app.route("/api/public/projects", legacySiteRoutes(rt));
   app.route("/api/public/news", publicNewsRoutes(rt));
   app.route("/api/public/documents", publicDocumentRoutes(rt));
   app.route("/api/public/progress", publicProgressRoutes(rt));

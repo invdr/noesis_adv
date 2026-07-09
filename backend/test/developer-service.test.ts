@@ -32,7 +32,7 @@ describe("createDeveloper", () => {
 });
 
 describe("deleteDeveloper", () => {
-  test("заблокировано, пока на застройщика ссылаются ЖК", async () => {
+  test("заблокировано, пока на владельца ссылаются конструкции", async () => {
     const prisma = {
       developer: { findUnique: async () => ({ id: "d1", logoId: null }) },
       construction: { count: async () => 2 },

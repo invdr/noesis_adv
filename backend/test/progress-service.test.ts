@@ -49,7 +49,7 @@ describe("createProgressAlbum", () => {
     expect(album.note).toBeNull();
   });
 
-  test("повтор периода в рамках ЖК отклоняется (409)", async () => {
+  test("повтор периода в рамках конструкции отклоняется (409)", async () => {
     const prisma = {
       construction: { count: async () => 1 },
       progressAlbum: { count: async () => 1 },
@@ -323,7 +323,7 @@ describe("deleteProgressPhoto", () => {
 });
 
 describe("listPublicProjectProgress", () => {
-  test("неопубликованный/несуществующий ЖК → null", async () => {
+  test("неопубликованная/несуществующая конструкция → null", async () => {
     const prisma = { construction: { findFirst: async () => null } };
     expect(await listPublicProjectProgress(runtimeWith(prisma), "ghost")).toBeNull();
   });

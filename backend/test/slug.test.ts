@@ -9,11 +9,11 @@ describe("uniqueSlug", () => {
   });
 
   test("занятый — добавляет суффикс до свободного", async () => {
-    const taken = new Set(["zhk", "zhk-2"]);
-    expect(await uniqueSlug("ЖК", async (s) => taken.has(s))).toBe("zhk-3");
+    const taken = new Set(["sf", "sf-2"]);
+    expect(await uniqueSlug("СФ", async (s) => taken.has(s))).toBe("sf-3");
   });
 
   test("пустой slug из имени → fallback", async () => {
-    expect(await uniqueSlug("«»—", async () => false, "zhk")).toBe("zhk");
+    expect(await uniqueSlug("«»—", async () => false, "construction")).toBe("construction");
   });
 });

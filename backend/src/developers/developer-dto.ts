@@ -5,10 +5,10 @@ import type {
 import type { Developer } from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 
-/** Строка застройщика с подгруженным логотипом. */
+/** Строка владельца сети с подгруженным логотипом. */
 export type DeveloperRow = PrismaDeveloper & { logo: PrismaAsset | null };
 
-/** Что нужно DTO застройщика помимо строки БД. */
+/** Что нужно DTO владельца сети помимо строки БД. */
 export interface DeveloperDtoConfig {
   publicBase: string;
 }

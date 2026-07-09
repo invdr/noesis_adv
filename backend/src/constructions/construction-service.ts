@@ -114,6 +114,20 @@ export async function archiveConstruction(
   id: string,
 ): Promise<Construction> {
   await requireConstruction(rt, id);
+  const activeBookings = await rt.prisma.booking.count({
+    where: {
+      constructionId: id,
+      status: { not: "cancelled" },
+      endDate: { gt: new Date() },
+    },
+  });
+  if (activeBookings > 0) {
+    throw new HttpError(
+      409,
+      "construction_has_active_bookings",
+      "У конструкции есть текущие или будущие брони — сначала отмените или перенесите их",
+    );
+  }
   const construction = await rt.prisma.construction.update({
     where: { id },
     data: { archivedAt: new Date() },
@@ -146,6 +160,15 @@ export async function deleteConstruction(rt: Runtime, id: string): Promise<void>
     include: { images: true, documents: true },
   });
   if (!construction) throw new HttpError(404, "not_found", "Конструкция не найдена");
+
+  const bookings = await rt.prisma.booking.count({ where: { constructionId: id } });
+  if (bookings > 0) {
+    throw new HttpError(
+      409,
+      "construction_has_bookings",
+      `Конструкцию используют брони (${bookings}). Используйте архив.`,
+    );
+  }
 
   const assetIds = new Set<string>(construction.images.map((i) => i.assetId));
   if (construction.coverId) assetIds.add(construction.coverId);
@@ -280,7 +303,7 @@ async function saveConstruction(
       ownerId: input.ownerId ?? null,
       format: input.format,
       size: input.size ?? null,
-      side: input.side ?? null,
+      sideCount: input.sideCount,
       lighting: input.lighting,
       grp: input.grp ?? null,
       trafficPerDay: input.trafficPerDay ?? null,

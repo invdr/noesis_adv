@@ -3,6 +3,9 @@ import type {
   AnalyticsResponse,
   ArchiveStageInput,
   AssignLeadInput,
+  Booking,
+  BookingBrand,
+  BookingServiceReason,
   ChangePasswordRequest,
   Contact,
   ContactDetail,
@@ -18,6 +21,9 @@ import type {
   CreateDocumentInput,
   CreateManualLeadInput,
   UpsertContactTypeInput,
+  UpsertBookingBrandInput,
+  UpsertBookingInput,
+  UpsertBookingServiceReasonInput,
   ResetPasswordResponse,
   UpdateUserInput,
   CreateFunnelInput,
@@ -129,7 +135,7 @@ async function requestMultipart<T>(
   return (await res.json()) as T;
 }
 
-/** FormData сохранения ЖК: JSON-данные + новые фото `image_0`, `image_1`, … */
+/** FormData сохранения конструкции: JSON-данные + новые фото `image_0`, `image_1`, … */
 function projectForm(data: UpsertConstructionInput, files: File[]): FormData {
   const form = new FormData();
   form.append("data", JSON.stringify(data));
@@ -155,6 +161,24 @@ export interface PaginatedProjects {
   page: number;
   pageSize: number;
   total: number;
+}
+
+export interface PaginatedBookings {
+  items: Booking[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface BookingListParams {
+  page?: number;
+  pageSize?: number;
+  from?: string;
+  to?: string;
+  status?: string;
+  kind?: string;
+  constructionId?: string;
+  search?: string;
 }
 
 export interface ProjectListParams {
@@ -424,6 +448,35 @@ export const api = {
       body: JSON.stringify(input),
     });
   },
+
+  // --- Брони ---
+  listBookings(params: BookingListParams = {}) {
+    const q = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") q.set(key, String(value));
+    }
+    const qs = q.toString();
+    return request<PaginatedBookings>(`/api/bookings${qs ? `?${qs}` : ""}`);
+  },
+  getBooking(id: string) {
+    return request<Booking>(`/api/bookings/${id}`);
+  },
+  createBooking(input: UpsertBookingInput) {
+    return request<Booking>("/api/bookings", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateBooking(id: string, input: UpsertBookingInput) {
+    return request<Booking>(`/api/bookings/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  cancelBooking(id: string) {
+    return request<Booking>(`/api/bookings/${id}/cancel`, { method: "POST" });
+  },
+
   partnerAnalytics(params: PartnerAnalyticsQuery = {}) {
     const q = new URLSearchParams();
     if (params.from) q.set("from", params.from);
@@ -509,7 +562,7 @@ export const api = {
     return request<void>(`/api/developers/${id}`, { method: "DELETE" });
   },
 
-  // --- Жилые комплексы (ЖК) ---
+  // --- Рекламные конструкции ---
   listProjects(params: ProjectListParams = {}) {
     const q = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -536,6 +589,72 @@ export const api = {
   },
   deleteProject(id: string) {
     return request<void>(`/api/constructions/${id}`, { method: "DELETE" });
+  },
+
+  // --- Бренды размещений (справочник) ---
+  listBookingBrands(includeArchived = false) {
+    const qs = includeArchived ? "?includeArchived=true" : "";
+    return request<BookingBrand[]>(`/api/booking-brands${qs}`);
+  },
+  createBookingBrand(input: UpsertBookingBrandInput) {
+    return request<BookingBrand>("/api/booking-brands", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateBookingBrand(id: string, input: UpsertBookingBrandInput) {
+    return request<BookingBrand>(`/api/booking-brands/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  reorderBookingBrands(ids: string[]) {
+    return request<BookingBrand[]>("/api/booking-brands/reorder", {
+      method: "PATCH",
+      body: JSON.stringify({ ids }),
+    });
+  },
+  archiveBookingBrand(id: string) {
+    return request<BookingBrand>(`/api/booking-brands/${id}/archive`, { method: "POST" });
+  },
+  restoreBookingBrand(id: string) {
+    return request<BookingBrand>(`/api/booking-brands/${id}/restore`, { method: "POST" });
+  },
+  deleteBookingBrand(id: string) {
+    return request<void>(`/api/booking-brands/${id}`, { method: "DELETE" });
+  },
+
+  // --- Причины служебных броней (справочник) ---
+  listBookingServiceReasons(includeArchived = false) {
+    const qs = includeArchived ? "?includeArchived=true" : "";
+    return request<BookingServiceReason[]>(`/api/booking-service-reasons${qs}`);
+  },
+  createBookingServiceReason(input: UpsertBookingServiceReasonInput) {
+    return request<BookingServiceReason>("/api/booking-service-reasons", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateBookingServiceReason(id: string, input: UpsertBookingServiceReasonInput) {
+    return request<BookingServiceReason>(`/api/booking-service-reasons/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  reorderBookingServiceReasons(ids: string[]) {
+    return request<BookingServiceReason[]>("/api/booking-service-reasons/reorder", {
+      method: "PATCH",
+      body: JSON.stringify({ ids }),
+    });
+  },
+  archiveBookingServiceReason(id: string) {
+    return request<BookingServiceReason>(`/api/booking-service-reasons/${id}/archive`, { method: "POST" });
+  },
+  restoreBookingServiceReason(id: string) {
+    return request<BookingServiceReason>(`/api/booking-service-reasons/${id}/restore`, { method: "POST" });
+  },
+  deleteBookingServiceReason(id: string) {
+    return request<void>(`/api/booking-service-reasons/${id}`, { method: "DELETE" });
   },
 
   // --- Новости ---
@@ -640,7 +759,7 @@ export const api = {
     return request<void>(`/api/document-categories/${id}`, { method: "DELETE" });
   },
 
-  // --- Документы по ЖК (точечные операции в карточке) ---
+  // --- Документы по конструкции (точечные операции в карточке) ---
   listProjectDocuments(projectId: string) {
     return request<Document[]>(`/api/constructions/${projectId}/documents`);
   },
@@ -666,7 +785,7 @@ export const api = {
     });
   },
 
-  // --- Ход строительства по ЖК (точечные операции в карточке) ---
+  // --- Фотоотчёты по конструкции (точечные операции в карточке) ---
   listProjectProgress(projectId: string) {
     return request<ProgressAlbum[]>(`/api/constructions/${projectId}/progress`);
   },

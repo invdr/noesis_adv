@@ -12,12 +12,14 @@ startSessionSweeper(rt);
 // Сторожок простоя публикации лендинга (алерт, если сборщик не работает).
 startBuildStallWatcher(rt);
 
-console.log(`API Noesis слушает порт ${rt.env.PORT}`);
+const bindHost = rt.env.HOST ? `${rt.env.HOST}:` : "";
+console.log(`API Noesis слушает ${bindHost}${rt.env.PORT}`);
 
 export default {
   port: rt.env.PORT,
+  hostname: rt.env.HOST,
   fetch: app.fetch,
-  // Дефолтный кап Bun — 128 МиБ: сохранение ЖК с полной галереей
+  // Дефолтный кап Bun — 128 МиБ: сохранение конструкции с полной галереей
   // (PROJECT_UPLOAD_MAX_BYTES ≈ 302 МБ) получало бы голый 413 от рантайма
   // до Hono. Поднимаем ровно до client_max_body_size в nginx (320m): всё,
   // что пропустил nginx, доходит до bodyLimit роутов и получает JSON-ошибку,

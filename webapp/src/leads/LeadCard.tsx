@@ -577,7 +577,7 @@ export function LeadCard({
               </div>
 
               <div className="field">
-                <div className="field-label">ЖК</div>
+                <div className="field-label">Конструкция</div>
                 {editable ? (
                   <>
                     <select

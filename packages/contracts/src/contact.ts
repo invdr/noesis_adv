@@ -110,7 +110,7 @@ export type ContactDetail = z.infer<typeof contactDetailSchema>;
 
 /**
  * Создание/обновление контакта. Оптимистичная блокировка по версии
- * (`expectedUpdatedAt` → 409), как у ЖК/новостей/настроек. Инварианты
+ * (`expectedUpdatedAt` → 409), как у конструкций/новостей/настроек. Инварианты
  * (agencyId только у риелтора и на живое агентство, без самоссылки) — в сервисе.
  */
 export const upsertContactSchema = z.object({

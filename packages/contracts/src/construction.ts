@@ -34,12 +34,20 @@ export const CONSTRUCTION_FORMAT_LABEL: Record<ConstructionFormat, string> = {
 };
 
 /**
- * Сторона конструкции. Двусторонние конструкции продаются по сторонам;
- * `null` — односторонняя / сторона не применима. Гранулярность брони по
- * сторонам решается на Этапе 2 (инвентарь).
+ * Сторона инвентаря. Хранится на брони: у односторонней конструкции `null`,
+ * у двусторонней — A или B.
  */
 export const constructionSideSchema = z.enum(["A", "B"]);
 export type ConstructionSide = z.infer<typeof constructionSideSchema>;
+
+/** Количество продаваемых сторон конструкции. */
+export const constructionSideCountSchema = z.union([z.literal(1), z.literal(2)]);
+export type ConstructionSideCount = z.infer<typeof constructionSideCountSchema>;
+
+export const CONSTRUCTION_SIDE_COUNT_LABEL: Record<ConstructionSideCount, string> = {
+  1: "Односторонняя",
+  2: "Двусторонняя (A/B)",
+};
 
 /** Подсветка конструкции. */
 export const constructionLightingSchema = z.enum([
@@ -149,8 +157,8 @@ export const constructionSchema = z.object({
   format: constructionFormatSchema,
   /** Габариты свободной строкой («1,2 × 1,8 м»). */
   size: z.string().nullable(),
-  /** Сторона (для двусторонних); `null` — односторонняя. */
-  side: constructionSideSchema.nullable(),
+  /** Количество продаваемых сторон. Сама сторона выбирается в брони. */
+  sideCount: constructionSideCountSchema,
   lighting: constructionLightingSchema,
   /** Рейтинг GRP (охват), если известен. */
   grp: z.number().nullable(),
@@ -217,7 +225,7 @@ export const upsertConstructionSchema = z
     // шлёт их явно. Основной продукт — сити-формат, подсветка по умолчанию нет.
     format: constructionFormatSchema.default("cityFormat"),
     size: z.string().trim().max(MAX_CONSTRUCTION_SIZE).optional(),
-    side: constructionSideSchema.nullable().optional(),
+    sideCount: constructionSideCountSchema.default(1),
     lighting: constructionLightingSchema.default("none"),
     grp: z.number().nonnegative().nullable().optional(),
     trafficPerDay: z.number().int().nonnegative().nullable().optional(),
@@ -265,9 +273,9 @@ export const upsertConstructionSchema = z
     if (v.status !== "published") return; // черновик — достаточно названия
 
     // Обычная публикация — строгий набор (решение по обязательным полям).
+    // Цена может быть неизвестна: публичный DTO покажет «Цена по запросу».
     if (!v.address) issue("address", "Укажите адрес");
     if (!hasLat || !hasLng) issue("lat", "Проставьте точку на карте");
-    if (v.pricePerMonth == null) issue("pricePerMonth", "Укажите цену за месяц");
     if (images.length === 0) issue("images", "Добавьте хотя бы одно фото");
     if (!hasCover) issue("coverIndex", "Отметьте обложку");
   });

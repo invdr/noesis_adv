@@ -4,9 +4,9 @@ import { assetSchema } from "./file";
 // --- Категории документов (общий справочник, ведёт admin) ---
 
 /**
- * DTO категории документов. Справочник общий для всех ЖК: на главной лендинга
- * навигация идёт от категории к ЖК, поэтому категория — общая ось, а не
- * произвольный список внутри отдельного ЖК.
+ * DTO категории документов. Справочник общий для всех конструкций: на главной
+ * навигация идёт от категории к конструкции, поэтому категория — общая ось, а не
+ * произвольный список внутри отдельной конструкции.
  */
 export const documentCategorySchema = z.object({
   id: z.string(),
@@ -106,7 +106,7 @@ const httpUrlSchema = z
   );
 
 /**
- * Добавление документа в карточку ЖК (multipart `data` + для `file` — файл
+ * Добавление документа в карточку конструкции (multipart `data` + для `file` — файл
  * `file`). Для `file` название необязательно: сервис возьмёт имя файла без
  * расширения. Для `link` название обязательно (имени файла нет).
  */
@@ -150,8 +150,8 @@ export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
 // --- Публичные DTO для лендинга ---
 
 /**
- * Документы одного ЖК, сгруппированные по категории (страница ЖК и страница
- * «все документы ЖК»). Группы — в порядке справочника категорий.
+ * Документы одной конструкции, сгруппированные по категории. Группы — в порядке
+ * справочника категорий.
  */
 export const documentGroupSchema = z.object({
   category: documentCategorySchema,
@@ -159,24 +159,24 @@ export const documentGroupSchema = z.object({
 });
 export type DocumentGroup = z.infer<typeof documentGroupSchema>;
 
-/** Облегчённая ссылка на ЖК для блока документов на главной (категория → ЖК). */
-export const documentProjectRefSchema = z.object({
+/** Облегчённая ссылка на конструкцию для блока документов на главной. */
+export const documentConstructionRefSchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
   address: z.string().nullable(),
   cover: assetSchema.optional(),
 });
-export type DocumentProjectRef = z.infer<typeof documentProjectRefSchema>;
+export type DocumentConstructionRef = z.infer<typeof documentConstructionRefSchema>;
 
 /**
- * Категория и ЖК, у которых есть документы этой категории — для навигации
- * «от категории к ЖК» на главной. Пустые категории сюда не попадают.
+ * Категория и конструкции, у которых есть документы этой категории — для
+ * навигации «от категории к конструкции» на главной. Пустые категории сюда не попадают.
  */
-export const documentCategoryProjectsSchema = z.object({
+export const documentCategoryConstructionsSchema = z.object({
   category: documentCategorySchema,
-  projects: z.array(documentProjectRefSchema),
+  constructions: z.array(documentConstructionRefSchema),
 });
-export type DocumentCategoryProjects = z.infer<
-  typeof documentCategoryProjectsSchema
+export type DocumentCategoryConstructions = z.infer<
+  typeof documentCategoryConstructionsSchema
 >;

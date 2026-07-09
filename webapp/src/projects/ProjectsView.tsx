@@ -4,6 +4,7 @@ import {
   BADGE_PALETTE,
   CONSTRUCTION_FORMAT_LABEL,
   CONSTRUCTION_LIGHTING_LABEL,
+  CONSTRUCTION_SIDE_COUNT_LABEL,
   MAX_BADGES,
   MAX_GALLERY_IMAGES,
   type Asset,
@@ -12,7 +13,7 @@ import {
   type Construction,
   type ConstructionFormat,
   type ConstructionLighting,
-  type ConstructionSide,
+  type ConstructionSideCount,
   type ConstructionStatus,
   type Developer,
   type UpsertConstructionInput,
@@ -214,7 +215,7 @@ function ProjectFormBody({
   const [ownerId, setOwnerId] = useState(construction?.owner?.id ?? "");
   const [format, setFormat] = useState<ConstructionFormat>(construction?.format ?? "cityFormat");
   const [size, setSize] = useState(construction?.size ?? "");
-  const [side, setSide] = useState<"" | ConstructionSide>(construction?.side ?? "");
+  const [sideCount, setSideCount] = useState<ConstructionSideCount>(construction?.sideCount ?? 1);
   const [lighting, setLighting] = useState<ConstructionLighting>(construction?.lighting ?? "none");
   const [grp, setGrp] = useState(construction?.grp != null ? String(construction.grp) : "");
   const [trafficPerDay, setTrafficPerDay] = useState(construction?.trafficPerDay != null ? String(construction.trafficPerDay) : "");
@@ -295,7 +296,7 @@ function ProjectFormBody({
         lng: num(lng),
         format,
         size: size.trim() || undefined,
-        side: side || null,
+        sideCount,
         lighting,
         grp: num(grp),
         trafficPerDay: traffic != null ? Math.round(traffic) : null,
@@ -398,13 +399,12 @@ function ProjectFormBody({
             {err("size")}
           </Field>
 
-          <Field label="Сторона">
-            <select value={side} onChange={(e) => setSide(e.target.value as "" | ConstructionSide)}>
-              <option value="">Односторонняя</option>
-              <option value="A">Сторона A</option>
-              <option value="B">Сторона B</option>
+          <Field label="Стороны">
+            <select value={String(sideCount)} onChange={(e) => setSideCount(Number(e.target.value) as ConstructionSideCount)}>
+              <option value="1">{CONSTRUCTION_SIDE_COUNT_LABEL[1]}</option>
+              <option value="2">{CONSTRUCTION_SIDE_COUNT_LABEL[2]}</option>
             </select>
-            {err("side")}
+            {err("sideCount")}
           </Field>
 
           <Field label="Подсветка">

@@ -39,7 +39,7 @@ export const sourceBucketSchema = z.object({
   count: z.number().int(),
 });
 
-/** Распределение по ЖК (только заявки с привязкой к ЖК). */
+/** Распределение по конструкциям (только заявки с привязкой к конструкции). */
 export const projectBucketSchema = z.object({
   projectId: z.string(),
   name: z.string(),

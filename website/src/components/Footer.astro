@@ -1,6 +1,6 @@
 ---
 // Подвал лендинга. Якорные ссылки разделов работают на главной как `#id`, а на
-// отдельных страницах (ЖК/новость) — как `/#id` (через `home`). Пункт
+// отдельных страницах (конструкция/новость) — как `/#id` (через `home`). Пункт
 // «Документы» скрывается, если документов нет (`showDocs`). Тексты/контакты —
 // из настроек сайта (Веха 4.3), дизайн 1:1.
 import type { Chrome } from "../lib/chrome";
@@ -23,7 +23,7 @@ const base = home ? "" : "/";
       <div class="footer-col">
         <span class="mono footer-col-title">Разделы</span>
         <a href={`${base}#catalog`}>{s.navCatalog}</a>
-        <a href={`${base}#flats`}>{s.navFlats}</a>
+        <a href={`${base}#map`}>{s.navFlats}</a>
         <a href={`${base}#about`}>{s.navAbout}</a>
         {showDocs && <a href={`${base}#docs`}>{s.navDocs}</a>}
       </div>

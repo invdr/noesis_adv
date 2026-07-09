@@ -46,15 +46,19 @@ model User {
   authoredAssignEvents   LeadAssignEvent[]  @relation("AssignEventAuthor")
   /// События задач «следующий контакт», инициированные пользователем.
   authoredContactEvents  LeadContactEvent[] @relation("ContactEventAuthor")
-  /// Файлы, загруженные пользователем (фото ЖК, документы и т. п.).
+  /// Файлы, загруженные пользователем (фото конструкций, документы и т. п.).
   uploadedAssets         Asset[]
-  /// ЖК, заведённые пользователем.
+  /// Конструкции, заведённые пользователем.
   authoredConstructions  Construction[]     @relation("ConstructionAuthor")
+  /// Брони, заведённые пользователем.
+  authoredBookings       Booking[]          @relation("BookingAuthor")
+  /// Брони, где пользователь — ответственный менеджер.
+  managedBookings        Booking[]          @relation("BookingManager")
   /// Новости, заведённые пользователем.
   authoredNews           News[]             @relation("NewsAuthor")
   /// Документы, загруженные пользователем.
   authoredDocuments      Document[]         @relation("DocumentAuthor")
-  /// Альбомы хода строительства, заведённые пользователем.
+  /// Альбомы фотоотчётов, заведённые пользователем.
   authoredProgress       ProgressAlbum[]    @relation("ProgressAlbumAuthor")
   /// Контакты CRM, заведённые пользователем вручную.
   authoredContacts       Contact[]          @relation("ContactAuthor")
@@ -84,7 +88,7 @@ enum AssetKind {
   document
 }
 
-/// Загруженный файл (фото ЖК, обложка новости, документ). Бинарь лежит на
+/// Загруженный файл (фото конструкции, обложка новости, документ). Бинарь лежит на
 /// диске (постоянный том VPS, раздаётся nginx), в БД — только метаданные и
 /// ключи хранения. Имена на диске обезличены; исходное имя — в `originalName`.
 model Asset {
@@ -266,6 +270,8 @@ model Contact {
   leads                  Lead[]      @relation("LeadContact")
   /// Заявки, приведённые этим контактом (реферер).
   referredLeads          Lead[]      @relation("LeadReferrer")
+  /// Коммерческие брони, где контакт — плательщик.
+  paidBookings           Booking[]   @relation("BookingClient")
 
   @@index([kind])
   @@index([phone])
@@ -285,7 +291,7 @@ model Lead {
   /// Текущий этап воронки. Перевод заявки между этапами — свободный.
   stageId           String
   stage             Stage              @relation(fields: [stageId], references: [id], onDelete: Restrict)
-  /// ЖК заявки (необязателен); при удалении ЖК ссылка обнуляется.
+  /// Конструкция заявки (необязательна); при удалении конструкции ссылка обнуляется.
   constructionId    String?
   construction      Construction?      @relation(fields: [constructionId], references: [id], onDelete: SetNull)
   message           String?
@@ -314,6 +320,7 @@ model Lead {
   statusEvents      LeadStatusEvent[]
   assignEvents      LeadAssignEvent[]
   contactEvents     LeadContactEvent[]
+  bookings          Booking[]
 
   @@index([stageId])
   @@index([createdAt])
@@ -391,14 +398,28 @@ model LeadContactEvent {
   @@index([leadId])
 }
 
-/// Статус публикации ЖК. Черновик виден только в CRM.
+/// Статус публикации конструкции. Черновик виден только в CRM.
 enum ConstructionStatus {
   draft
   published
 }
 
-/// Застройщик — справочник (ведёт admin, менеджер выбирает из него при
-/// заведении ЖК). «Удаление» = архивация: на застройщика ссылаются ЖК, из БД
+/// Тип брони: коммерческая продажа рекламодателю или служебная занятость.
+enum BookingKind {
+  commercial
+  service
+}
+
+/// Операционный статус брони. Все переходы ручные.
+enum BookingStatus {
+  booked
+  onAir
+  completed
+  cancelled
+}
+
+/// Владелец сети — справочник (ведёт admin, менеджер выбирает из него при
+/// заведении конструкции). «Удаление» = архивация: на владельца ссылаются конструкции, из БД
 /// его не стираем.
 model Developer {
   id                   String         @id @default(cuid())
@@ -423,7 +444,7 @@ model Developer {
   logo                 Asset?         @relation("DeveloperLogo", fields: [logoId], references: [id], onDelete: SetNull)
   /// Позиция в списке (меньше — раньше).
   order                Int            @default(0)
-  /// Архивация вместо удаления: скрыт из выбора, ссылки из ЖК сохранены.
+  /// Архивация вместо удаления: скрыт из выбора, ссылки из конструкций сохранены.
   archivedAt           DateTime?
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
@@ -438,7 +459,7 @@ model Developer {
 /// constructionId). Фото — через Asset; обложка — одно из фото галереи (coverId).
 model Construction {
   id            String              @id @default(cuid())
-  /// Человеко-понятный URL `/construction/<slug>`. Заморожен, уникален.
+  /// Человеко-понятный URL `/constructions/<slug>`. Заморожен, уникален.
   slug          String              @unique
   name          String
   /// Инвентарный код («СФ-014»).
@@ -456,8 +477,8 @@ model Construction {
   format        String              @default("cityFormat")
   /// Габариты свободной строкой («1,2 × 1,8 м»).
   size          String?
-  /// Сторона двусторонней конструкции: "A"|"B"; null — односторонняя.
-  side          String?
+  /// Количество продаваемых сторон: 1 — односторонняя, 2 — A/B.
+  sideCount     Int                 @default(1)
   /// Подсветка: none|internal|external (валидирует Zod).
   lighting      String              @default("none")
   /// Рейтинг GRP (охват), если известен.
@@ -481,6 +502,7 @@ model Construction {
   documents     Document[]
   progress      ProgressAlbum[]
   leads         Lead[]
+  bookings      Booking[]
 
   @@index([status])
   @@index([archivedAt])
@@ -488,7 +510,90 @@ model Construction {
   @@index([format])
 }
 
-/// Фото галереи ЖК — упорядоченная связь Construction↔Asset. Обложка задаётся
+/// Бренд/кампания, которую размещают на конструкции. Не обязательно совпадает с
+/// плательщиком-клиентом: агентство может платить за бренд рекламодателя.
+model BookingBrand {
+  id         String    @id @default(cuid())
+  name       String
+  order      Int       @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  bookings   Booking[]
+
+  @@index([archivedAt])
+  @@index([order])
+}
+
+/// Причина служебной брони: ремонт, собственная реклама, резерв и т. п.
+model BookingServiceReason {
+  id         String    @id @default(cuid())
+  name       String
+  order      Int       @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  bookings   Booking[]
+
+  @@index([archivedAt])
+  @@index([order])
+}
+
+/// Бронирование рекламной конструкции на период. Занятость считается по
+/// полуоткрытому интервалу [startDate, endDate) и только для не-отменённых броней.
+model Booking {
+  id                String                @id @default(cuid())
+  kind              BookingKind           @default(commercial)
+  status            BookingStatus         @default(booked)
+  constructionId    String
+  construction      Construction          @relation(fields: [constructionId], references: [id], onDelete: Restrict)
+  /// Сторона брони: null у односторонней конструкции, "A"/"B" у двусторонней.
+  side              String?
+  /// Плательщик для commercial-брони (Contact kind=client). Для service — null.
+  clientId          String?
+  client            Contact?              @relation("BookingClient", fields: [clientId], references: [id], onDelete: SetNull)
+  /// Причина служебной брони. Для commercial — null.
+  serviceReasonId   String?
+  serviceReason     BookingServiceReason? @relation(fields: [serviceReasonId], references: [id], onDelete: SetNull)
+  /// Что размещаем: бренд/рекламодатель на макете.
+  brandId           String?
+  brand             BookingBrand?         @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  campaignNote      String?
+  /// Необязательная связка с заявкой; сама бронь создаётся напрямую из сетки.
+  leadId            String?
+  lead              Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  /// Даты хранятся как UTC-полночь календарного дня; бизнес-логика работает с YYYY-MM-DD.
+  startDate         DateTime
+  endDate           DateTime
+  durationMonths    Int
+  /// Ценовой снимок на момент создания/ручной правки.
+  basePricePerMonth Int?
+  totalPrice        Int?
+  priceNote         String?
+  /// Напоминание ответственному менеджеру о подходящем сроке.
+  reminderAt        DateTime?
+  managerId         String?
+  manager           User?                 @relation("BookingManager", fields: [managerId], references: [id], onDelete: SetNull)
+  createdById       String?
+  createdBy         User?                 @relation("BookingAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([constructionId])
+  @@index([status])
+  @@index([kind])
+  @@index([side])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([clientId])
+  @@index([serviceReasonId])
+  @@index([brandId])
+  @@index([leadId])
+  @@index([managerId])
+  @@index([reminderAt])
+}
+
+/// Фото галереи конструкции — упорядоченная связь Construction↔Asset. Обложка задаётся
 /// полем Construction.coverId (одно из этих фото).
 model ConstructionImage {
   id             String       @id @default(cuid())
@@ -562,7 +667,7 @@ model News {
 }
 
 /// Категория документов — общий справочник (ведёт admin, задаёт порядок), един
-/// для всех ЖК: на главной лендинга навигация идёт от категории к ЖК. «Удаление»
+/// для всех конструкций: на главной навигация идёт от категории к конструкции. «Удаление»
 /// = архивация: на категорию ссылаются документы.
 model DocumentCategory {
   id         String     @id @default(cuid())
@@ -581,15 +686,15 @@ model DocumentCategory {
   @@index([order])
 }
 
-/// Вид документа по ЖК: загруженный файл или внешняя ссылка.
+/// Вид документа по конструкции: загруженный файл или внешняя ссылка.
 enum DocumentKind {
   file
   link
 }
 
-/// Документ по ЖК: загруженный файл (asset) или внешняя ссылка (url + подпись).
-/// Привязан к ЖК и категории справочника. Удаление документа — сразу и навсегда
-/// (файл с диска чистит сервис); жёсткое удаление ЖК сносит документы каскадом.
+/// Документ по конструкции: загруженный файл (asset) или внешняя ссылка (url + подпись).
+/// Привязан к конструкции и категории справочника. Удаление документа — сразу и навсегда
+/// (файл с диска чистит сервис); жёсткое удаление конструкции сносит документы каскадом.
 model Document {
   id             String           @id @default(cuid())
   constructionId String
@@ -661,7 +766,7 @@ model SiteBuild {
 
 /// Singleton-настройки «обвязки» лендинга (Веха 4.3): навигация, контакты,
 /// реквизиты, подписи кнопок/секций, параметры блока новостей, видимость/порядок
-/// ЖК на главной, ID Яндекс.Метрики. Ровно одна строка (фиксированный id).
+/// конструкций на главной, ID Яндекс.Метрики. Ровно одна строка (фиксированный id).
 /// Хранится разреженным набором переопределений в JSON `data` (валидируется Zod
 /// по siteSettingsBaseSchema); пустое поле = берётся дефолт из кода. Admin-only,
 /// блокировка по версии через `updatedAt`.
@@ -673,9 +778,9 @@ model SiteSettings {
   updatedAt DateTime @updatedAt
 }
 
-/// Ход строительства: фотоальбом за месяц по ЖК. Управляется в карточке ЖК
-/// точечными операциями (как документы); на лендинге — секция на /zhk/<slug>
-/// от новых месяцев к старым. Один альбом на период (`constructionId+year+month`).
+/// Фотоотчёты: фотоальбом за месяц по конструкции. Управляется в карточке
+/// конструкции точечными операциями (как документы). Один альбом на период
+/// (`constructionId+year+month`).
 model ProgressAlbum {
   id             String          @id @default(cuid())
   constructionId String

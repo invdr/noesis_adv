@@ -21,8 +21,8 @@ import {
 
 
 /**
- * Роуты хода строительства внутри карточки ЖК. Монтируются на `/api/projects`
- * (`:projectId` в путях — как у документов). Управление — manager+admin;
+ * Роуты фотоотчётов внутри карточки конструкции. Монтируются на `/api/constructions`
+ * (`:constructionId` в путях — как у документов). Управление — manager+admin;
  * операции точечные мгновенные: альбом (период+комментарий) и фото отдельно.
  * Фото — multipart с полями `photo_0`, `photo_1`, …
  */
@@ -35,38 +35,38 @@ export function progressRoutes(rt: Runtime): Hono<AppEnv> {
       c.json({ error: { code: "file_too_large", message: "Файлы слишком большие" } }, 413),
   });
 
-  app.get("/:projectId/progress", auth, async (c) =>
-    c.json(await listProjectProgress(rt, c.req.param("projectId"))),
+  app.get("/:constructionId/progress", auth, async (c) =>
+    c.json(await listProjectProgress(rt, c.req.param("constructionId"))),
   );
 
-  app.post("/:projectId/progress", auth, async (c) => {
+  app.post("/:constructionId/progress", auth, async (c) => {
     const input = upsertProgressAlbumSchema.parse(await c.req.json());
     const album = await createProgressAlbum(
       rt,
-      c.req.param("projectId"),
+      c.req.param("constructionId"),
       input,
       c.get("user").id,
     );
     return c.json(album, 201);
   });
 
-  app.patch("/:projectId/progress/:albumId", auth, async (c) => {
+  app.patch("/:constructionId/progress/:albumId", auth, async (c) => {
     const input = upsertProgressAlbumSchema.parse(await c.req.json());
     const album = await updateProgressAlbum(
       rt,
-      c.req.param("projectId"),
+      c.req.param("constructionId"),
       c.req.param("albumId"),
       input,
     );
     return c.json(album);
   });
 
-  app.delete("/:projectId/progress/:albumId", auth, async (c) => {
-    await deleteProgressAlbum(rt, c.req.param("projectId"), c.req.param("albumId"));
+  app.delete("/:constructionId/progress/:albumId", auth, async (c) => {
+    await deleteProgressAlbum(rt, c.req.param("constructionId"), c.req.param("albumId"));
     return c.body(null, 204);
   });
 
-  app.post("/:projectId/progress/:albumId/photos", auth, photoLimit, async (c) => {
+  app.post("/:constructionId/progress/:albumId/photos", auth, photoLimit, async (c) => {
     const { files } = await parseMultipart(c);
     if (files.size > MAX_PROGRESS_PHOTOS_PER_REQUEST) {
       throw new HttpError(
@@ -77,7 +77,7 @@ export function progressRoutes(rt: Runtime): Hono<AppEnv> {
     }
     const album = await addProgressPhotos(
       rt,
-      c.req.param("projectId"),
+      c.req.param("constructionId"),
       c.req.param("albumId"),
       [...files.values()],
       c.get("user").id,
@@ -85,10 +85,10 @@ export function progressRoutes(rt: Runtime): Hono<AppEnv> {
     return c.json(album, 201);
   });
 
-  app.delete("/:projectId/progress/:albumId/photos/:photoId", auth, async (c) => {
+  app.delete("/:constructionId/progress/:albumId/photos/:photoId", auth, async (c) => {
     await deleteProgressPhoto(
       rt,
-      c.req.param("projectId"),
+      c.req.param("constructionId"),
       c.req.param("albumId"),
       c.req.param("photoId"),
     );

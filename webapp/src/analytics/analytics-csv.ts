@@ -37,7 +37,7 @@ export function analyticsToCsv(data: AnalyticsResponse): string {
   for (const s of data.bySource) lines.push(row(s.name ?? sourceLabel(s.source), s.count));
 
   lines.push("");
-  lines.push(row("По ЖК", "Заявок"));
+  lines.push(row("По конструкциям", "Заявок"));
   for (const p of data.byProject) lines.push(row(p.name, p.count));
 
   lines.push("");

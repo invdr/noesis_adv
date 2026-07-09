@@ -1,0 +1,71 @@
+# Noesis рядом с существующим nginx/site на VPS.
+# Рендерится infra/deploy-no-docker.sh в /etc/nginx/sites-available/noesis.
+
+server {
+  listen 80;
+  server_name {{NOESIS_SERVER_NAMES}};
+  return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name {{NOESIS_SERVER_NAMES}};
+
+  ssl_certificate     {{NOESIS_SSL_CERT}};
+  ssl_certificate_key {{NOESIS_SSL_KEY}};
+  include /etc/letsencrypt/options-ssl-nginx.conf;
+  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+  client_max_body_size 20m;
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:{{NOESIS_BACKEND_PORT}};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location ~ ^/api/(constructions|developers|news|files)(/|$) {
+    client_max_body_size 320m;
+    proxy_pass http://127.0.0.1:{{NOESIS_BACKEND_PORT}};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /files/ {
+    alias {{NOESIS_FILES_DIR}}/;
+    try_files $uri =404;
+    expires 30d;
+    add_header Cache-Control "public, immutable";
+    access_log off;
+  }
+
+  location /crm/ {
+    alias {{NOESIS_DEPLOY_DIR}}/webapp/dist/;
+    try_files $uri $uri/ /crm/index.html;
+  }
+
+  location /constructions/ {
+    root {{NOESIS_DEPLOY_DIR}}/website/web/current;
+    try_files $uri $uri/ $uri.html @noesis_stale;
+  }
+
+  location /news/ {
+    root {{NOESIS_DEPLOY_DIR}}/website/web/current;
+    try_files $uri $uri/ $uri.html @noesis_stale;
+  }
+
+  location @noesis_stale {
+    return 301 /#catalog;
+  }
+
+  location / {
+    root {{NOESIS_DEPLOY_DIR}}/website/web/current;
+    try_files $uri $uri/ $uri.html /index.html;
+  }
+}

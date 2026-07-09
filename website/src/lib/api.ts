@@ -5,16 +5,16 @@
 // наружу уходит только успешно собранный сайт (решение №8 плана Вехи 4).
 import {
   BADGE_PALETTE,
+  CONSTRUCTION_FORMAT_LABEL,
+  CONSTRUCTION_LIGHTING_LABEL,
+  CONSTRUCTION_SIDE_COUNT_LABEL,
   newsBodyToParagraphs,
-  priceFromLabel,
   resolveSiteSettings,
-  roomsToShortLabel,
   SITE_SETTINGS_DEFAULTS,
   type Badge,
+  type Construction as ContractConstruction,
   type PublicSiteStats,
-  type ProjectTools,
   type ResolvedSiteSettings,
-  type RoomFormat,
 } from "@noesis/contracts";
 import { formatNewsDate } from "./format";
 
@@ -30,21 +30,8 @@ export interface Asset {
   renditions?: { srcset: string; thumbnailUrl: string };
 }
 
-/** Подмножество DTO ЖК. */
-export interface Project {
-  id: string;
-  slug: string;
-  name: string;
-  address: string | null;
-  priceFrom: number | null;
-  rooms: RoomFormat[];
-  description: string | null;
-  cover?: Asset;
-  comingSoon: boolean;
-  badges: Badge[];
-  /** Ссылки инструментов «Выбор квартиры» (null = инструмент выключен). */
-  tools: ProjectTools;
-}
+/** DTO конструкции из публичного API. */
+export type Construction = ContractConstruction;
 
 /** Подмножество DTO новости. */
 export interface News {
@@ -58,7 +45,7 @@ export interface News {
   cover?: Asset;
 }
 
-/** Документ (файл или ссылка) — для страницы документов ЖК. */
+/** Документ (файл или ссылка) — для страницы материалов конструкции. */
 export type Document =
   | { kind: "file"; id: string; name: string; asset: Asset & { mimeType?: string; size?: number } }
   | { kind: "link"; id: string; name: string; url: string; caption: string | null };
@@ -72,9 +59,9 @@ export interface DocumentGroup {
   category: DocumentCategory;
   documents: Document[];
 }
-export interface DocumentCategoryProjects {
+export interface DocumentCategoryConstructions {
   category: DocumentCategory;
-  projects: { id: string; slug: string; name: string; address: string | null; cover?: Asset }[];
+  constructions: { id: string; slug: string; name: string; address: string | null; cover?: Asset }[];
 }
 
 async function getJson<T>(path: string): Promise<T> {
@@ -108,20 +95,21 @@ export async function fetchSiteSettings(): Promise<ResolvedSiteSettings> {
   }
 }
 
-export const fetchProjects = () => getJson<Project[]>("/api/public/projects");
+export const fetchConstructions = () =>
+  getJson<Construction[]>("/api/public/constructions");
 export const fetchNews = () => getJson<News[]>("/api/public/news");
 export const fetchDocumentCategories = () =>
-  getJson<DocumentCategoryProjects[]>("/api/public/documents");
+  getJson<DocumentCategoryConstructions[]>("/api/public/documents");
 export const fetchSiteStats = () => getJson<PublicSiteStats>("/api/public/site-stats");
 
-export const fetchProject = (slug: string) =>
-  getJsonOrNull<Project>(`/api/public/projects/${slug}`);
+export const fetchConstruction = (slug: string) =>
+  getJsonOrNull<Construction>(`/api/public/constructions/${slug}`);
 export const fetchNewsItem = (slug: string) =>
   getJsonOrNull<News>(`/api/public/news/${slug}`);
 
-/** Документы ЖК по slug, сгруппированные по категориям (пусто, если их нет). */
-export async function fetchProjectDocuments(slug: string): Promise<DocumentGroup[]> {
-  return (await getJsonOrNull<DocumentGroup[]>(`/api/public/documents/project/${slug}`)) ?? [];
+/** Документы конструкции по slug, сгруппированные по категориям (пусто, если их нет). */
+export async function fetchConstructionDocuments(slug: string): Promise<DocumentGroup[]> {
+  return (await getJsonOrNull<DocumentGroup[]>(`/api/public/documents/construction/${slug}`)) ?? [];
 }
 
 /** Альбом хода строительства (месяц → фото); альбомы без фото API не отдаёт. */
@@ -133,48 +121,59 @@ export interface ProgressAlbum {
   photos: Asset[];
 }
 
-/** Ход строительства ЖК по slug, от новых месяцев к старым (пусто, если нет). */
-export async function fetchProjectProgress(slug: string): Promise<ProgressAlbum[]> {
-  return (await getJsonOrNull<ProgressAlbum[]>(`/api/public/progress/project/${slug}`)) ?? [];
+/** Фотоотчёты конструкции по slug, от новых месяцев к старым (пусто, если нет). */
+export async function fetchConstructionProgress(slug: string): Promise<ProgressAlbum[]> {
+  return (await getJsonOrNull<ProgressAlbum[]>(`/api/public/progress/construction/${slug}`)) ?? [];
 }
 
 // --- View-модели: единый источник вычисляемых подписей для главной и страниц ---
 
-/** Карточка ЖК на лендинге (готовые подписи 1:1 с дизайном). */
-export interface ProjectView {
+/** Карточка конструкции на лендинге (готовые подписи для дизайна). */
+export interface ConstructionView {
+  id: string;
   slug: string;
   name: string;
+  code: string;
   address: string;
   img: string;
   imgSrcset?: string;
-  isSoon: boolean;
   priceLabel: string;
-  /** Короткая комнатность для карточки (может быть пустой). */
-  rooms: string;
-  /** Комнатность для спецификации с запасным «Уточняйте». */
-  roomsLabel: string;
-  /** Ссылка на страницу ЖК; `null` для тизера «Скоро» (страницы нет). */
-  href: string | null;
-  /** Ссылки инструментов «Выбор квартиры» — для карточек главной и страницы ЖК. */
-  tools: ProjectTools;
+  formatLabel: string;
+  sizeLabel: string;
+  sideLabel: string;
+  lightingLabel: string;
+  reachLabel: string;
+  href: string;
+  lat: number | null;
+  lng: number | null;
   badges: { text: string; color: Badge["color"]; bg: string; fg: string }[];
 }
 
-export function toProjectView(p: Project): ProjectView {
-  const rooms = roomsToShortLabel(p.rooms);
+export function toConstructionView(c: Construction): ConstructionView {
+  const reachLabel =
+    c.grp != null
+      ? `GRP ${c.grp}`
+      : c.trafficPerDay != null
+        ? `${new Intl.NumberFormat("ru-RU").format(c.trafficPerDay)} чел./день`
+        : "Охват по запросу";
   return {
-    slug: p.slug,
-    name: p.name,
-    address: p.address ?? "",
-    img: p.cover?.url ?? "",
-    imgSrcset: p.cover?.renditions?.srcset,
-    isSoon: p.comingSoon,
-    priceLabel: p.comingSoon ? "Скоро на сайте" : priceFromLabel(p.priceFrom),
-    rooms,
-    roomsLabel: rooms || "Уточняйте",
-    href: p.comingSoon ? null : `/zhk/${p.slug}`,
-    tools: p.tools,
-    badges: p.badges.map((b) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    code: c.code ?? "",
+    address: c.address ?? "Грозный",
+    img: c.cover?.url ?? "",
+    imgSrcset: c.cover?.renditions?.srcset,
+    priceLabel: c.priceLabel,
+    formatLabel: CONSTRUCTION_FORMAT_LABEL[c.format],
+    sizeLabel: c.size || "Размер по запросу",
+    sideLabel: CONSTRUCTION_SIDE_COUNT_LABEL[c.sideCount],
+    lightingLabel: CONSTRUCTION_LIGHTING_LABEL[c.lighting],
+    reachLabel,
+    href: `/constructions/${c.slug}`,
+    lat: c.lat,
+    lng: c.lng,
+    badges: c.badges.map((b) => ({
       ...b,
       bg: BADGE_PALETTE[b.color].bg,
       fg: BADGE_PALETTE[b.color].fg,
@@ -209,7 +208,7 @@ export function toNewsView(n: News): NewsView {
   };
 }
 
-// --- Документы: ссылка и мелкая строка карточки (для страниц ЖК) ---
+// --- Документы: ссылка и мелкая строка карточки (для страниц конструкций) ---
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   "application/pdf": "PDF",

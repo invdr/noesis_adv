@@ -15,7 +15,7 @@ import {
 /** Порядок альбомов: от новых месяцев к старым. */
 const albumOrderBy = [{ year: "desc" as const }, { month: "desc" as const }];
 
-/** Альбомы хода строительства одного ЖК для CRM (включая пустые). */
+/** Фотоотчёты одной конструкции для CRM (включая пустые альбомы). */
 export async function listProjectProgress(
   rt: Runtime,
   constructionId: string,
@@ -129,7 +129,7 @@ export async function addProgressPhotos(
       throw new HttpError(
         422,
         "expected_image",
-        "В ход строительства можно загружать только изображения",
+        "В фотоотчёт можно загружать только изображения",
       );
     }
     try {
@@ -169,11 +169,11 @@ export async function deleteProgressPhoto(
 }
 
 /**
- * Ход строительства опубликованного ЖК по slug для лендинга: непустые альбомы
- * от новых месяцев к старым. «Скоро» и архив страницы не имеют → null
+ * Фотоотчёты опубликованной конструкции по slug для лендинга: непустые альбомы
+ * от новых месяцев к старым. Архив страницы не имеет → null
  * (вызывающий отдаёт 404).
  */
-export async function listPublicProjectProgress(
+export async function listPublicConstructionProgress(
   rt: Runtime,
   slug: string,
 ): Promise<ProgressAlbum[] | null> {
@@ -190,6 +190,9 @@ export async function listPublicProjectProgress(
   return rows.map((a) => dto(rt, a));
 }
 
+/** @deprecated Используйте listPublicConstructionProgress. */
+export const listPublicProjectProgress = listPublicConstructionProgress;
+
 // --- внутреннее ---
 
 function dto(rt: Runtime, album: ProgressAlbumRow): ProgressAlbum {
@@ -198,7 +201,7 @@ function dto(rt: Runtime, album: ProgressAlbumRow): ProgressAlbum {
 
 async function requireProject(rt: Runtime, id: string): Promise<void> {
   const exists = await rt.prisma.construction.count({ where: { id } });
-  if (!exists) throw new HttpError(404, "not_found", "ЖК не найден");
+  if (!exists) throw new HttpError(404, "not_found", "Конструкция не найдена");
 }
 
 async function requireAlbum(
@@ -230,7 +233,7 @@ function mapPeriodConflict(err: unknown): unknown {
   return err;
 }
 
-/** Один альбом на период: повтор года+месяца в рамках ЖК отклоняется. */
+/** Один альбом на период: повтор года+месяца в рамках конструкции отклоняется. */
 async function requireFreePeriod(
   rt: Runtime,
   constructionId: string,

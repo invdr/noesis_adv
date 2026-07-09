@@ -138,7 +138,7 @@ export function ContactCard({ contactId, onBack }: { contactId: string; onBack: 
                   <th className="contact-card__date-col">Дата</th>
                   <th>Имя</th>
                   <th>Источник</th>
-                  <th>ЖК</th>
+                  <th>Конструкция</th>
                   <th className="contact-card__stage-col">Этап</th>
                 </tr>
               </thead>

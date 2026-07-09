@@ -143,7 +143,7 @@ export function ManualLeadForm({
       <div className="card-body">
         {(projects.error || clients.error || realtors.error || agencies.error) && (
           <p className="alert alert-error" role="alert">
-            Не удалось загрузить справочники (ЖК/контакты):{" "}
+            Не удалось загрузить справочники (конструкции/контакты):{" "}
             {((projects.error || clients.error || realtors.error || agencies.error) as Error).message}
           </p>
         )}
@@ -253,7 +253,7 @@ export function ManualLeadForm({
           </Field>
         </div>
 
-        <Field label="ЖК (необязательно)">
+        <Field label="Конструкция (необязательно)">
           <select value={constructionId} onChange={(e) => setProjectId(e.target.value)}>
             <option value="">— не выбран —</option>
             {(projects.data ?? []).map((p) => (

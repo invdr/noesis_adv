@@ -14,6 +14,7 @@ const navClass = solid ? "nav scrolled" : "nav";
 const homeHref = home ? "#top" : "/";
 const base = home ? "" : "/";
 const link = (hash: string) => `${base}${hash}`;
+const mapHref = link("#map");
 ---
 <nav class={navClass} id="nav">
   <a href={homeHref} class="nav-logo">
@@ -22,7 +23,7 @@ const link = (hash: string) => `${base}${hash}`;
 
   <div class="nav-links">
     <a href={link("#catalog")}>{s.navCatalog}</a>
-    <a href={link("#flats")}>{s.navFlats}</a>
+    <a href={mapHref}>{s.navFlats}</a>
     <a href={link("#about")}>{s.navAbout}</a>
     {showDocs && <a href={link("#docs")}>{s.navDocs}</a>}
     <a href={link("#contacts")}>{s.navContacts}</a>
@@ -45,7 +46,7 @@ const link = (hash: string) => `${base}${hash}`;
   <div class="mobile-menu-links">
     <a href={homeHref}>Главная</a>
     <a href={link("#catalog")}>{s.navCatalog}</a>
-    <a href={link("#flats")}>{s.navFlats}</a>
+    <a href={mapHref}>{s.navFlats}</a>
     <a href={link("#about")}>{s.navAbout}</a>
     {showDocs && <a href={link("#docs")}>{s.navDocs}</a>}
     <a href={link("#contacts")}>{s.navContacts}</a>

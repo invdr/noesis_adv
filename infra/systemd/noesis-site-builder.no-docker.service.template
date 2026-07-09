@@ -1,0 +1,21 @@
+[Unit]
+Description=Noesis site builder (no Docker)
+After=network-online.target {{NOESIS_BACKEND_SERVICE}}.service
+Wants=network-online.target
+Requires={{NOESIS_BACKEND_SERVICE}}.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory={{NOESIS_DEPLOY_DIR}}
+EnvironmentFile={{NOESIS_RUNTIME_ENV}}
+Environment=BUILD_API_URL=http://127.0.0.1:{{NOESIS_BACKEND_PORT}}
+Environment=PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+ExecStart=/usr/bin/env bash {{NOESIS_DEPLOY_DIR}}/infra/site-builder.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

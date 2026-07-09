@@ -17,8 +17,8 @@ import {
 } from "./document-service";
 
 /**
- * Роуты документов внутри карточки ЖК. Монтируются на `/api/projects`, поэтому
- * `:projectId` задан прямо в путях (не в префиксе mount — так параметр доступен
+ * Роуты документов внутри карточки конструкции. Монтируются на `/api/constructions`,
+ * поэтому `:constructionId` задан прямо в путях (не в префиксе mount — так параметр доступен
  * независимо от версии Hono). Управление — manager+admin. Добавление —
  * multipart: `data` (JSON: вид, категория, для ссылки — url/подпись) + для файла
  * — `file`. Правка метаданных и удаление — точечные мгновенные операции.
@@ -32,16 +32,16 @@ export function documentRoutes(rt: Runtime): Hono<AppEnv> {
       c.json({ error: { code: "file_too_large", message: "Файл слишком большой" } }, 413),
   });
 
-  app.get("/:projectId/documents", auth, async (c) =>
-    c.json(await listProjectDocuments(rt, c.req.param("projectId"))),
+  app.get("/:constructionId/documents", auth, async (c) =>
+    c.json(await listProjectDocuments(rt, c.req.param("constructionId"))),
   );
 
-  app.post("/:projectId/documents", auth, limit, async (c) => {
+  app.post("/:constructionId/documents", auth, limit, async (c) => {
     const { data, files } = await parseMultipart(c);
     const input = createDocumentSchema.parse(data);
     const doc = await addDocument(
       rt,
-      c.req.param("projectId"),
+      c.req.param("constructionId"),
       input,
       files.get("file"),
       c.get("user").id,
@@ -49,19 +49,19 @@ export function documentRoutes(rt: Runtime): Hono<AppEnv> {
     return c.json(doc, 201);
   });
 
-  app.patch("/:projectId/documents/:id", auth, async (c) => {
+  app.patch("/:constructionId/documents/:id", auth, async (c) => {
     const input = updateDocumentSchema.parse(await c.req.json());
     const doc = await updateDocument(
       rt,
-      c.req.param("projectId"),
+      c.req.param("constructionId"),
       c.req.param("id"),
       input,
     );
     return c.json(doc);
   });
 
-  app.delete("/:projectId/documents/:id", auth, async (c) => {
-    await deleteDocument(rt, c.req.param("projectId"), c.req.param("id"));
+  app.delete("/:constructionId/documents/:id", auth, async (c) => {
+    await deleteDocument(rt, c.req.param("constructionId"), c.req.param("id"));
     return c.body(null, 204);
   });
 

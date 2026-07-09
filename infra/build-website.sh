@@ -34,10 +34,10 @@ PUBLIC_API_URL="${PUBLIC_API_URL:-}" \
 SITE_URL="${SITE_URL:-http://168.222.140.78}" \
   bun run build:website
 
-# Санити контента (Веха 6): не публикуем заведомо пустой сайт. Каталог ЖК на
+# Санити контента (Веха 6): не публикуем заведомо пустой сайт. Каталог конструкций на
 # главной рендерится client-side, поэтому проверяем артефакты сборки от тех же
-# данных API — в sitemap должен быть хотя бы один ЖК (/zhk/). «0 ЖК» для сайта
-# недвижимости трактуем как ошибку (бэк отдал пусто). При провале НЕ переключаем
+# данных API — в sitemap должна быть хотя бы одна конструкция (/constructions/).
+# «0 конструкций» трактуем как ошибку (бэк отдал пусто). При провале НЕ переключаем
 # current — сайт остаётся на рабочей версии. SKIP_CHECKS=1 — аварийный обход.
 DIST="$ROOT/website/dist"
 if [ "${SKIP_CHECKS:-}" = "1" ]; then
@@ -47,12 +47,12 @@ else
     echo "build-website: пустой или отсутствующий index.html — не публикуем." >&2
     exit 1
   fi
-  zhk_count="$(grep -c "/zhk/" "$DIST/sitemap.xml" 2>/dev/null || true)"
-  if [ -z "$zhk_count" ] || [ "$zhk_count" -lt 1 ]; then
-    echo "build-website: в sitemap нет ни одного ЖК (/zhk/) — похоже, API отдал пусто. Не публикуем." >&2
+  construction_count="$(grep -c "/constructions/" "$DIST/sitemap.xml" 2>/dev/null || true)"
+  if [ -z "$construction_count" ] || [ "$construction_count" -lt 1 ]; then
+    echo "build-website: в sitemap нет ни одной конструкции (/constructions/) — похоже, API отдал пусто. Не публикуем." >&2
     exit 1
   fi
-  echo "build-website: санити ок (ЖК в sitemap: $zhk_count)."
+  echo "build-website: санити ок (конструкций в sitemap: $construction_count)."
 fi
 
 # Кладём свежий dist в релиз и атомарно переключаем current.

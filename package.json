@@ -33,6 +33,7 @@
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "deploy:vps": "bash infra/deploy.sh",
+    "deploy:vps:no-docker": "bash infra/deploy-no-docker.sh",
     "e2e": "playwright test --config e2e/playwright.config.ts"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ import {
   SITE_SETTINGS_LIMITS,
   deriveSecondaryContact,
   formatPhoneRu,
+  orderHomepageConstructions,
   orderHomepageProjects,
   resolveSiteSettings,
   updateSiteSettingsSchema,
@@ -73,24 +74,28 @@ describe("formatPhoneRu / deriveSecondaryContact", () => {
   });
 });
 
-describe("orderHomepageProjects", () => {
+describe("orderHomepageConstructions", () => {
   const p = (id: string) => ({ id });
 
   test("скрытые убираются, перечисленные — первыми в заданном порядке", () => {
-    const projects = [p("a"), p("b"), p("c"), p("d")];
-    const out = orderHomepageProjects(projects, ["c", "a"], ["b"]);
+    const constructions = [p("a"), p("b"), p("c"), p("d")];
+    const out = orderHomepageConstructions(constructions, ["c", "a"], ["b"]);
     expect(out.map((x) => x.id)).toEqual(["c", "a", "d"]);
   });
 
   test("мёртвые id в порядке игнорируются", () => {
-    const out = orderHomepageProjects([p("a"), p("b")], ["zzz", "b"], []);
+    const out = orderHomepageConstructions([p("a"), p("b")], ["zzz", "b"], []);
     expect(out.map((x) => x.id)).toEqual(["b", "a"]);
   });
 
   test("без настроек — исходный порядок", () => {
-    const out = orderHomepageProjects([p("a"), p("b")], [], []);
+    const out = orderHomepageConstructions([p("a"), p("b")], [], []);
     expect(out.map((x) => x.id)).toEqual(["a", "b"]);
   });
+});
+
+test("orderHomepageProjects остаётся алиасом для старых импортов", () => {
+  expect(orderHomepageProjects([{ id: "a" }], [], []).map((x) => x.id)).toEqual(["a"]);
 });
 
 describe("updateSiteSettingsSchema (гайдрейлы)", () => {

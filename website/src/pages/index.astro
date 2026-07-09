@@ -8,22 +8,24 @@ import Footer from "../components/Footer.astro";
 import CookieBanner from "../components/CookieBanner.astro";
 import Header from "../components/Header.astro";
 import {
-  fetchProjects,
+  fetchConstructions,
   fetchNews,
   fetchDocumentCategories,
   fetchSiteStats,
   fetchSiteSettings,
-  toProjectView,
+  toConstructionView,
   toNewsView,
 } from "../lib/api";
 import { SITE_URL, absUrl } from "../lib/site";
 import { buildChrome } from "../lib/chrome";
-import { orderHomepageProjects } from "@noesis/contracts";
+import { orderHomepageConstructions } from "@noesis/contracts";
 
 const apiUrl = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3000";
+const yandexMapsApiKey = import.meta.env.PUBLIC_YANDEX_MAPS_API_KEY ?? "";
+const GROZNY_CENTER = [43.318, 45.698] as const;
 
-const [projects, news, docCategories, stats, settings] = await Promise.all([
-  fetchProjects(),
+const [constructions, news, docCategories, stats, settings] = await Promise.all([
+  fetchConstructions(),
   fetchNews(),
   fetchDocumentCategories(),
   fetchSiteStats(),
@@ -33,47 +35,46 @@ const [projects, news, docCategories, stats, settings] = await Promise.all([
 const chrome = buildChrome(settings);
 const s = chrome.s;
 
-// Видимость/порядок ЖК на главной из настроек (Веха 4.3): скрытые убираем из
-// каталога И из блока «Документы»; страница /zhk/<slug> и sitemap не трогаются.
-const homepageProjects = orderHomepageProjects(projects, s.homepageOrder, s.homepageHidden);
+// Видимость/порядок конструкций на главной из настроек: скрытые убираем из
+// каталога, карты и блока «Документы».
+const homepageConstructions = orderHomepageConstructions(constructions, s.homepageOrder, s.homepageHidden);
 const hiddenSet = new Set(s.homepageHidden);
 const docCategoriesVisible = docCategories
-  .map((c) => ({ ...c, projects: c.projects.filter((p) => !hiddenSet.has(p.id)) }))
-  .filter((c) => c.projects.length > 0);
+  .map((c) => ({
+    ...c,
+    constructions: c.constructions.filter((p) => !hiddenSet.has(p.id)),
+  }))
+  .filter((c) => c.constructions.length > 0);
 
-const projectViews = homepageProjects.map(toProjectView);
+const constructionViews = homepageConstructions.map(toConstructionView);
 const newsViews = news.map(toNewsView);
-const heroDeveloperCount = stats.developerCount;
-// Hero показывает количество введённых публичных ЖК, не зависящее от ручного
+const heroOwnerCount = stats.developerCount;
+// Hero показывает количество публичных конструкций, не зависящее от ручного
 // скрытия карточек на главной.
-const heroProjectCount = projects.length;
+const heroConstructionCount = constructions.length;
 
-// Бегущая строка — те же видимые ЖК, что и в каталоге (скрытый уходит, новый
+// Бегущая строка — те же видимые конструкции, что и в каталоге (скрытая уходит, новая
 // добавляется); названия капсом, как в дизайне.
-const marqueeNames = projectViews.map((p) => p.name.toUpperCase());
+const marqueeNames = constructionViews.map((p) => p.name.toUpperCase());
 
 const hasNews = newsViews.length > 0;
 const hasDocs = docCategoriesVisible.length > 0;
 
-// Декоративное фото секции «Квартиры» — тот же снимок, что обложка новости о
-// поддержке СВО; он перенесён в наше хранилище сидом. Берём его URL из API,
-// чтобы лендинг не зависел от стороннего облака после сида (см. VEHA4_PLAN §3).
-// Фолбэк — локальный ассет, если новость убрали из публикации.
-const flatsImage =
-  newsViews.find(
-    (n) => n.slug === "osobye-usloviya-dlya-uchastnikov-i-veteranov-svo",
-  )?.img || "/assets/hiro.webp";
-
-// Данные для main.js: каталожные карточки получают прямые href на /zhk/<slug>,
-// новости и документы по-прежнему открываются в своих overlay.
+// Данные для main.js: каталожные карточки получают прямые href на
+// /constructions/<slug>, новости и документы по-прежнему открываются в overlay.
 const noesisData = {
-  projects: projectViews,
+  constructions: constructionViews,
   news: newsViews,
   newsHomeCount: s.newsHomeCount,
+  map: {
+    apiKey: yandexMapsApiKey,
+    center: GROZNY_CENTER,
+    zoom: 12,
+  },
   docs: docCategoriesVisible.map((c) => ({
     name: c.category.name,
     slug: c.category.slug,
-    projects: c.projects.map((p) => ({
+    constructions: c.constructions.map((p) => ({
       slug: p.slug,
       name: p.name,
       address: p.address ?? "",
@@ -98,9 +99,9 @@ const orgJsonLd = {
   },
 };
 
-const title = "Noesis — Жилые комплексы в Грозном";
+const title = "Noesis — наружная реклама в Грозном";
 const description =
-  "Рекламное агентство Noesis. Пять застройщиков, один офис продаж. Строим будущее, сохраняя прошлое.";
+  "Рекламное агентство Noesis: каталог рекламных конструкций в Грозном, фото, адреса, охват и заявки на размещение.";
 ---
 <!DOCTYPE html>
 <html lang="ru">
@@ -136,8 +137,8 @@ const description =
       </div>
 
       <div class="hero-card reveal-up">
-        <span class="mono hero-card-label">Единый офис продаж</span>
-        <p class="hero-card-title">Оставьте номер — перезвоним за 15 минут и подберём квартиру под ваш бюджет</p>
+        <span class="mono hero-card-label">Отдел размещений</span>
+        <p class="hero-card-title">Оставьте номер — перезвоним за 15 минут и подберём подходящую рекламную конструкцию</p>
         <form class="hero-card-form" id="heroLeadForm" novalidate>
           <label class="visually-hidden" for="leadName">Как к вам обращаться</label>
           <input id="leadName" type="text" placeholder="Как к вам обращаться" name="name" autocomplete="name" required>
@@ -163,12 +164,12 @@ const description =
   <div class="hero-stats">
     <div class="hero-stats-row">
       <div class="stat">
-        <span class="stat-num stat-count" data-target={heroDeveloperCount}>0</span>
-        <span class="stat-label">застройщиков в одном<br>офисе продаж</span>
+        <span class="stat-num stat-count" data-target={heroOwnerCount}>0</span>
+        <span class="stat-label">владельцев сети<br>в каталоге</span>
       </div>
       <div class="stat">
-        <span class="stat-num stat-count" data-target={heroProjectCount}>0</span>
-        <span class="stat-label">жилых комплексов<br>в Грозном</span>
+        <span class="stat-num stat-count" data-target={heroConstructionCount}>0</span>
+        <span class="stat-label">рекламных конструкций<br>в Грозном</span>
       </div>
       <div class="scroll-hint">
         <span class="mono">Листайте</span>
@@ -198,47 +199,39 @@ const description =
         <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.catalogEyebrow}</span></div>
         <h2 class="h2 h2-cat">{s.catalogTitle}</h2>
       </div>
-      <p class="section-desc">Восемь жилых комплексов в Грозном от ключевых застройщиков региона. Выберите дом и откройте карточку проекта.</p>
+      <p class="section-desc">Выберите сити-формат или другую рекламную конструкцию, посмотрите параметры и оставьте заявку на размещение.</p>
     </div>
 
     <div class="catalog-grid" id="catalogGrid"></div>
   </div>
 </section>
 
-<section id="flats" class="section section-white">
+<section id="map" class="section section-white">
   <div class="wrap">
     <div class="section-head reveal-up">
       <div>
         <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.flatsEyebrow}</span></div>
         <h2 class="h2 h2-flats">{s.flatsTitle}</h2>
       </div>
-      <p class="section-desc">Готовое жильё для жизни и выгодных инвестиций — с удобными планировками, продуманной инфраструктурой и современными инженерными решениями.</p>
+      <p class="section-desc">Стартовая точка карты — Грозный. Пины показывают опубликованные конструкции с координатами из CRM.</p>
     </div>
 
-    <div class="flats-grid">
-      <div class="flats-image reveal-up">
-        <img src={flatsImage} alt="Квартиры Noesis" loading="lazy">
-        <div class="flats-image-gradient"></div>
-        <div class="flats-image-stats">
-          <div><span class="flats-image-num">Ст, 1к, 2к, 3к</span><span class="flats-image-cap">форматы квартир</span></div>
-        </div>
+    <div class="map-shell reveal-up">
+      <div id="constructionsMap" class="constructions-map" role="img" aria-label="Карта рекламных конструкций в Грозном">
+        <p class="map-placeholder">Карта загружается…</p>
       </div>
-      <div class="flats-list">
+      <div class="map-side">
+        <div class="map-stat">
+          <span class="flats-image-num">{constructionViews.filter((c) => c.lat != null && c.lng != null).length}</span>
+          <span class="flats-image-cap">пинов на карте</span>
+        </div>
         <div class="flats-feature reveal-up">
           <span class="flats-feature-n">01</span>
-          <div><span class="flats-feature-t">Функциональные планировки</span><span class="flats-feature-d">С возможностью объединения квартир</span></div>
+          <div><span class="flats-feature-t">География по городу</span><span class="flats-feature-d">Смотрите расположение конструкций перед заявкой.</span></div>
         </div>
         <div class="flats-feature reveal-up">
           <span class="flats-feature-n">02</span>
-          <div><span class="flats-feature-t">Современные инженерные системы</span><span class="flats-feature-d">Надёжные решения в каждом доме</span></div>
-        </div>
-        <div class="flats-feature reveal-up">
-          <span class="flats-feature-n">03</span>
-          <div><span class="flats-feature-t">Подземный паркинг</span><span class="flats-feature-d">Своё место рядом с домом</span></div>
-        </div>
-        <div class="flats-feature reveal-up">
-          <span class="flats-feature-n">04</span>
-          <div><span class="flats-feature-t">Развивающиеся районы</span><span class="flats-feature-d">Инфраструктура в шаговой доступности</span></div>
+          <div><span class="flats-feature-t">Быстрый переход в карточку</span><span class="flats-feature-d">Откройте пин, затем страницу конструкции с фото и параметрами.</span></div>
         </div>
         <a href="#catalog" class="btn btn-primary reveal-up flats-cta">{s.flatsCta}</a>
       </div>
@@ -256,23 +249,23 @@ const description =
     <div class="advantages">
       <div class="advantage reveal-up">
         <span class="advantage-n">01</span>
-        <span class="advantage-t">Продажа напрямую от застройщика</span>
-        <span class="advantage-d">Прозрачные условия, без посредников и переплат</span>
+        <span class="advantage-t">Городской инвентарь в одном месте</span>
+        <span class="advantage-d">Адреса, фото, формат и цена собраны в едином каталоге</span>
       </div>
       <div class="advantage reveal-up">
         <span class="advantage-n">02</span>
-        <span class="advantage-t">Единый офис продаж</span>
-        <span class="advantage-d">Пять ключевых застройщиков региона в одном месте</span>
+        <span class="advantage-t">Быстрый подбор под задачу</span>
+        <span class="advantage-d">Менеджер уточнит период, сторону и подходящие локации</span>
       </div>
       <div class="advantage reveal-up">
         <span class="advantage-n">03</span>
-        <span class="advantage-t">Полный цикл услуг</span>
-        <span class="advantage-d">Покупка, ремонт под ключ и последующая продажа в одной компании</span>
+        <span class="advantage-t">Прозрачная заявка</span>
+        <span class="advantage-d">Заявка из карточки сразу привязывается к выбранной конструкции</span>
       </div>
       <div class="advantage reveal-up">
         <span class="advantage-n">04</span>
-        <span class="advantage-t">Современные жилые комплексы</span>
-        <span class="advantage-d">Актуальная архитектура, благоустроенные дворы, удобная локация</span>
+        <span class="advantage-t">Основа для бронирования</span>
+        <span class="advantage-d">Следующим шагом период размещения попадёт в календарь занятости</span>
       </div>
     </div>
   </div>
@@ -298,7 +291,7 @@ const description =
         <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.docsEyebrow}</span></div>
         <h2 class="h2 h2-nowrap">{s.docsTitle}</h2>
       </div>
-      <p class="section-desc">Выберите категорию, затем жилой комплекс — покажем актуальные документы именно по нему.</p>
+      <p class="section-desc">Выберите категорию, затем конструкцию — покажем связанные материалы именно по ней.</p>
     </div>
     <div class="docs-grid" id="docsGrid"></div>
   </div>
@@ -313,7 +306,7 @@ const description =
       <h2 class="h2 contacts-title">{s.contactsTitle}</h2>
     </div>
     <div class="contacts-main reveal-up">
-      <p class="contacts-desc">Оставьте заявку или позвоните в единый офис продаж. Поможем с выбором, ипотекой и ремонтом под ключ.</p>
+      <p class="contacts-desc">Оставьте заявку или позвоните в отдел размещений. Поможем подобрать конструкцию, сторону и период кампании.</p>
       <div class="contacts-info">
         <div class="contacts-info-row">
           <span class="mono">Офис продаж</span>
@@ -375,7 +368,7 @@ const description =
       <div class="pattern-overlay pattern-overlay-cta"></div>
       <div class="project-cta-text">
         <h3>Остались вопросы?</h3>
-        <p>Оставьте заявку — расскажем об условиях и подберём квартиру под ваш бюджет.</p>
+        <p>Оставьте заявку — расскажем об условиях размещения и подберём подходящую конструкцию.</p>
       </div>
       <div class="project-cta-actions">
         <a href={chrome.phoneHref} class="btn btn-white">{chrome.phoneDisplay}</a>
@@ -397,11 +390,11 @@ const description =
   <div class="wrap-narrow docs-page-body">
     <div id="docsPageList">
       <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Документы</span></div>
-      <h1 id="docsPageTitle">Выберите жилой комплекс</h1>
+      <h1 id="docsPageTitle">Выберите конструкцию</h1>
       <div class="catalog-grid docs-project-grid" id="docsProjectGrid"></div>
     </div>
     <div id="docsPageDetail" hidden>
-      <button class="link-back" id="docsDetailBackBtn" type="button">← Все ЖК</button>
+      <button class="link-back" id="docsDetailBackBtn" type="button">← Все конструкции</button>
       <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Документы</span></div>
       <h1 id="docsProjectName"></h1>
       <div id="docsCategories"></div>
@@ -418,8 +411,8 @@ const description =
     <button type="button" class="lead-modal-close" id="leadModalClose" aria-label="Закрыть" data-lead-close>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
     </button>
-    <span class="mono hero-card-label">Единый офис продаж</span>
-    <p class="hero-card-title" id="leadModalTitle">Оставьте номер — перезвоним за 15 минут и подберём квартиру под ваш бюджет</p>
+    <span class="mono hero-card-label">Отдел размещений</span>
+    <p class="hero-card-title" id="leadModalTitle">Оставьте номер — перезвоним за 15 минут и подберём рекламную конструкцию</p>
     <form class="hero-card-form" id="modalLeadForm" novalidate>
       <label class="visually-hidden" for="modalLeadName">Как к вам обращаться</label>
       <input id="modalLeadName" type="text" placeholder="Как к вам обращаться" name="name" autocomplete="name" required>

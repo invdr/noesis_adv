@@ -1,65 +1,61 @@
 ---
-// Реальная страница ЖК /zhk/<slug>: SEO-meta, прямой доступ и индексация.
-// Только опубликованные обычные ЖК — «скоро» (тизер без страницы) и архив сюда
-// не попадают (фильтр в getStaticPaths).
+// Реальная страница конструкции /constructions/<slug>: SEO-meta, прямой доступ
+// и индексация. В getStaticPaths попадают только опубликованные неархивные
+// конструкции из публичного API.
 import SiteHead from "../../components/SiteHead.astro";
 import Footer from "../../components/Footer.astro";
 import CookieBanner from "../../components/CookieBanner.astro";
 import Header from "../../components/Header.astro";
-import ProjectTools from "../../components/ProjectTools.astro";
 import {
-  fetchProjects,
+  fetchConstructions,
   fetchDocumentCategories,
-  fetchProjectDocuments,
-  fetchProjectProgress,
+  fetchConstructionDocuments,
   fetchSiteSettings,
-  toProjectView,
+  toConstructionView,
   documentHref,
   documentMeta,
-  type Project,
+  type Construction,
 } from "../../lib/api";
-import { progressPeriodLabel } from "@noesis/contracts";
 import { buildChrome } from "../../lib/chrome";
 
 export async function getStaticPaths() {
-  const projects = await fetchProjects();
-  return projects
-    .filter((p) => !p.comingSoon)
-    .map((p) => ({ params: { slug: p.slug }, props: { project: p } }));
+  const constructions = await fetchConstructions();
+  return constructions.map((c) => ({
+    params: { slug: c.slug },
+    props: { construction: c },
+  }));
 }
 
 interface Props {
-  project: Project;
+  construction: Construction;
 }
-const { project } = Astro.props;
-const view = toProjectView(project);
-const [groups, progress, docCategories, settings] = await Promise.all([
-  fetchProjectDocuments(project.slug),
-  fetchProjectProgress(project.slug),
+const { construction } = Astro.props;
+const view = toConstructionView(construction);
+const [groups, docCategories, settings] = await Promise.all([
+  fetchConstructionDocuments(construction.slug),
   fetchDocumentCategories(),
   fetchSiteSettings(),
 ]);
 const chrome = buildChrome(settings);
 const s = chrome.s;
 const hasDocs = groups.length > 0;
-const hasProgress = progress.length > 0;
 const homeDocsHiddenSet = new Set(s.homepageHidden);
 const hasHomeDocs = docCategories.some((c) =>
-  c.projects.some((p) => !homeDocsHiddenSet.has(p.id)),
+  c.constructions.some((p) => !homeDocsHiddenSet.has(p.id)),
 );
 
 // URL API в браузере (для формы заявки) — как на главной, через PUBLIC_API_URL.
 const apiUrl = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3000";
 
 const about =
-  project.description ||
-  "Современный жилой комплекс в Грозном от Noesis. Удобные планировки, продуманная инфраструктура и современные инженерные решения. Покупка напрямую от застройщика — без посредников и переплат, с поддержкой на всех этапах сделки.";
+  construction.description ||
+  "Рекламная конструкция Noesis в Грозном. Уточните период размещения, сторону и условия кампании — менеджер свяжется с вами и предложит подходящий сценарий.";
 
-const displayName = `ЖК ${view.name}`;
-const title = `${displayName} — квартиры в Грозном | Noesis`;
-const description = project.description
-  ? project.description.slice(0, 200)
-  : `${displayName} — жилой комплекс в Грозном от Noesis. ${view.roomsLabel}${project.priceFrom ? `, ${view.priceLabel}` : ""}. Квартиры напрямую от застройщика, без посредников.`;
+const displayName = view.name;
+const title = `${displayName} — рекламная конструкция в Грозном | Noesis`;
+const description = construction.description
+  ? construction.description.slice(0, 200)
+  : `${displayName} — рекламная конструкция в Грозном. ${view.formatLabel}, ${view.priceLabel}. Оставьте заявку на размещение.`;
 ---
 <!DOCTYPE html>
 <html lang="ru">
@@ -67,7 +63,7 @@ const description = project.description
 <SiteHead
   title={title}
   description={description}
-  path={`/zhk/${project.slug}`}
+  path={`/constructions/${construction.slug}`}
   image={view.img || "/assets/og-default.jpg"}
   siteName={s.siteName}
   metrikaId={chrome.metrikaId}
@@ -95,11 +91,9 @@ const description = project.description
 </div>
 
 <div class="wrap-narrow project-body">
-  <ProjectTools tools={project.tools} />
-
   <div class="project-about-grid">
     <div>
-      <h2 class="h2 h2-md">О комплексе</h2>
+      <h2 class="h2 h2-md">О конструкции</h2>
       <p>{about}</p>
       <div class="project-about-actions">
         <button type="button" class="btn btn-primary" data-lead-open>{s.contactsLeaveCta}</button>
@@ -112,12 +106,24 @@ const description = project.description
         <span>{view.address}</span>
       </div>
       <div class="project-spec">
-        <span class="mono">Комнатность</span>
-        <span>{view.roomsLabel}</span>
+        <span class="mono">Формат</span>
+        <span>{view.formatLabel}</span>
       </div>
       <div class="project-spec">
-        <span class="mono">Покупка</span>
-        <span>Без посредников</span>
+        <span class="mono">Стороны</span>
+        <span>{view.sideLabel}</span>
+      </div>
+      <div class="project-spec">
+        <span class="mono">Размер</span>
+        <span>{view.sizeLabel}</span>
+      </div>
+      <div class="project-spec">
+        <span class="mono">Подсветка</span>
+        <span>{view.lightingLabel}</span>
+      </div>
+      <div class="project-spec project-spec-wide">
+        <span class="mono">Охват</span>
+        <span>{view.reachLabel}</span>
       </div>
       <div class="project-spec project-spec-wide">
         <span class="mono">Стоимость</span>
@@ -125,31 +131,6 @@ const description = project.description
       </div>
     </div>
   </div>
-
-  {hasProgress && (
-  <div>
-    <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Ход строительства</span></div>
-    {progress.map((album) => (
-      <div class="progress-album">
-        <h2 class="h2 docs-category-title">{progressPeriodLabel(album.year, album.month)}</h2>
-        {album.note && <p class="progress-note">{album.note}</p>}
-        <div class="progress-grid">
-          {album.photos.map((photo) => (
-            <a class="progress-photo" href={photo.url} target="_blank" rel="noopener" aria-label={`Фото: ${progressPeriodLabel(album.year, album.month)}`}>
-              <img
-                src={photo.renditions?.thumbnailUrl ?? photo.url}
-                srcset={photo.renditions?.srcset || undefined}
-                sizes={photo.renditions?.srcset ? "(max-width: 700px) 50vw, 25vw" : undefined}
-                alt={`${view.name} — ход строительства, ${progressPeriodLabel(album.year, album.month)}`}
-                loading="lazy"
-              >
-            </a>
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-  )}
 
   {hasDocs && (
   <div>
@@ -175,11 +156,11 @@ const description = project.description
     <div class="pattern-overlay pattern-overlay-cta"></div>
     <div class="project-cta-text">
       <h3>Заинтересовал {view.name}?</h3>
-      <p>Оставьте заявку — подберём квартиру и условия рассрочки под ваш бюджет.</p>
+      <p>Оставьте заявку — уточним период, сторону и условия размещения.</p>
     </div>
     <div class="project-cta-actions">
       <button type="button" class="btn btn-white" data-lead-open>{s.contactsLeaveCta}</button>
-      <a href="/#catalog" class="btn btn-outline-white">К другим ЖК</a>
+      <a href="/#catalog" class="btn btn-outline-white">К другим конструкциям</a>
     </div>
   </div>
 </div>
@@ -191,7 +172,7 @@ const description = project.description
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
     </button>
     <span class="mono hero-card-label">{view.name}</span>
-    <p class="hero-card-title" id="leadModalTitle">Оставьте номер — перезвоним за 15 минут и подберём квартиру в «{view.name}»</p>
+    <p class="hero-card-title" id="leadModalTitle">Оставьте номер — перезвоним за 15 минут и обсудим размещение на «{view.name}»</p>
     <form class="hero-card-form" id="modalLeadForm" novalidate>
       <label class="visually-hidden" for="modalLeadName">Как к вам обращаться</label>
       <input id="modalLeadName" type="text" placeholder="Как к вам обращаться" name="name" autocomplete="name" minlength="2" maxlength="120" required>
@@ -214,12 +195,12 @@ const description = project.description
 <Footer chrome={chrome} showDocs={hasHomeDocs} />
 <CookieBanner />
 
-<script is:inline define:vars={{ apiUrl, zhkSlug: project.slug, zhkId: project.id, zhkName: view.name }}>
+<script is:inline define:vars={{ apiUrl, constructionSlug: construction.slug, constructionId: construction.id, constructionName: view.name }}>
   window.NOESIS_API_URL = apiUrl;
-  // Контекст для формы заявки: привязка лида к этому ЖК (source=project).
-  window.NOESIS_PROJECT = { id: zhkId, name: zhkName, slug: zhkSlug };
-  // Цель Метрики «просмотр ЖК» (Веха 4.3); no-op, если счётчик не задан.
-  if (window.ymGoal) window.ymGoal('zhk_view', { slug: zhkSlug });
+  // Контекст для формы заявки: привязка лида к этой конструкции.
+  window.NOESIS_CONSTRUCTION = { id: constructionId, name: constructionName, slug: constructionSlug };
+  // Цель Метрики «просмотр конструкции»; no-op, если счётчик не задан.
+  if (window.ymGoal) window.ymGoal('construction_view', { slug: constructionSlug });
 </script>
 <script is:inline src="/js/page.js"></script>
 </body>

@@ -10,7 +10,6 @@ import {
   type Construction,
   type ConstructionFormat,
   type ConstructionLighting,
-  type ConstructionSide,
 } from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 import { toDeveloperDto } from "../developers/developer-dto";
@@ -55,7 +54,7 @@ export function toConstructionDto(
     lng: c.lng,
     format: c.format as ConstructionFormat,
     size: c.size,
-    side: c.side as ConstructionSide | null,
+    sideCount: c.sideCount === 2 ? 2 : 1,
     lighting: c.lighting as ConstructionLighting,
     grp: c.grp,
     trafficPerDay: c.trafficPerDay,

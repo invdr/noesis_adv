@@ -81,6 +81,24 @@ async function seedContactTypes(rt: Runtime): Promise<void> {
   }
 }
 
+/** Стартовые причины служебных броней. */
+const DEFAULT_BOOKING_SERVICE_REASONS = [
+  { id: "booking_reason_repair", name: "Ремонт", order: 1 },
+  { id: "booking_reason_own_ad", name: "Своя реклама", order: 2 },
+  { id: "booking_reason_reserve", name: "Резерв", order: 3 },
+  { id: "booking_reason_dismantling", name: "Демонтаж", order: 4 },
+];
+
+async function seedBookingServiceReasons(rt: Runtime): Promise<void> {
+  for (const reason of DEFAULT_BOOKING_SERVICE_REASONS) {
+    await rt.prisma.bookingServiceReason.upsert({
+      where: { id: reason.id },
+      update: {},
+      create: reason,
+    });
+  }
+}
+
 async function seedAdmin(rt: Runtime): Promise<void> {
   if (!rt.env.ADMIN_EMAIL || !rt.env.ADMIN_PASSWORD) {
     throw new Error(
@@ -109,6 +127,7 @@ async function main(): Promise<void> {
     await seedStages(rt);
     await seedLeadSources(rt);
     await seedContactTypes(rt);
+    await seedBookingServiceReasons(rt);
     await seedAdmin(rt);
     await seedContent(rt);
   } finally {

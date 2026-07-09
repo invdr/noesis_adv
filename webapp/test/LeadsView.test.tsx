@@ -7,7 +7,7 @@ import { LeadsView } from "../src/leads/LeadsView";
 import { lead, sessionUser } from "./fixtures";
 
 /**
- * Список заявок: колонки «ЖК»/«След. контакт», фильтр ответственного у админа
+ * Список заявок: колонки «Конструкция»/«След. контакт», фильтр ответственного у админа
  * против чекбокса «Только мои» у менеджера, источники из справочника.
  */
 
@@ -64,12 +64,12 @@ afterEach(() => {
 });
 
 describe("LeadsView", () => {
-  test("таблица: колонки ЖК и «След. контакт», имя источника и просрочка", async () => {
+  test("таблица: колонки конструкции и «След. контакт», имя источника и просрочка", async () => {
     renderLeads("manager");
     expect(await screen.findByText("Иван Петров")).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "ЖК" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Конструкция" })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "След. контакт" })).toBeTruthy();
-    expect(screen.getByText("ЖК «Башня»")).toBeTruthy();
+    expect(screen.getByText("СФ-001")).toBeTruthy();
     // «Главная форма» есть и в фильтре-селекте, и в ячейке строки.
     expect(screen.getAllByText("Главная форма").length).toBeGreaterThanOrEqual(2);
     // Просроченная дата контакта выводится (подсветку цветом не проверяем).

@@ -2,7 +2,7 @@ import type { LeadSource, SessionUser, Lead } from "@noesis/contracts";
 
 export const SOURCE_LABELS: Record<string, string> = {
   hero_form: "Главная форма",
-  project: "Карточка ЖК",
+  project: "Карточка конструкции",
   contacts: "Контакты",
   offline: "Оффлайн",
   other: "Прочее",

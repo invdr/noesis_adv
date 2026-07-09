@@ -4,7 +4,7 @@ import { normalizeRuPhone, phoneSchema } from "./lead";
 /**
  * Редактируемая «обвзяка» лендинга из CRM (Веха 4.3): навигация, контакты,
  * реквизиты, подписи кнопок/секций, параметры блока новостей, видимость/порядок
- * ЖК на главной, ID Яндекс.Метрики.
+ * конструкций на главной, ID Яндекс.Метрики.
  *
  * Модель — singleton, admin-only, блокировка по версии (`expectedUpdatedAt`),
  * любая правка ставит флажок пересборки (как контент в 4.2).
@@ -104,8 +104,8 @@ export const siteSettingsBaseSchema = z.object({
   secondaryContactLabel: t(L.contactLabel).optional(),
   // Блок новостей
   newsHomeCount: newsHomeCountSchema.optional(),
-  // ЖК на главной: порядок (id по очереди) и скрытые (id). Скрытый ЖК уходит из
-  // каталога И из блока «Документы» на главной, но /zhk/<slug> и sitemap живут.
+  // Конструкции на главной: порядок (id по очереди) и скрытые (id). Скрытая
+  // конструкция уходит из каталога, карты и блока «Документы» на главной.
   homepageOrder: z.array(z.string()).max(200).optional(),
   homepageHidden: z.array(z.string()).max(200).optional(),
   // Яндекс.Метрика: только цифры; пусто = счётчик не грузится.
@@ -185,31 +185,31 @@ export type ResolvedSiteSettings = Required<SiteSettingsOverrides>;
 export const SITE_SETTINGS_DEFAULTS: ResolvedSiteSettings = {
   siteName: "Noesis",
   navCatalog: "Каталог",
-  navFlats: "Квартиры",
+  navFlats: "Карта",
   navAbout: "О нас",
-  navDocs: "Документы",
+  navDocs: "Материалы",
   navContacts: "Контакты",
-  ctaSelectFlat: "Выбрать квартиру",
+  ctaSelectFlat: "Выбрать конструкцию",
   heroEyebrow: "Чеченская Республика, Грозный",
-  heroTitleLine1: "Строим будущее,",
-  heroTitleLine2: "сохраняя прошлое",
+  heroTitleLine1: "Наружная реклама",
+  heroTitleLine2: "в Грозном",
   heroSubtitle:
-    "Без посредников и с полной поддержкой на всех этапах. Пять ключевых застройщиков региона в одном офисе продаж.",
-  heroCtaPrimary: "Выбрать квартиру",
-  heroCtaSecondary: "Рассчитать рассрочку",
+    "Каталог сити-форматов и рекламных конструкций: адреса, фото, охват, цена за месяц и быстрая заявка на размещение.",
+  heroCtaPrimary: "Смотреть каталог",
+  heroCtaSecondary: "Открыть карту",
   catalogEyebrow: "Каталог",
-  catalogTitle: "Жилые комплексы",
-  flatsEyebrow: "Наши квартиры",
-  flatsTitle: "Современно, продуманно, комфортно",
-  flatsCta: "Смотреть квартиры",
-  newsEyebrow: "Акции и новости",
-  newsTitle: "Выгодные предложения",
-  newsAllCta: "Все акции и новости",
-  docsEyebrow: "Документы",
-  docsTitle: "Документация",
-  aboutEyebrow: "Почему мы",
+  catalogTitle: "Рекламные конструкции",
+  flatsEyebrow: "География",
+  flatsTitle: "Карта конструкций",
+  flatsCta: "К каталогу",
+  newsEyebrow: "Новости и кейсы",
+  newsTitle: "Идеи для размещения",
+  newsAllCta: "Все новости",
+  docsEyebrow: "Материалы",
+  docsTitle: "Документы и презентации",
+  aboutEyebrow: "Почему Noesis",
   contactsEyebrow: "Свяжитесь с нами",
-  contactsTitle: "Подберём вашу квартиру",
+  contactsTitle: "Подберём размещение",
   contactsLeaveCta: "Оставить заявку",
   ctaOrderCall: "Заказать звонок",
   phonePrimary: "+79280009300",
@@ -218,9 +218,9 @@ export const SITE_SETTINGS_DEFAULTS: ResolvedSiteSettings = {
   workHoursWeekday: "Пн-Пт: 9:00-18:00 (перерыв 13:00-14:00)",
   workHoursSaturday: "Сб: 9:00-14:00",
   footerBrand:
-    "Группа строительных компаний. Пять застройщиков, один офис продаж, полный цикл услуг в Грозном.",
+    "Рекламное агентство: каталог городских конструкций, подбор локаций и сопровождение размещения в Грозном.",
   copyright: "© Noesis. Не является публичной офертой",
-  slogan: "Строим будущее, сохраняя прошлое",
+  slogan: "Наружная реклама в Грозном",
   secondaryContactKind: "email",
   secondaryContactValue: "",
   secondaryContactLabel: "",
@@ -297,20 +297,23 @@ export function deriveSecondaryContact(s: ResolvedSiteSettings): {
 }
 
 /**
- * Каталог ЖК на главной с учётом настроек: скрытые убраны, перечисленные в
+ * Каталог конструкций на главной с учётом настроек: скрытые убраны, перечисленные в
  * `homepageOrder` — первыми в заданном порядке, остальные — в исходном порядке
  * (публичный API отдаёт от новых к старым). «Мёртвые» id игнорируются.
  */
-export function orderHomepageProjects<T extends { id: string }>(
-  projects: T[],
+export function orderHomepageConstructions<T extends { id: string }>(
+  constructions: T[],
   order: string[],
   hidden: string[],
 ): T[] {
   const hiddenSet = new Set(hidden);
-  const visible = projects.filter((p) => !hiddenSet.has(p.id));
+  const visible = constructions.filter((p) => !hiddenSet.has(p.id));
   const listedIds = new Set(order);
   const byId = new Map(visible.map((p) => [p.id, p]));
   const listed = order.map((id) => byId.get(id)).filter((p): p is T => p !== undefined);
   const rest = visible.filter((p) => !listedIds.has(p.id));
   return [...listed, ...rest];
 }
+
+/** @deprecated Используйте orderHomepageConstructions. */
+export const orderHomepageProjects = orderHomepageConstructions;

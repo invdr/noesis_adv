@@ -220,7 +220,7 @@ function Dashboard({
             }))}
           />
         </Panel>
-        <Panel title="По ЖК">
+        <Panel title="По конструкциям">
           {data.byProject.length === 0 ? (
             <Empty />
           ) : (
