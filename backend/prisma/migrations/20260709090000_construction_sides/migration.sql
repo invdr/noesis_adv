@@ -43,11 +43,11 @@ INSERT INTO "ConstructionSide" (
     "updatedAt"
 )
 SELECT
-    'side_' || md5(c."id" || ':A'),
+    ('side_' || md5(c."id" || ':A'))::TEXT,
     c."id",
-    'A',
-    NULL,
-    NULL,
+    'A'::TEXT,
+    NULL::TEXT,
+    NULL::INTEGER,
     c."trafficPerDay",
     c."grp",
     c."coverId",
@@ -56,11 +56,11 @@ SELECT
 FROM "Construction" c
 UNION ALL
 SELECT
-    'side_' || md5(c."id" || ':B'),
+    ('side_' || md5(c."id" || ':B'))::TEXT,
     c."id",
-    'B',
-    NULL,
-    NULL,
+    'B'::TEXT,
+    NULL::TEXT,
+    NULL::INTEGER,
     c."trafficPerDay",
     c."grp",
     c."coverId",
@@ -70,11 +70,11 @@ FROM "Construction" c
 WHERE c."sideCount" >= 2
 UNION ALL
 SELECT
-    'side_' || md5(c."id" || ':C'),
+    ('side_' || md5(c."id" || ':C'))::TEXT,
     c."id",
-    'C',
-    NULL,
-    NULL,
+    'C'::TEXT,
+    NULL::TEXT,
+    NULL::INTEGER,
     c."trafficPerDay",
     c."grp",
     c."coverId",
