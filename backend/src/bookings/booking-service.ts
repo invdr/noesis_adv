@@ -198,7 +198,8 @@ async function saveBooking(
         const reminderChanged =
           (current?.reminderAt?.getTime() ?? null) !== (reminderDate?.getTime() ?? null);
         const managerChanged = current?.managerId !== managerId;
-        const reminderDeliveryChanged = reminderChanged || managerChanged;
+        const statusChanged = current?.status !== input.status;
+        const reminderDeliveryChanged = reminderChanged || managerChanged || statusChanged;
         if (reminderDeliveryChanged && hasActiveReminderClaim(current)) {
           throw new HttpError(
             409,

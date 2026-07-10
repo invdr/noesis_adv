@@ -6,7 +6,7 @@ import type {
   ResetPasswordResponse,
   UpdateUserInput,
 } from "@noesis/contracts";
-import type { Prisma } from "@prisma/client";
+import { Prisma, type User } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import {
@@ -18,6 +18,7 @@ import { toAdminUserDto } from "./user-dto";
 
 /** Длина генерируемого стартового пароля (в символах). */
 const GENERATED_PASSWORD_LENGTH = 14;
+const REMINDER_CLAIM_TTL_MS = 5 * 60 * 1000;
 
 /**
  * Генерирует стартовый/сброшенный пароль. Email-канала нет — пароль показывается
@@ -114,12 +115,24 @@ export async function updateUser(
     data.telegramChatId = input.telegramChatId.trim() || null;
   }
 
-  const updated = await rt.prisma.$transaction(async (tx) => {
-    const u = await tx.user.update({ where: { id }, data });
-    // Повышение в админы: исполнителем admin не выступает — снимаем активные заявки.
-    if (promotingToAdmin) await requeueActiveLeads(tx, id);
-    return u;
-  });
+  let updated: User;
+  try {
+    updated = await rt.prisma.$transaction(
+      async (tx) => {
+        if (input.telegramChatId !== undefined) {
+          await assertNoActiveReminderClaim(tx, id);
+        }
+        const u = await tx.user.update({ where: { id }, data });
+        // Повышение в админы: исполнителем admin не выступает — снимаем активные заявки.
+        if (promotingToAdmin) await requeueActiveLeads(tx, id);
+        return u;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (err) {
+    if (isSerializationFailure(err)) throw reminderClaimConflict();
+    throw err;
+  }
   const count = promotingToAdmin ? 0 : await userActiveLeadCount(rt, id);
   return toAdminUserDto(updated, count);
 }
@@ -143,11 +156,21 @@ export async function setUserActive(
     await assertNotLastAdmin(rt, id);
   }
 
-  const updated = await rt.prisma.$transaction(async (tx) => {
-    const u = await tx.user.update({ where: { id }, data: { isActive } });
-    if (!isActive) await requeueActiveLeads(tx, id);
-    return u;
-  });
+  let updated: User;
+  try {
+    updated = await rt.prisma.$transaction(
+      async (tx) => {
+        if (!isActive) await assertNoActiveReminderClaim(tx, id);
+        const u = await tx.user.update({ where: { id }, data: { isActive } });
+        if (!isActive) await requeueActiveLeads(tx, id);
+        return u;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (err) {
+    if (isSerializationFailure(err)) throw reminderClaimConflict();
+    throw err;
+  }
   // Сессии гасим уже ПОСЛЕ коммита: если транзакция откатится, пользователь не
   // окажется разлогинен «впустую», а заблокированного всё равно добьёт
   // resolveSession (он прекращает сессии неактивного при следующем запросе).
@@ -186,6 +209,32 @@ async function requireUser(rt: Runtime, id: string) {
   const user = await rt.prisma.user.findUnique({ where: { id } });
   if (!user) throw new HttpError(404, "not_found", "Пользователь не найден");
   return user;
+}
+
+async function assertNoActiveReminderClaim(
+  tx: Prisma.TransactionClient,
+  userId: string,
+): Promise<void> {
+  const activeClaim = await tx.booking.count({
+    where: {
+      reminderSendingToken: { not: null },
+      reminderSendingAt: { gt: new Date(Date.now() - REMINDER_CLAIM_TTL_MS) },
+      OR: [{ managerId: userId }, { createdById: userId }],
+    },
+  });
+  if (activeClaim > 0) throw reminderClaimConflict();
+}
+
+function reminderClaimConflict(): HttpError {
+  return new HttpError(
+    409,
+    "reminder_delivery_in_progress",
+    "Личное напоминание уже отправляется — повторите смену Telegram или блокировку через несколько секунд",
+  );
+}
+
+function isSerializationFailure(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
 }
 
 async function assertEmailFree(rt: Runtime, email: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import {
   BOOKING_REMINDER_UPCOMING_DAYS,
   type BookingKind,
@@ -242,6 +242,7 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
               // before sendMessage; this is still defensive against stale work.
               where: {
                 id: row.id,
+                status: { in: ACTIVE_STATUSES },
                 reminderAt: row.reminderAt,
                 reminderNotifiedAt: null,
                 reminderSendingToken: claimToken,
@@ -280,23 +281,34 @@ async function claimReminderDeliveries(
   const claims = await Promise.all(
     deliveries.map(async (delivery) => {
       const claimToken: string = randomUUID();
-      const claimed = await rt.prisma.booking.updateMany({
-        // The recipient snapshot is checked before claiming. Once claimed,
-        // booking-service rejects recipient/date changes until this short lease
-        // is released or expires, so sendMessage cannot target a stale chat.
-        where: {
-          id: delivery.row.id,
-          reminderAt: delivery.row.reminderAt,
-          reminderNotifiedAt: null,
-          OR: [
-            { reminderSendingToken: null },
-            { reminderSendingAt: null },
-            { reminderSendingAt: { lt: staleClaimBefore } },
-          ],
-          AND: [delivery.recipientWhere],
-        },
-        data: { reminderSendingToken: claimToken, reminderSendingAt: new Date() },
-      });
+      let claimed;
+      try {
+        claimed = await rt.prisma.$transaction(
+          (tx) =>
+            tx.booking.updateMany({
+              // The recipient snapshot is checked before claiming. Once claimed,
+              // booking-service rejects recipient/date changes until this short lease
+              // is released or expires, so sendMessage cannot target a stale chat.
+              where: {
+                id: delivery.row.id,
+                status: { in: ACTIVE_STATUSES },
+                reminderAt: delivery.row.reminderAt,
+                reminderNotifiedAt: null,
+                OR: [
+                  { reminderSendingToken: null },
+                  { reminderSendingAt: null },
+                  { reminderSendingAt: { lt: staleClaimBefore } },
+                ],
+                AND: [delivery.recipientWhere],
+              },
+              data: { reminderSendingToken: claimToken, reminderSendingAt: new Date() },
+            }),
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (err) {
+        if (isSerializationFailure(err)) return null;
+        throw err;
+      }
       return claimed.count > 0 ? { ...delivery, claimToken } : null;
     }),
   );
@@ -346,4 +358,8 @@ function recipientSnapshot(
     };
   }
   return null;
+}
+
+function isSerializationFailure(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
 }

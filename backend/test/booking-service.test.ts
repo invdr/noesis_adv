@@ -300,7 +300,7 @@ describe("booking-service", () => {
     expect(bookings[0]!.reminderNotifiedAt).toBeNull();
   });
 
-  test("не меняет дату или получателя, пока Telegram держит активную lease", async () => {
+  test("не меняет дату, получателя или статус, пока Telegram держит активную lease", async () => {
     const { db, bookings } = makeDb();
     const rt = runtimeWith(db);
     const admin = { ...user, id: "admin", role: "admin" as const };
@@ -314,7 +314,14 @@ describe("booking-service", () => {
       status: 409,
       code: "reminder_delivery_in_progress",
     });
+    await expect(
+      updateBooking(rt, admin, "b1", { ...input, status: "cancelled" }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "reminder_delivery_in_progress",
+    });
     expect(bookings[0]!.managerId).toBe("u1");
+    expect(bookings[0]!.status).toBe("booked");
   });
 
   test("менеджер не может переназначить приватное напоминание другому сотруднику", async () => {

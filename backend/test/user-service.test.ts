@@ -71,6 +71,7 @@ describe("setUserActive (блокировка)", () => {
           return { count: 3 };
         },
       },
+      booking: { count: async () => 0 },
       $transaction: async (fn: any) => fn(prisma),
     };
     const result = await setUserActive(runtimeWith(prisma), "a1", "u2", false);
@@ -78,6 +79,27 @@ describe("setUserActive (блокировка)", () => {
     expect(result.activeLeadCount).toBe(0);
     expect(calls.sessions).toBe(true);
     expect(calls.requeued).toBe(true);
+  });
+
+  test("не блокирует получателя, пока его личное напоминание отправляется", async () => {
+    let updated = false;
+    const prisma = {
+      user: {
+        findUnique: async () => userRow(),
+        count: async () => 1,
+        update: async () => {
+          updated = true;
+          return userRow({ isActive: false });
+        },
+      },
+      booking: { count: async () => 1 },
+      $transaction: async (fn: any) => fn(prisma),
+    };
+
+    await expect(
+      setUserActive(runtimeWith(prisma), "a1", "u2", false),
+    ).rejects.toMatchObject({ status: 409, code: "reminder_delivery_in_progress" });
+    expect(updated).toBe(false);
   });
 });
 
@@ -101,5 +123,25 @@ describe("updateUser", () => {
     await expect(
       updateUser(runtimeWith(prisma), "a1", "a2", { role: "manager" }),
     ).rejects.toMatchObject({ status: 409, code: "last_admin" });
+  });
+
+  test("не меняет Telegram получателя, пока его личное напоминание отправляется", async () => {
+    let updated = false;
+    const prisma = {
+      user: {
+        findUnique: async () => userRow(),
+        update: async () => {
+          updated = true;
+          return userRow({ telegramChatId: "new-chat" });
+        },
+      },
+      booking: { count: async () => 1 },
+      $transaction: async (fn: any) => fn(prisma),
+    };
+
+    await expect(
+      updateUser(runtimeWith(prisma), "a1", "u2", { telegramChatId: "new-chat" }),
+    ).rejects.toMatchObject({ status: 409, code: "reminder_delivery_in_progress" });
+    expect(updated).toBe(false);
   });
 });

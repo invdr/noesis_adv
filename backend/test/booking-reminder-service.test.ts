@@ -117,19 +117,18 @@ describe("sendDueBookingReminders", () => {
 
   function prismaWith(rows: any[]) {
     const marked: any[] = [];
-    return {
-      marked,
-      prisma: {
-        booking: {
-          findMany: async () => rows,
-          updateMany: async ({ where, data }: any) => {
-            if (data.reminderSendingToken) return { count: 1 };
-            if (data.reminderNotifiedAt) marked.push(where);
-            return { count: 1 };
-          },
+    const prisma: any = {
+      booking: {
+        findMany: async () => rows,
+        updateMany: async ({ where, data }: any) => {
+          if (data.reminderSendingToken) return { count: 1 };
+          if (data.reminderNotifiedAt) marked.push(where);
+          return { count: 1 };
         },
       },
     };
+    prisma.$transaction = async (fn: any) => fn(prisma);
+    return { marked, prisma };
   }
 
   test("без токена бота ничего не шлём и не помечаем", async () => {
@@ -242,7 +241,7 @@ describe("sendDueBookingReminders", () => {
       }),
     ];
     const marked: any[] = [];
-    const prisma = {
+    const prisma: any = {
       booking: {
         findMany: async () => rows,
         updateMany: async ({ where, data }: any) => {
@@ -253,6 +252,7 @@ describe("sendDueBookingReminders", () => {
         },
       },
     };
+    prisma.$transaction = async (fn: any) => fn(prisma);
 
     const res = await sendDueBookingReminders(
       runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }),
@@ -275,7 +275,7 @@ describe("sendDueBookingReminders", () => {
       }),
     ];
     const marked: any[] = [];
-    const prisma = {
+    const prisma: any = {
       booking: {
         findMany: async () => rows,
         updateMany: async ({ where, data }: any) => {
@@ -289,6 +289,7 @@ describe("sendDueBookingReminders", () => {
         },
       },
     };
+    prisma.$transaction = async (fn: any) => fn(prisma);
 
     const res = await sendDueBookingReminders(
       runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }),
