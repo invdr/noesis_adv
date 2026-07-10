@@ -17,12 +17,6 @@ CREATE TYPE "StageKind" AS ENUM ('in_progress', 'won', 'lost');
 CREATE TYPE "ConstructionStatus" AS ENUM ('draft', 'published');
 
 -- CreateEnum
-CREATE TYPE "BookingKind" AS ENUM ('commercial', 'service');
-
--- CreateEnum
-CREATE TYPE "BookingStatus" AS ENUM ('booked', 'onAir', 'completed', 'cancelled');
-
--- CreateEnum
 CREATE TYPE "NewsStatus" AS ENUM ('draft', 'published');
 
 -- CreateEnum
@@ -266,7 +260,7 @@ CREATE TABLE "Construction" (
     "ownerId" TEXT,
     "format" TEXT NOT NULL DEFAULT 'cityFormat',
     "size" TEXT,
-    "sideCount" INTEGER NOT NULL DEFAULT 1,
+    "side" TEXT,
     "lighting" TEXT NOT NULL DEFAULT 'none',
     "grp" DOUBLE PRECISION,
     "trafficPerDay" INTEGER,
@@ -281,57 +275,6 @@ CREATE TABLE "Construction" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Construction_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "BookingBrand" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "order" INTEGER NOT NULL DEFAULT 0,
-    "archivedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "BookingBrand_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "BookingServiceReason" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "order" INTEGER NOT NULL DEFAULT 0,
-    "archivedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "BookingServiceReason_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Booking" (
-    "id" TEXT NOT NULL,
-    "kind" "BookingKind" NOT NULL DEFAULT 'commercial',
-    "status" "BookingStatus" NOT NULL DEFAULT 'booked',
-    "constructionId" TEXT NOT NULL,
-    "side" TEXT,
-    "clientId" TEXT,
-    "serviceReasonId" TEXT,
-    "brandId" TEXT,
-    "campaignNote" TEXT,
-    "leadId" TEXT,
-    "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3) NOT NULL,
-    "durationMonths" INTEGER NOT NULL,
-    "basePricePerMonth" INTEGER,
-    "totalPrice" INTEGER,
-    "priceNote" TEXT,
-    "reminderAt" TIMESTAMP(3),
-    "managerId" TEXT,
-    "createdById" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Booking_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -592,54 +535,6 @@ CREATE INDEX "Construction_ownerId_idx" ON "Construction"("ownerId");
 CREATE INDEX "Construction_format_idx" ON "Construction"("format");
 
 -- CreateIndex
-CREATE INDEX "BookingBrand_archivedAt_idx" ON "BookingBrand"("archivedAt");
-
--- CreateIndex
-CREATE INDEX "BookingBrand_order_idx" ON "BookingBrand"("order");
-
--- CreateIndex
-CREATE INDEX "BookingServiceReason_archivedAt_idx" ON "BookingServiceReason"("archivedAt");
-
--- CreateIndex
-CREATE INDEX "BookingServiceReason_order_idx" ON "BookingServiceReason"("order");
-
--- CreateIndex
-CREATE INDEX "Booking_constructionId_idx" ON "Booking"("constructionId");
-
--- CreateIndex
-CREATE INDEX "Booking_status_idx" ON "Booking"("status");
-
--- CreateIndex
-CREATE INDEX "Booking_kind_idx" ON "Booking"("kind");
-
--- CreateIndex
-CREATE INDEX "Booking_side_idx" ON "Booking"("side");
-
--- CreateIndex
-CREATE INDEX "Booking_startDate_idx" ON "Booking"("startDate");
-
--- CreateIndex
-CREATE INDEX "Booking_endDate_idx" ON "Booking"("endDate");
-
--- CreateIndex
-CREATE INDEX "Booking_clientId_idx" ON "Booking"("clientId");
-
--- CreateIndex
-CREATE INDEX "Booking_serviceReasonId_idx" ON "Booking"("serviceReasonId");
-
--- CreateIndex
-CREATE INDEX "Booking_brandId_idx" ON "Booking"("brandId");
-
--- CreateIndex
-CREATE INDEX "Booking_leadId_idx" ON "Booking"("leadId");
-
--- CreateIndex
-CREATE INDEX "Booking_managerId_idx" ON "Booking"("managerId");
-
--- CreateIndex
-CREATE INDEX "Booking_reminderAt_idx" ON "Booking"("reminderAt");
-
--- CreateIndex
 CREATE INDEX "ConstructionImage_constructionId_idx" ON "ConstructionImage"("constructionId");
 
 -- CreateIndex
@@ -773,27 +668,6 @@ ALTER TABLE "Construction" ADD CONSTRAINT "Construction_coverId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "Construction" ADD CONSTRAINT "Construction_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_constructionId_fkey" FOREIGN KEY ("constructionId") REFERENCES "Construction"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_serviceReasonId_fkey" FOREIGN KEY ("serviceReasonId") REFERENCES "BookingServiceReason"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "BookingBrand"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_managerId_fkey" FOREIGN KEY ("managerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ConstructionImage" ADD CONSTRAINT "ConstructionImage_constructionId_fkey" FOREIGN KEY ("constructionId") REFERENCES "Construction"("id") ON DELETE CASCADE ON UPDATE CASCADE;

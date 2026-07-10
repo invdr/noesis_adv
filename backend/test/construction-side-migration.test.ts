@@ -6,8 +6,30 @@ const migrationPath = join(
   import.meta.dir,
   "../prisma/migrations/20260709090000_construction_sides/migration.sql",
 );
+const initialMigrationPath = join(
+  import.meta.dir,
+  "../prisma/migrations/20260708000000_init/migration.sql",
+);
 
 describe("construction sides migration", () => {
+  test("keeps the historical initial schema intact and applies bookings forward", async () => {
+    const [initialSql, sql] = await Promise.all([
+      readFile(initialMigrationPath, "utf8"),
+      readFile(migrationPath, "utf8"),
+    ]);
+
+    expect(initialSql).toContain('"side" TEXT');
+    expect(initialSql).not.toContain('CREATE TABLE "Booking"');
+    expect(initialSql).not.toContain('CREATE TYPE "BookingKind"');
+    expect(sql).toContain('ALTER TABLE "Construction" ADD COLUMN "sideCount"');
+    expect(sql).toContain('CREATE TYPE "BookingKind"');
+    expect(sql).toContain('CREATE TABLE "Booking"');
+    expect(sql.indexOf('CREATE TABLE "Booking"')).toBeLessThan(
+      sql.indexOf('ALTER TABLE "Booking" ADD COLUMN "constructionSideId"'),
+    );
+    expect(sql).toContain('ALTER TABLE "Construction" DROP COLUMN "side"');
+  });
+
   test("backfills demo side counts before sides and keeps booking-side FK composite", async () => {
     const sql = await readFile(migrationPath, "utf8");
 
