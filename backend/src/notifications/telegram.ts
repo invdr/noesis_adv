@@ -31,9 +31,9 @@ export async function sendTelegramMessage(
   rt: Runtime,
   text: string,
   chatId: string | undefined = rt.env.TELEGRAM_CHAT_ID,
-): Promise<void> {
+): Promise<boolean> {
   const token = rt.env.TELEGRAM_BOT_TOKEN;
-  if (!token || !chatId) return; // уведомления не настроены — тихо выходим
+  if (!token || !chatId) return false; // уведомления не настроены — тихо выходим
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -48,9 +48,12 @@ export async function sendTelegramMessage(
     });
     if (!res.ok) {
       console.error(`[telegram] sendMessage ${res.status}: ${await res.text()}`);
+      return false;
     }
+    return true;
   } catch (err) {
     console.error("[telegram] сообщение не отправлено:", err);
+    return false;
   }
 }
 

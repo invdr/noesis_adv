@@ -182,4 +182,22 @@ describe("sendDueBookingReminders", () => {
     expect(calls).toHaveLength(0);
     expect(marked).toHaveLength(0);
   });
+
+  test("при неуспешном ответе Telegram не помечает напоминание", async () => {
+    globalThis.fetch = (async () => new Response("bad request", { status: 400 })) as unknown as typeof fetch;
+    const rows = [
+      reminderRow("a", new Date(), {
+        manager: { isActive: true, telegramChatId: "100", name: "M", email: "m@n.ru" },
+        createdBy: null,
+      }),
+    ];
+    const { prisma, marked } = prismaWith(rows);
+
+    const res = await sendDueBookingReminders(
+      runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }),
+    );
+
+    expect(res).toEqual({ candidates: 1, notified: 0, skipped: 1 });
+    expect(marked).toHaveLength(0);
+  });
 });

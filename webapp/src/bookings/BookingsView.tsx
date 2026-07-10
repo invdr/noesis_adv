@@ -367,6 +367,7 @@ function BookingForm({
   );
   const [priceNote, setPriceNote] = useState(booking?.priceNote ?? "");
   const [reminderAt, setReminderAt] = useState(booking?.reminderAt ?? defaultBookingReminder(addBookingMonths(productToday(), 1)));
+  const [reminderAtTouched, setReminderAtTouched] = useState(false);
   const [managerId, setManagerId] = useState(booking?.manager?.id ?? user.id);
   const [newBrandName, setNewBrandName] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -391,11 +392,11 @@ function BookingForm({
 
   // Новой брони дефолтное напоминание следует за периодом (как и снимок цены):
   // менять срок и получать напоминание, привязанное к старому «+1 мес от сегодня»,
-  // — сюрприз. Существующую бронь не трогаем, чтобы не перетереть ручную дату.
+  // — сюрприз. Существующую бронь и вручную введённую дату не перетираем.
   useEffect(() => {
-    if (booking || !endDate) return;
+    if (booking || reminderAtTouched || !endDate) return;
     setReminderAt(defaultBookingReminder(endDate));
-  }, [booking, endDate]);
+  }, [booking, endDate, reminderAtTouched]);
 
   const save = useMutation({
     mutationFn: () => {
@@ -572,7 +573,14 @@ function BookingForm({
               <input inputMode="numeric" value={totalPrice} onChange={(e) => setTotalPrice(e.target.value)} disabled={kind === "service"} />
             </Field>
             <Field label="Напомнить">
-              <input type="date" value={reminderAt} onChange={(e) => setReminderAt(e.target.value)} />
+              <input
+                type="date"
+                value={reminderAt}
+                onChange={(e) => {
+                  setReminderAtTouched(true);
+                  setReminderAt(e.target.value);
+                }}
+              />
             </Field>
           </div>
           <Field label="Комментарий к цене">

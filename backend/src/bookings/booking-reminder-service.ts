@@ -122,7 +122,7 @@ export interface DueRemindersResult {
   candidates: number;
   /** Скольким ушёл Telegram (и они помечены уведомлёнными). */
   notified: number;
-  /** Пропущены: у ответственного/создателя нет Telegram (перевзвесятся позже). */
+  /** Не отправлены: у адресата нет Telegram либо Telegram вернул ошибку (повторятся позже). */
   skipped: number;
 }
 
@@ -190,7 +190,6 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
     const bucket = byChat.get(chatId) ?? [];
     bucket.push(row);
     byChat.set(chatId, bucket);
-    notifiedIds.push(row.id);
   }
 
   for (const [chatId, bucket] of byChat) {
@@ -199,7 +198,11 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
       lines.push(`• ${escapeHtml(bookingLabel(row))} — до ${previousDateOnly(row.endDate)}`);
     }
     if (rt.env.CRM_BASE_URL) lines.push(`Открыть: ${rt.env.CRM_BASE_URL}/#/bookings`);
-    await sendTelegramMessage(rt, lines.join("\n"), chatId);
+    if (await sendTelegramMessage(rt, lines.join("\n"), chatId)) {
+      notifiedIds.push(...bucket.map((row) => row.id));
+    } else {
+      result.skipped += bucket.length;
+    }
   }
 
   if (notifiedIds.length > 0) {
