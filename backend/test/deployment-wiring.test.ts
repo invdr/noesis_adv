@@ -15,4 +15,15 @@ describe("deployment wiring for booking reminders", () => {
     expect(dockerCompose).toContain("REMINDER_CRON_TOKEN: ${REMINDER_CRON_TOKEN:-}");
     expect(dockerCompose).toContain("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}");
   });
+
+  test("кодирует реквизиты PostgreSQL перед записью DATABASE_URL без Docker", async () => {
+    const noDockerDeploy = await readFile(resolve(root, "infra/deploy-no-docker.sh"), "utf8");
+
+    expect(noDockerDeploy).toContain("urlencode()");
+    expect(noDockerDeploy).toContain("encodeURIComponent(process.argv[1])");
+    expect(noDockerDeploy).toContain('database_password="$(urlencode "$POSTGRES_PASSWORD")"');
+    expect(noDockerDeploy).toContain(
+      'postgresql://$database_user:$database_password@127.0.0.1:5432/$database_name?schema=public',
+    );
+  });
 });

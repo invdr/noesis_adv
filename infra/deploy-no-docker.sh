@@ -153,12 +153,20 @@ ALTER SCHEMA public OWNER TO :"role";
 SQL
 }
 
+urlencode() {
+  "$BUN_BIN" -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' -- "$1"
+}
+
 write_runtime_env() {
   local runtime_dir
   runtime_dir="$(dirname "$NOESIS_RUNTIME_ENV")"
   install -d -m 0700 "$runtime_dir"
 
-  local database_url="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@127.0.0.1:5432/$POSTGRES_DB?schema=public"
+  local database_user database_password database_name database_url
+  database_user="$(urlencode "$POSTGRES_USER")"
+  database_password="$(urlencode "$POSTGRES_PASSWORD")"
+  database_name="$(urlencode "$POSTGRES_DB")"
+  database_url="postgresql://$database_user:$database_password@127.0.0.1:5432/$database_name?schema=public"
   cat > "$NOESIS_RUNTIME_ENV" <<EOF
 NODE_ENV=production
 DATABASE_URL=$database_url
