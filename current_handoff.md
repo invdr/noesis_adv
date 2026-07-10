@@ -7,11 +7,10 @@
 
 **Последнее обновление:** 2026-07-10
 **Текущий фокус:** Этап 2 — Инвентарь и бронирование по периодам (см. TASKS.md).
-**Стадия:** следующий проход Этапа 2 реализован и дожат по саб-агент ревью
-локально (contracts + backend + CRM): продаваемые стороны `A/B/C`, брони по
-стороне, CRM-аналитика загрузки/выручки и публичный агрегат занятости. Следующий
-фокус — применить миграцию на БД, пройти smoke-тесты и деплоить только по
-отдельному запросу.
+**Стадия:** следующий проход Этапа 2 реализован, дожат по саб-агент ревью,
+закоммичен, запушен и выкачен на прод `https://noesis.catlg.ru/`: продаваемые
+стороны `A/B/C`, брони по стороне, CRM-аналитика загрузки/выручки и публичный
+агрегат занятости.
 **Ветка:** `claude/stage-2-period-booking-design-14q994`.
 
 ## Как работаем над Этапом 2
@@ -254,29 +253,54 @@
 - ⚠️ В backend-тестах во время зелёного прогона печатается ожидаемый fail-safe
   warning из Telegram-уведомления в `lead-service.test.ts`; suite зелёный.
 
-## Риски / внимание перед деплоем
+## Риски / внимание после деплоя
 
-- Прод-БД уже существует: перед выкладкой обязательно применить новую Prisma
-  migration обычным deploy-путём, не менять init.
-- Миграция backfill создаёт стороны A/B/C из текущего `sideCount`, а старые
-  брони привязывает к A при `side=null` и к соответствующему коду при `A/B`.
-- Полноценный populated-PostgreSQL migration smoke ещё нужен перед продом:
-  проверить legacy брони `side=null/A/B`, demo C-side (`ББ-021`, `ПЛ-006`) и
-  composite FK на реальной БД/дампе.
+- Прод-БД уже существует: init-миграцию не переписывать; следующие изменения
+  схемы делать только новыми Prisma migrations.
+- Миграция `20260709090000_construction_sides` применена на проде. Первый запуск
+  упал на типизации `NULL` в backfill `INSERT ... UNION ALL`; фикс в commit
+  `a8f2162` явно кастует `NULL::INTEGER`/`NULL::TEXT`. После проверки, что DDL
+  откатился целиком (`ConstructionSide` отсутствовала, `Booking.constructionSideId`
+  отсутствовал), миграция была помечена как rolled back через
+  `bun x prisma migrate resolve --rolled-back 20260709090000_construction_sides`
+  и успешно применена повторно.
+- На проде создано 15 строк `ConstructionSide`; `_prisma_migrations` для
+  `20260709090000_construction_sides` имеет `finished_at` и без `rolled_back_at`.
 - Публичный агрегат занятости отдаёт только опубликованные неархивные
   конструкции и не выбирает клиент/бренд/цену.
 - Из публичной заявки брони по-прежнему не создаются автоматически.
 
 ## Проверки
 
-- ✅ `bun run typecheck`
-- ✅ `bun run test`
-- ✅ `bun run build:backend`
-- ✅ `bun run build:webapp`
-- ⚠️ `bun run build` целиком упирается в `website`: Astro намеренно тянет
-  публичный API при сборке, а локальный backend/Postgres не подняты. Docker в этой
-  среде отсутствует (`docker: command not found`), поэтому полноценный website build
-  нужно повторить там, где можно поднять БД/backend.
+- ✅ `PATH="$HOME/.bun/bin:$PATH" bun run typecheck`
+- ✅ `PATH="$HOME/.bun/bin:$PATH" bun run test`
+- ✅ `git diff --check`
+- ✅ `PATH="$HOME/.bun/bin:$PATH" bun test backend/test/construction-side-migration.test.ts`
+- ✅ Продовый `bash infra/deploy-no-docker.sh`: `prisma migrate deploy`, seed,
+  `website build`, `webapp build`, nginx config test и рестарты сервисов прошли.
+- ⚠️ В backend-тестах во время зелёного прогона печатается ожидаемый fail-safe
+  warning из Telegram-уведомления в `lead-service.test.ts`; suite зелёный.
+
+## Обновление прода 2026-07-10: Этап 2 стороны/брони/аналитика
+
+- Ветка `claude/stage-2-period-booking-design-14q994` запушена в origin.
+  Последовательность коммитов релиза:
+  - `06fa7c0` — основной Stage 2 side-based bookings;
+  - `7296cfc` — no-Docker deploy теперь запускает Prisma migrations;
+  - `a8f2162` — фикс кастов в migration backfill.
+- Прод обновлён rsync-ом из локального workspace в `/var/www/noesis_adv`, затем
+  выполнен `bash infra/deploy-no-docker.sh`.
+- Smoke-checks после релиза:
+  - `noesis-backend`, `noesis-site-builder`, `nginx`, `catalog-noema` active;
+  - `curl http://127.0.0.1:3001/health` → `{"status":"ok"}`;
+  - `https://noesis.catlg.ru/` → 200;
+  - `https://noesis.catlg.ru/crm/` → 200;
+  - `https://noesis.catlg.ru/api/public/site-stats` → JSON;
+  - `https://noesis.catlg.ru/api/public/construction-availability?from=2026-08-01&to=2026-09-01`
+    → JSON со сторонами и `busyIntervals`, без клиента/бренда/цены;
+  - `https://catlg.ru/` остался 200;
+  - в БД `SELECT COUNT(*) FROM "ConstructionSide";` → `15`;
+  - migration `20260709090000_construction_sides` applied (`finished_at IS NOT NULL`).
 
 ## VPS-аудит и no-Docker деплой (2026-07-09)
 
@@ -324,26 +348,21 @@
 
 ## Следующие smoke-тесты
 
-1. На машине с Docker/БД: `bun run db:up`,
-   `bun run --cwd backend prisma:migrate`, `bun run --cwd backend db:seed`,
-   `bun run dev`.
-2. В CRM создать новую трёхстороннюю конструкцию, заполнить A/B/C, выбрать фото
+1. В CRM создать новую трёхстороннюю конструкцию, заполнить A/B/C, выбрать фото
    стороны из галереи, сохранить и открыть карточку повторно.
-3. Создать бронь на односторонней конструкции: в форме сторона не должна
+2. Создать бронь на односторонней конструкции: в форме сторона не должна
    выбираться, но таймлайн должен показать строку стороны A.
-4. Создать бронь на A, проверить конфликт пересечения на A и успешную бронь на B
+3. Создать бронь на A, проверить конфликт пересечения на A и успешную бронь на B
    или C, включая стык-в-стык.
-5. Попробовать уменьшить `3 → 2` при бронях на C и `2 → 1` при бронях на B:
+4. Попробовать уменьшить `3 → 2` при бронях на C и `2 → 1` при бронях на B:
    ожидать 409 и понятную ошибку.
-6. Проверить аналитику «Инвентарь»: service/cancelled не входят в выручку,
+5. Проверить аналитику «Инвентарь»: service/cancelled не входят в выручку,
    commercial без `totalPrice` попадает в «Брони без цены», загрузка считается
    по сторонам/дням.
-7. Проверить
+6. Проверить
    `/api/public/construction-availability?from=YYYY-MM-DD&to=YYYY-MM-DD`:
    нет клиента/бренда/цены, статусы `free/partiallyOccupied/occupied`, интервалы
    отображаются включительно.
-8. После поднятого backend повторить `bun run build` для website.
-9. Деплой на прод делать только отдельным запросом.
 
 ## Как обновлять прод в новой сессии
 
