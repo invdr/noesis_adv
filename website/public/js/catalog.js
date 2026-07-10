@@ -81,9 +81,15 @@
     if (f.format && item.format !== f.format) return false;
     if (f.district && (item.district || '') !== f.district) return false;
     if (f.priceFrom != null || f.priceTo != null) {
-      if (item.pricePerMonth == null) return false; // «по запросу» вне диапазона
-      if (f.priceFrom != null && item.pricePerMonth < f.priceFrom) return false;
-      if (f.priceTo != null && item.pricePerMonth > f.priceTo) return false;
+      // Конструкция остаётся в выдаче, если диапазону соответствует хотя бы
+      // одна продаваемая сторона. Цена стороны приоритетнее общего значения.
+      const prices = (item.sides || [])
+        .map((side) => side.effectivePricePerMonth)
+        .filter((price) => typeof price === 'number');
+      if (!prices.some((price) =>
+        (f.priceFrom == null || price >= f.priceFrom) &&
+        (f.priceTo == null || price <= f.priceTo)
+      )) return false;
     }
     if (f.onlyFree) {
       const a = availability.get(item.id);

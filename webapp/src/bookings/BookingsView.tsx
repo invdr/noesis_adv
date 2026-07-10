@@ -95,7 +95,7 @@ export function BookingsView({ user }: { user: SessionUser }) {
 
   const constructions = useQuery({
     queryKey: ["booking-constructions"],
-    queryFn: () => api.listProjects({ pageSize: 100, includeArchived: false }),
+    queryFn: () => api.listAllProjects({ includeArchived: false }),
   });
   const bookings = useQuery({
     queryKey: [...KEY, { from, to, status, kind, constructionId, search }],

@@ -16,4 +16,3 @@ export function inventoryAnalyticsRoutes(rt: Runtime): Hono<AppEnv> {
 
   return app;
 }
-

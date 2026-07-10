@@ -79,4 +79,3 @@ export function occupancyStatus(
   if (occupiedDays === 0) return "free";
   return occupiedDays >= totalDays ? "occupied" : "partiallyOccupied";
 }
-

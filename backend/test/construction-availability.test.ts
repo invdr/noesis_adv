@@ -75,4 +75,3 @@ describe("getPublicAvailability", () => {
     expect(payload).not.toContain("totalPrice");
   });
 });
-

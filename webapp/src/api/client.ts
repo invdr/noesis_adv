@@ -619,6 +619,19 @@ export const api = {
     const qs = q.toString();
     return request<PaginatedProjects>(`/api/constructions${qs ? `?${qs}` : ""}`);
   },
+  async listAllProjects(
+    params: Omit<ProjectListParams, "page" | "pageSize"> = {},
+  ) {
+    const first = await this.listProjects({ ...params, page: 1, pageSize: 100 });
+    const pages = Math.ceil(first.total / first.pageSize);
+    if (pages <= 1) return first;
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, index) =>
+        this.listProjects({ ...params, page: index + 2, pageSize: first.pageSize }),
+      ),
+    );
+    return { ...first, items: [...first.items, ...rest.flatMap((page) => page.items)] };
+  },
   getProject(id: string) {
     return request<Construction>(`/api/constructions/${id}`);
   },

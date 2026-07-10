@@ -76,4 +76,3 @@ export const inventoryAnalyticsResponseSchema = z.object({
 export type InventoryAnalyticsResponse = z.infer<
   typeof inventoryAnalyticsResponseSchema
 >;
-

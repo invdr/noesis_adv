@@ -14,4 +14,3 @@ export function publicConstructionAvailabilityRoutes(rt: Runtime): Hono<AppEnv> 
 
   return app;
 }
-

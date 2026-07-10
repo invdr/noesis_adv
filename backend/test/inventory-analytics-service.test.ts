@@ -171,4 +171,3 @@ describe("getInventoryAnalytics", () => {
     expect(archived.sides[0]!.sideCode).toBe("A");
   });
 });
-
