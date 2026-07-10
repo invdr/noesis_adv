@@ -1,5 +1,9 @@
 import { Hono } from "hono";
-import { listBookingsQuerySchema, upsertBookingSchema } from "@noesis/contracts";
+import {
+  bookingRemindersQuerySchema,
+  listBookingsQuerySchema,
+  upsertBookingSchema,
+} from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged } from "../http/auth";
@@ -10,6 +14,7 @@ import {
   listBookings,
   updateBooking,
 } from "./booking-service";
+import { getBookingReminders } from "./booking-reminder-service";
 
 export function bookingRoutes(rt: Runtime): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -23,6 +28,12 @@ export function bookingRoutes(rt: Runtime): Hono<AppEnv> {
   app.post("/", auth, async (c) => {
     const input = upsertBookingSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await createBooking(rt, c.get("user"), input), 201);
+  });
+
+  // Напоминания «Моего дня» — до `/:id`, иначе `reminders` уйдёт в параметр id.
+  app.get("/reminders", auth, async (c) => {
+    const query = bookingRemindersQuerySchema.parse(c.req.query());
+    return c.json(await getBookingReminders(rt, c.get("user"), query));
   });
 
   app.get("/:id", auth, async (c) => c.json(await getBooking(rt, c.req.param("id"))));

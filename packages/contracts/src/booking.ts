@@ -223,6 +223,56 @@ export const listBookingsQuerySchema = paginationQuerySchema.extend({
 });
 export type ListBookingsQuery = z.infer<typeof listBookingsQuerySchema>;
 
+// --- Напоминания о сроке брони («Мой день» + Telegram) ---
+
+/** Окно «ближайшие» напоминания в «Моём дне» — как у повестки заявок. */
+export const BOOKING_REMINDER_UPCOMING_DAYS = 7;
+
+/**
+ * Параметры блока напоминаний в «Моём дне». `scope` учитывается только для admin
+ * (у менеджера — всегда свои брони): `all` (по умолчанию для admin) — вся команда,
+ * `mine` — только свои.
+ */
+export const bookingRemindersQuerySchema = z.object({
+  scope: z.enum(["mine", "all"]).optional(),
+});
+export type BookingRemindersQuery = z.infer<typeof bookingRemindersQuerySchema>;
+
+/** Строка напоминания: активная бронь с назначенной датой напоминания. */
+export const bookingReminderItemSchema = z.object({
+  id: z.string(),
+  kind: bookingKindSchema,
+  status: bookingStatusSchema,
+  constructionName: z.string(),
+  constructionCode: z.string().nullable(),
+  sideCode: constructionSideSchema,
+  clientName: z.string().nullable(),
+  brandName: z.string().nullable(),
+  campaignNote: z.string().nullable(),
+  serviceReasonName: z.string().nullable(),
+  startDate: dateOnlySchema,
+  /** Последний день размещения (включительно, для вывода). */
+  endDate: dateOnlySchema,
+  reminderAt: dateOnlySchema,
+  /** Ответственный менеджер (или создатель как fallback); `null` — не задан. */
+  managerName: z.string().nullable(),
+});
+export type BookingReminderItem = z.infer<typeof bookingReminderItemSchema>;
+
+/**
+ * Напоминания о сроке брони, разложенные по дню МСК: просрочено / сегодня /
+ * ближайшие 7 дней. Брони без даты напоминания (`reminderAt=null` — напоминание
+ * отключено) и неактивные (`completed`/`cancelled`) в блок не попадают.
+ */
+export const bookingRemindersResponseSchema = z.object({
+  overdue: z.array(bookingReminderItemSchema),
+  today: z.array(bookingReminderItemSchema),
+  upcoming: z.array(bookingReminderItemSchema),
+});
+export type BookingRemindersResponse = z.infer<
+  typeof bookingRemindersResponseSchema
+>;
+
 // --- Хелперы дат/периодов ---
 
 function parseDateOnly(value: string): { year: number; month: number; day: number } {

@@ -600,6 +600,9 @@ model Booking {
   priceNote         String?
   /// Напоминание ответственному менеджеру о подходящем сроке.
   reminderAt        DateTime?
+  /// Когда по этому напоминанию уже ушёл Telegram-дайджест (дедуп cron-рассылки).
+  /// Сбрасывается в null при смене `reminderAt`, чтобы перенос срока перевзвёл напоминание.
+  reminderNotifiedAt DateTime?
   managerId         String?
   manager           User?                 @relation("BookingManager", fields: [managerId], references: [id], onDelete: SetNull)
   createdById       String?

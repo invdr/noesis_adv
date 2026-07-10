@@ -22,6 +22,7 @@ import { publicConstructionRoutes } from "./constructions/construction-public-ro
 import { bookingRoutes } from "./bookings/booking-routes";
 import { bookingBrandRoutes } from "./bookings/booking-brand-routes";
 import { bookingServiceReasonRoutes } from "./bookings/booking-service-reason-routes";
+import { bookingReminderInternalRoutes } from "./bookings/booking-reminder-internal-routes";
 import { newsLabelRoutes } from "./news/news-label-routes";
 import { newsRoutes } from "./news/news-routes";
 import { publicNewsRoutes } from "./news/news-public-routes";
@@ -113,6 +114,7 @@ export function createApp(rt: Runtime): Hono<AppEnv> {
   app.route("/api/site-settings", siteSettingsRoutes(rt));
   app.route("/api/site-build", siteBuildRoutes(rt));
   app.route("/api/internal/site-build", siteBuildInternalRoutes(rt));
+  app.route("/api/internal/bookings", bookingReminderInternalRoutes(rt));
 
   app.onError(onError);
   app.notFound((c) =>

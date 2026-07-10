@@ -5,6 +5,7 @@ import type {
   AssignLeadInput,
   Booking,
   BookingBrand,
+  BookingRemindersResponse,
   BookingServiceReason,
   ChangePasswordRequest,
   Contact,
@@ -478,6 +479,11 @@ export const api = {
   },
   cancelBooking(id: string) {
     return request<Booking>(`/api/bookings/${id}/cancel`, { method: "POST" });
+  },
+  getBookingReminders(scope?: "mine" | "all") {
+    return request<BookingRemindersResponse>(
+      `/api/bookings/reminders${scope ? `?scope=${scope}` : ""}`,
+    );
   },
 
   inventoryAnalytics(params: InventoryAnalyticsQuery) {

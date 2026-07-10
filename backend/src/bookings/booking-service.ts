@@ -168,6 +168,12 @@ async function saveBooking(
                 : bookingDefaultTotal(basePricePerMonth, input.durationMonths);
         const managerId =
           input.managerId !== undefined ? input.managerId : (current?.managerId ?? user.id);
+        // Смена даты напоминания перевзвешивает Telegram-дайджест (дедуп сбрасываем).
+        const reminderChanged =
+          (current?.reminderAt?.getTime() ?? null) !== (reminderDate?.getTime() ?? null);
+        const reminderNotifiedAt = reminderChanged
+          ? null
+          : (current?.reminderNotifiedAt ?? null);
 
         const data = {
           kind: input.kind,
@@ -187,6 +193,7 @@ async function saveBooking(
           totalPrice,
           priceNote: input.priceNote ?? null,
           reminderAt: reminderDate,
+          reminderNotifiedAt,
           managerId,
         };
 

@@ -23,3 +23,18 @@
 .agenda-group__stage-col {
   width: 180px;
 }
+
+.agenda-view__bookings {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.agenda-view__section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}

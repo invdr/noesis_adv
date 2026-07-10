@@ -250,6 +250,31 @@ docker compose -f infra/docker-compose.prod.yml exec -T postgres \
   pg_dump -U noesis noesis > backup_$(date +%F).sql
 ```
 
+## Напоминания о сроке брони (Telegram по cron)
+
+Веб-«Мой день» показывает брони с подходящим сроком всегда (lazy-on-read, без
+демонов). Telegram-дайджест ответственному менеджеру — опционально, через
+суточный cron (фоновых демонов в приложении нет).
+
+1. В env бэкенда (`infra/no-docker.env` или `infra/.env`) задать секрет и, если
+   ещё не заданы, токен бота:
+   ```bash
+   REMINDER_CRON_TOKEN=$(openssl rand -hex 24)   # запишите в env
+   # TELEGRAM_BOT_TOKEN=...                       # общий с уведомлениями о заявках
+   ```
+   Адресат — личный чат менеджера: у пользователя должен быть заполнен
+   `telegramChatId` (иначе бронь пропускается и уведомит позже). Fallback —
+   создатель брони.
+
+2. Добавить cron (например, ежедневно в 09:00 МСК = 06:00 UTC) на VPS:
+   ```bash
+   0 6 * * * curl -fsS -X POST -H "X-Reminder-Token: <REMINDER_CRON_TOKEN>" \
+     http://127.0.0.1:3001/api/internal/bookings/reminders/notify >/dev/null
+   ```
+   Ручка идемпотентна: разосланные напоминания помечаются `reminderNotifiedAt` и
+   повторно не шлются; перенос срока брони сбрасывает флаг и перевзвешивает
+   уведомление. Без `REMINDER_CRON_TOKEN` ручка отдаёт 404 (рассылка выключена).
+
 ## Отличия от шаблона vibe
 
 Шаблон ориентирован на DigitalOcean App Platform / Yandex Cloud (`.do/`,

@@ -266,6 +266,25 @@ describe("booking-service", () => {
     expect(bookings[0]!.basePricePerMonth).toBe(40_000);
     expect(bookings[0]!.totalPrice).toBe(40_000);
   });
+
+  test("смена даты напоминания сбрасывает дедуп Telegram-рассылки", async () => {
+    const { db, bookings } = makeDb();
+    const rt = runtimeWith(db);
+
+    await createBooking(rt, user, input);
+    // Дефолт напоминания для startDate 2026-05-05 / 1 мес → 2026-05-29.
+    expect(bookings[0]!.reminderAt).toEqual(new Date("2026-05-29T00:00:00.000Z"));
+    // Эмулируем, что дайджест уже ушёл.
+    bookings[0]!.reminderNotifiedAt = new Date();
+
+    // Правка с той же датой напоминания — флаг сохраняется.
+    await updateBooking(rt, user, "b1", { ...input, reminderAt: "2026-05-29" });
+    expect(bookings[0]!.reminderNotifiedAt).not.toBeNull();
+
+    // Перенос напоминания — дедуп сбрасывается, уведомление перевзвесится.
+    await updateBooking(rt, user, "b1", { ...input, reminderAt: "2026-05-30" });
+    expect(bookings[0]!.reminderNotifiedAt).toBeNull();
+  });
 });
 
 describe("listBookings search", () => {
