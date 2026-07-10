@@ -1,6 +1,9 @@
 import { z } from "zod";
-import { dateOnlySchema } from "./booking";
+import { addBookingMonths, dateOnlySchema } from "./booking";
 import { constructionSideSchema } from "./construction";
+
+/** Потолок окна выборки занятости/аналитики (в т.ч. на публичном эндпоинте). */
+export const MAX_ANALYTICS_WINDOW_MONTHS = 24;
 
 export const inventoryAnalyticsQuerySchema = z
   .object({
@@ -10,6 +13,10 @@ export const inventoryAnalyticsQuerySchema = z
   .refine((q) => q.from < q.to, {
     message: "Начало периода должно быть раньше окончания",
     path: ["from"],
+  })
+  .refine((q) => q.to <= addBookingMonths(q.from, MAX_ANALYTICS_WINDOW_MONTHS), {
+    message: `Период не длиннее ${MAX_ANALYTICS_WINDOW_MONTHS} месяцев`,
+    path: ["to"],
   });
 export type InventoryAnalyticsQuery = z.infer<typeof inventoryAnalyticsQuerySchema>;
 

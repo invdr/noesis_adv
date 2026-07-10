@@ -389,6 +389,14 @@ function BookingForm({
     if (nextSideId !== constructionSideId) setConstructionSideId(nextSideId);
   }, [selectedConstruction, constructionSideId]);
 
+  // Новой брони дефолтное напоминание следует за периодом (как и снимок цены):
+  // менять срок и получать напоминание, привязанное к старому «+1 мес от сегодня»,
+  // — сюрприз. Существующую бронь не трогаем, чтобы не перетереть ручную дату.
+  useEffect(() => {
+    if (booking || !endDate) return;
+    setReminderAt(defaultBookingReminder(endDate));
+  }, [booking, endDate]);
+
   const save = useMutation({
     mutationFn: () => {
       const base = basePricePerMonth.trim() ? Number(basePricePerMonth) : null;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Runtime } from "../src/runtime";
-import { createBooking, updateBooking } from "../src/bookings/booking-service";
+import { createBooking, listBookings, updateBooking } from "../src/bookings/booking-service";
 
 function runtimeWith(prisma: any): Runtime {
   return { env: {}, prisma } as unknown as Runtime;
@@ -265,5 +265,28 @@ describe("booking-service", () => {
 
     expect(bookings[0]!.basePricePerMonth).toBe(40_000);
     expect(bookings[0]!.totalPrice).toBe(40_000);
+  });
+});
+
+describe("listBookings search", () => {
+  test("поиск покрывает причину служебной брони", async () => {
+    let capturedWhere: any;
+    const rt = runtimeWith({
+      booking: {
+        findMany: async ({ where }: any) => {
+          capturedWhere = where;
+          return [];
+        },
+        count: async () => 0,
+      },
+      $transaction: async (ops: any[]) => Promise.all(ops),
+    });
+
+    await listBookings(rt, { page: 1, pageSize: 20, search: "ремонт" } as any);
+
+    const targets = (capturedWhere.OR ?? []).map((clause: any) => Object.keys(clause)[0]);
+    expect(targets).toContain("serviceReason");
+    expect(targets).toContain("brand");
+    expect(targets).toContain("client");
   });
 });

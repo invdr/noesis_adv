@@ -42,6 +42,7 @@ export async function listBookings(
       { construction: { code: { contains: query.search, mode: "insensitive" } } },
       { client: { fullName: { contains: query.search, mode: "insensitive" } } },
       { brand: { name: { contains: query.search, mode: "insensitive" } } },
+      { serviceReason: { name: { contains: query.search, mode: "insensitive" } } },
     ];
   }
 
