@@ -266,7 +266,17 @@ docker compose -f infra/docker-compose.prod.yml exec -T postgres \
    `telegramChatId` (иначе бронь пропускается и уведомит позже). Fallback —
    создатель брони.
 
-2. Добавить cron (например, ежедневно в 09:00 МСК = 06:00 UTC) на VPS:
+2. Добавить cron (например, ежедневно в 09:00 МСК = 06:00 UTC) на VPS. Порт
+   зависит от способа развёртывания:
+
+   **Docker Compose** (`infra/.env`, backend опубликован на localhost:3000):
+   ```bash
+   0 6 * * * curl -fsS -X POST -H "X-Reminder-Token: <REMINDER_CRON_TOKEN>" \
+     http://127.0.0.1:3000/api/internal/bookings/reminders/notify >/dev/null
+   ```
+
+   **Без Docker** (`infra/no-docker.env`, значение `NOESIS_BACKEND_PORT`, по
+   умолчанию 3001):
    ```bash
    0 6 * * * curl -fsS -X POST -H "X-Reminder-Token: <REMINDER_CRON_TOKEN>" \
      http://127.0.0.1:3001/api/internal/bookings/reminders/notify >/dev/null

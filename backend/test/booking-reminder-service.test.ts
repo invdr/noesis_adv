@@ -186,6 +186,48 @@ describe("sendDueBookingReminders", () => {
     expect(marked).toHaveLength(160);
   });
 
+  test("резервирует следующую часть дайджеста только перед её отправкой", async () => {
+    let resolveFirst: ((response: Response) => void) | undefined;
+    let firstRequest = true;
+    globalThis.fetch = (async (_url: string, init: any) => {
+      calls.push(JSON.parse(init.body));
+      if (!firstRequest) return new Response("{}", { status: 200 });
+      firstRequest = false;
+      return await new Promise<Response>((resolve) => {
+        resolveFirst = resolve;
+      });
+    }) as unknown as typeof fetch;
+    const rows = Array.from({ length: 160 }, (_, index) =>
+      reminderRow(`booking-${index}`, new Date(), {
+        manager: { isActive: true, telegramChatId: "100", name: "M", email: "m@n.ru" },
+        createdBy: null,
+      }),
+    );
+    const claimedIds: string[] = [];
+    const prisma: any = {
+      booking: {
+        findMany: async () => rows,
+        updateMany: async ({ where, data }: any) => {
+          if (data.reminderSendingToken) {
+            claimedIds.push(where.id);
+            return { count: 1 };
+          }
+          return { count: 1 };
+        },
+      },
+    };
+    prisma.$transaction = async (fn: any) => fn(prisma);
+
+    const pending = sendDueBookingReminders(runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }));
+    for (let i = 0; i < 8 && !resolveFirst; i++) await Promise.resolve();
+
+    expect(calls).toHaveLength(1);
+    expect(claimedIds.length).toBeLessThan(rows.length);
+    resolveFirst!(new Response("{}", { status: 200 }));
+
+    await expect(pending).resolves.toEqual({ candidates: 160, notified: 160, skipped: 0 });
+  });
+
   test("без Telegram у адресата — пропускаем и не помечаем (уведомим позже)", async () => {
     const rows = [
       reminderRow("a", new Date(), {

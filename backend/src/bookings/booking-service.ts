@@ -270,11 +270,11 @@ async function saveBooking(
     );
     return toBookingDto(row as BookingRow);
   } catch (err) {
-    if (isSerializationFailure(err)) {
+    if (isSerializationFailure(err) || isBookingRelationConflict(err)) {
       throw new HttpError(
         409,
         "booking_conflict",
-        "Период уже заняли параллельной бронью, обновите сетку",
+        "Связанные данные брони изменились параллельно, обновите сетку",
       );
     }
     throw err;
@@ -436,4 +436,10 @@ function isSerializationFailure(err: unknown): boolean {
     err instanceof Prisma.PrismaClientKnownRequestError &&
     err.code === "P2034"
   );
+}
+
+function isBookingRelationConflict(err: unknown): boolean {
+  // A side can be removed after this transaction has read it but before it
+  // inserts Booking. PostgreSQL reports that race as an FK failure.
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003";
 }

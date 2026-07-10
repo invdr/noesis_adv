@@ -412,6 +412,23 @@ describe("booking-service concurrency", () => {
     });
   });
 
+  test("удалённая параллельно сторона отдаётся как 409, а не 500", async () => {
+    const foreignKeyFailure = new Prisma.PrismaClientKnownRequestError(
+      "Foreign key constraint failed",
+      { code: "P2003", clientVersion: "test" },
+    );
+    const rt = runtimeWith({
+      $transaction: async () => {
+        throw foreignKeyFailure;
+      },
+    });
+
+    await expect(createBooking(rt, user, input)).rejects.toMatchObject({
+      status: 409,
+      code: "booking_conflict",
+    });
+  });
+
   test("прочие ошибки транзакции пробрасываются как есть", async () => {
     const boom = new Error("boom");
     const rt = runtimeWith({

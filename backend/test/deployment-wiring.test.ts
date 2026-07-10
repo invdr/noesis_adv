@@ -26,4 +26,12 @@ describe("deployment wiring for booking reminders", () => {
       'postgresql://$database_user:$database_password@127.0.0.1:5432/$database_name?schema=public',
     );
   });
+
+  test("документирует отдельные cron URL для Docker и no-docker", async () => {
+    const deploymentGuide = await readFile(resolve(root, "docs/DEPLOYMENT_VPS.md"), "utf8");
+
+    expect(deploymentGuide).toContain("http://127.0.0.1:3000/api/internal/bookings/reminders/notify");
+    expect(deploymentGuide).toContain("NOESIS_BACKEND_PORT");
+    expect(deploymentGuide).toContain("http://127.0.0.1:3001/api/internal/bookings/reminders/notify");
+  });
 });

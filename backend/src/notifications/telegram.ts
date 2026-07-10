@@ -1,6 +1,10 @@
 import type { Lead as PrismaLead } from "@prisma/client";
 import type { Runtime } from "../runtime";
 
+// Must stay well below the five-minute booking reminder lease. Otherwise a
+// stuck request could outlive the lease and be delivered to a stale recipient.
+const TELEGRAM_REQUEST_TIMEOUT_MS = 30_000;
+
 /**
  * Заявка с (опционально) развёрнутым названием источника из справочника —
  * сервис заявок передаёт строку с include `sourceOption`.
@@ -35,10 +39,13 @@ export async function sendTelegramMessage(
   const token = rt.env.TELEGRAM_BOT_TOKEN;
   if (!token || !chatId) return false; // уведомления не настроены — тихо выходим
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TELEGRAM_REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         chat_id: chatId,
         text,
@@ -54,6 +61,8 @@ export async function sendTelegramMessage(
   } catch (err) {
     console.error("[telegram] сообщение не отправлено:", err);
     return false;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

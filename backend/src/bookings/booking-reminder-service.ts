@@ -176,8 +176,8 @@ function reminderLine(row: ReminderRow): string {
   return `• ${escapeHtml(shortened)} — до ${previousDateOnly(row.endDate)}`;
 }
 
-function reminderMessage(
-  deliveries: ClaimedReminderDelivery[],
+function reminderMessage<T extends ReminderDelivery>(
+  deliveries: T[],
   crmBaseUrl: string | undefined,
 ): string {
   const lines = ["🔔 <b>Подходит срок броней</b>"];
@@ -186,12 +186,12 @@ function reminderMessage(
   return lines.join("\n");
 }
 
-function splitReminderMessages(
-  deliveries: ClaimedReminderDelivery[],
+function splitReminderMessages<T extends ReminderDelivery>(
+  deliveries: T[],
   crmBaseUrl: string | undefined,
-): ClaimedReminderDelivery[][] {
-  const chunks: ClaimedReminderDelivery[][] = [];
-  let chunk: ClaimedReminderDelivery[] = [];
+): T[][] {
+  const chunks: T[][] = [];
+  let chunk: T[] = [];
   for (const delivery of deliveries) {
     const candidate = [...chunk, delivery];
     if (
@@ -267,17 +267,17 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
       continue;
     }
     sendingReminderChats.add(chatId);
-    const claimedBucket = await claimReminderDeliveries(rt, bucket, staleClaimBefore);
-    result.skipped += bucket.length - claimedBucket.length;
-    if (claimedBucket.length === 0) {
-      sendingReminderChats.delete(chatId);
-      continue;
-    }
+    let activeClaims: ClaimedReminderDelivery[] = [];
     try {
-      for (const messageBucket of splitReminderMessages(claimedBucket, rt.env.CRM_BASE_URL)) {
-        if (await sendTelegramMessage(rt, reminderMessage(messageBucket, rt.env.CRM_BASE_URL), chatId)) {
+      // Claim each small message immediately before sending it. Claiming the
+      // whole chat at once could let later rows outlive the five-minute lease.
+      for (const messageBucket of splitReminderMessages(bucket, rt.env.CRM_BASE_URL)) {
+        activeClaims = await claimReminderDeliveries(rt, messageBucket, staleClaimBefore);
+        result.skipped += messageBucket.length - activeClaims.length;
+        if (activeClaims.length === 0) continue;
+        if (await sendTelegramMessage(rt, reminderMessage(activeClaims, rt.env.CRM_BASE_URL), chatId)) {
           const marked = await Promise.all(
-            messageBucket.map(({ row, recipientWhere, claimToken }) =>
+            activeClaims.map(({ row, recipientWhere, claimToken }) =>
               rt.prisma.booking.updateMany({
                 // The lease prevents recipient/date changes after the claim and
                 // before sendMessage; this is still defensive against stale work.
@@ -299,14 +299,15 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
           );
           const markedCount = marked.reduce((total, update) => total + update.count, 0);
           result.notified += markedCount;
-          result.skipped += messageBucket.length - markedCount;
+          result.skipped += activeClaims.length - markedCount;
         } else {
-          await releaseReminderClaims(rt, messageBucket);
-          result.skipped += messageBucket.length;
+          await releaseReminderClaims(rt, activeClaims);
+          result.skipped += activeClaims.length;
         }
+        activeClaims = [];
       }
     } catch (err) {
-      await releaseReminderClaims(rt, claimedBucket).catch(() => {});
+      await releaseReminderClaims(rt, activeClaims).catch(() => {});
       throw err;
     } finally {
       sendingReminderChats.delete(chatId);
