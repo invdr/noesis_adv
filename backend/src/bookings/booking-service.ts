@@ -132,6 +132,16 @@ async function saveBooking(
         if (existingId && !current) {
           throw new HttpError(404, "not_found", "Бронь не найдена");
         }
+        const currentManagerId = current ? current.managerId : user.id;
+        const managerId =
+          input.managerId !== undefined ? input.managerId : currentManagerId;
+        if (user.role !== "admin" && managerId !== currentManagerId) {
+          throw new HttpError(
+            403,
+            "booking_manager_forbidden",
+            "Менеджер не может переназначать ответственного за бронь",
+          );
+        }
 
         const construction = await tx.construction.findUnique({
           where: { id: input.constructionId },
@@ -171,8 +181,6 @@ async function saveBooking(
               : current
                 ? current.totalPrice
                 : bookingDefaultTotal(basePricePerMonth, input.durationMonths);
-        const managerId =
-          input.managerId !== undefined ? input.managerId : (current?.managerId ?? user.id);
         // Смена даты напоминания перевзвешивает Telegram-дайджест (дедуп сбрасываем).
         const reminderChanged =
           (current?.reminderAt?.getTime() ?? null) !== (reminderDate?.getTime() ?? null);

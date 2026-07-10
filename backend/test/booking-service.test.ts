@@ -286,6 +286,28 @@ describe("booking-service", () => {
     await updateBooking(rt, user, "b1", { ...input, reminderAt: "2026-05-30" });
     expect(bookings[0]!.reminderNotifiedAt).toBeNull();
   });
+
+  test("менеджер не может переназначить приватное напоминание другому сотруднику", async () => {
+    const { db, bookings } = makeDb();
+    const rt = runtimeWith(db);
+
+    await expect(
+      createBooking(rt, user, { ...input, managerId: "u2" }),
+    ).rejects.toMatchObject({
+      status: 403,
+      code: "booking_manager_forbidden",
+    });
+    expect(bookings).toHaveLength(0);
+  });
+
+  test("admin может назначить другого активного ответственного", async () => {
+    const { db, bookings } = makeDb();
+    const admin = { ...user, id: "admin", role: "admin" as const };
+
+    await createBooking(runtimeWith(db), admin, { ...input, managerId: "u2" });
+
+    expect(bookings[0]!.managerId).toBe("u2");
+  });
 });
 
 describe("listBookings search", () => {

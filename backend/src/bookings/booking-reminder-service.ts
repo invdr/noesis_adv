@@ -131,6 +131,16 @@ export interface DueRemindersResult {
   skipped: number;
 }
 
+type DueReminderRow = ReminderRow & {
+  manager: { isActive: boolean; telegramChatId: string | null } | null;
+  createdBy: { isActive: boolean; telegramChatId: string | null } | null;
+};
+
+interface ReminderDelivery {
+  row: DueReminderRow;
+  recipientWhere: Prisma.BookingWhereInput;
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -169,10 +179,7 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
       createdBy: { select: { name: true, email: true, isActive: true, telegramChatId: true } },
     },
     orderBy: [{ reminderAt: "asc" }, { startDate: "asc" }],
-  })) as (ReminderRow & {
-    manager: { isActive: boolean; telegramChatId: string | null } | null;
-    createdBy: { isActive: boolean; telegramChatId: string | null } | null;
-  })[];
+  })) as DueReminderRow[];
 
   const result: DueRemindersResult = { candidates: rows.length, notified: 0, skipped: 0 };
   if (rows.length === 0) return result;
@@ -184,16 +191,16 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
   }
 
   // Группируем по личному чату адресата.
-  const byChat = new Map<string, ReminderRow[]>();
+  const byChat = new Map<string, ReminderDelivery[]>();
   for (const row of rows) {
-    const chatId = recipientChatId(row);
-    if (!chatId) {
+    const recipient = recipientSnapshot(row);
+    if (!recipient) {
       result.skipped++;
       continue;
     }
-    const bucket = byChat.get(chatId) ?? [];
-    bucket.push(row);
-    byChat.set(chatId, bucket);
+    const bucket = byChat.get(recipient.chatId) ?? [];
+    bucket.push({ row, recipientWhere: recipient.where });
+    byChat.set(recipient.chatId, bucket);
   }
 
   for (const [chatId, bucket] of byChat) {
@@ -204,18 +211,23 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
     sendingReminderChats.add(chatId);
     const lines = ["🔔 <b>Подходит срок броней</b>"];
     try {
-      for (const row of bucket) {
+      for (const { row } of bucket) {
         lines.push(`• ${escapeHtml(bookingLabel(row))} — до ${previousDateOnly(row.endDate)}`);
       }
       if (rt.env.CRM_BASE_URL) lines.push(`Открыть: ${rt.env.CRM_BASE_URL}/#/bookings`);
       if (await sendTelegramMessage(rt, lines.join("\n"), chatId)) {
         const marked = await Promise.all(
-          bucket.map((row) =>
+          bucket.map(({ row, recipientWhere }) =>
             rt.prisma.booking.updateMany({
-              // A manager can move a reminder while Telegram is responding.
-              // Only acknowledge exactly the date that was included in this digest;
-              // the new date remains unnotified and will be picked up next time.
-              where: { id: row.id, reminderAt: row.reminderAt, reminderNotifiedAt: null },
+              // A manager can move a reminder or change its recipient while
+              // Telegram is responding. Acknowledge only the exact snapshot;
+              // an updated date or recipient stays unnotified for a fresh send.
+              where: {
+                id: row.id,
+                reminderAt: row.reminderAt,
+                reminderNotifiedAt: null,
+                AND: [recipientWhere],
+              },
               data: { reminderNotifiedAt: new Date() },
             }),
           ),
@@ -233,11 +245,33 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
   return result;
 }
 
-function recipientChatId(row: {
-  manager: { isActive: boolean; telegramChatId: string | null } | null;
-  createdBy: { isActive: boolean; telegramChatId: string | null } | null;
-}): string | null {
-  if (row.manager?.isActive && row.manager.telegramChatId) return row.manager.telegramChatId;
-  if (row.createdBy?.isActive && row.createdBy.telegramChatId) return row.createdBy.telegramChatId;
+function recipientSnapshot(
+  row: DueReminderRow,
+): { chatId: string; where: Prisma.BookingWhereInput } | null {
+  if (row.manager?.isActive && row.manager.telegramChatId) {
+    return {
+      chatId: row.manager.telegramChatId,
+      where: {
+        manager: {
+          is: { isActive: true, telegramChatId: row.manager.telegramChatId },
+        },
+      },
+    };
+  }
+  if (row.createdBy?.isActive && row.createdBy.telegramChatId) {
+    return {
+      chatId: row.createdBy.telegramChatId,
+      where: {
+        createdBy: {
+          is: { isActive: true, telegramChatId: row.createdBy.telegramChatId },
+        },
+        OR: [
+          { manager: { is: null } },
+          { manager: { is: { isActive: false } } },
+          { manager: { is: { telegramChatId: null } } },
+        ],
+      },
+    };
+  }
   return null;
 }

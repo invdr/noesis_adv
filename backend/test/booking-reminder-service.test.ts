@@ -265,4 +265,35 @@ describe("sendDueBookingReminders", () => {
       reminderNotifiedAt: null,
     });
   });
+
+  test("не подтверждает приватное напоминание после смены ответственного", async () => {
+    const rows = [
+      reminderRow("a", new Date(), {
+        manager: { isActive: true, telegramChatId: "old-chat", name: "M", email: "m@n.ru" },
+        createdBy: { isActive: true, telegramChatId: "creator-chat", name: "A", email: "a@n.ru" },
+      }),
+    ];
+    const marked: any[] = [];
+    const prisma = {
+      booking: {
+        findMany: async () => rows,
+        updateMany: async ({ where }: any) => {
+          marked.push(where);
+          // The manager changed after the Telegram request began, so the
+          // conditional update must leave the reminder pending for the new one.
+          return { count: 0 };
+        },
+      },
+    };
+
+    const res = await sendDueBookingReminders(
+      runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }),
+    );
+
+    expect(res).toEqual({ candidates: 1, notified: 0, skipped: 1 });
+    expect(calls.map((call) => call.chat_id)).toEqual(["old-chat"]);
+    expect(marked[0]?.AND).toEqual([
+      { manager: { is: { isActive: true, telegramChatId: "old-chat" } } },
+    ]);
+  });
 });

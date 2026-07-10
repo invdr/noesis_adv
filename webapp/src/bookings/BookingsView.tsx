@@ -376,7 +376,7 @@ function BookingForm({
   const [priceNote, setPriceNote] = useState(booking?.priceNote ?? "");
   const [reminderAt, setReminderAt] = useState(booking?.reminderAt ?? defaultBookingReminder(addBookingMonths(productToday(), 1)));
   const [reminderAtTouched, setReminderAtTouched] = useState(false);
-  const [managerId, setManagerId] = useState(booking?.manager?.id ?? user.id);
+  const [managerId, setManagerId] = useState(booking ? (booking.manager?.id ?? "") : user.id);
   const [newBrandName, setNewBrandName] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
