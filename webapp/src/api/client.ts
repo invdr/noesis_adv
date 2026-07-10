@@ -481,6 +481,19 @@ export const api = {
     const qs = q.toString();
     return request<PaginatedBookings>(`/api/bookings${qs ? `?${qs}` : ""}`);
   },
+  async listAllBookings(
+    params: Omit<BookingListParams, "page" | "pageSize"> = {},
+  ) {
+    const first = await this.listBookings({ ...params, page: 1, pageSize: 100 });
+    const pages = Math.ceil(first.total / first.pageSize);
+    if (pages <= 1) return first;
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, index) =>
+        this.listBookings({ ...params, page: index + 2, pageSize: first.pageSize }),
+      ),
+    );
+    return { ...first, items: [...first.items, ...rest.flatMap((page) => page.items)] };
+  },
   getBooking(id: string) {
     return request<Booking>(`/api/bookings/${id}`);
   },

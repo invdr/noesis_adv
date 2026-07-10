@@ -120,6 +120,18 @@ export async function setDealNoDocuments(
   noDocuments: boolean,
 ): Promise<LeadDetail> {
   await requireEditableLead(rt, user, leadId);
+  if (noDocuments) {
+    const documentsCount = await rt.prisma.dealDocument.count({
+      where: { leadId },
+    });
+    if (documentsCount > 0) {
+      throw new HttpError(
+        422,
+        "documents_attached",
+        "Нельзя отметить сделку без документов, пока документы прикреплены",
+      );
+    }
+  }
   await rt.prisma.lead.update({
     where: { id: leadId },
     data: { dealNoDocuments: noDocuments },

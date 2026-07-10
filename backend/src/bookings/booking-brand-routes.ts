@@ -25,7 +25,10 @@ export function bookingBrandRoutes(rt: Runtime): Hono<AppEnv> {
     return c.json(await listBookingBrands(rt, { includeArchived }));
   });
 
-  app.post("/", requireRole(rt, "admin"), async (c) => {
+  // Быстрое добавление бренда — часть формы брони: менеджер не должен идти к
+  // администратору только чтобы завести нового рекламодателя. Управление уже
+  // созданным справочником (правка, порядок, архив) остаётся только у admin.
+  app.post("/", requirePasswordChanged(rt), async (c) => {
     const input = upsertBookingBrandSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await createBookingBrand(rt, input), 201);
   });

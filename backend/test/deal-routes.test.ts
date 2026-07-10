@@ -21,6 +21,7 @@ function runtimeWith(
     leadAssigneeId?: string | null;
     leadExists?: boolean;
     docExists?: boolean;
+    documentCount?: number;
     filesDir?: string;
     documentAsset?: Record<string, unknown>;
   } = {},
@@ -29,6 +30,7 @@ function runtimeWith(
     leadAssigneeId = null,
     leadExists = true,
     docExists = false,
+    documentCount = 0,
     filesDir,
     documentAsset,
   } = opts;
@@ -70,6 +72,7 @@ function runtimeWith(
           docExists
             ? { id: "doc1", leadId: "lead1", assetId: "a1", asset: documentAsset }
             : null,
+        count: async () => documentCount,
       },
     },
   } as unknown as Runtime;
@@ -138,6 +141,17 @@ describe("dealRoutes", () => {
       headers: auth(),
     });
     expect(res.status).toBe(403);
+  });
+
+  test("PATCH /:id/deal не отмечает «без документов», когда документ уже есть", async () => {
+    const app = createApp(runtimeWith("admin", { documentCount: 1 }));
+    const res = await app.request("/api/leads/lead1/deal", {
+      method: "PATCH",
+      headers: { ...auth(), "Content-Type": "application/json" },
+      body: JSON.stringify({ noDocuments: true }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe("documents_attached");
   });
 
   test("GET /:id/documents/:docId/download отдаёт файл только через закрытый маршрут", async () => {

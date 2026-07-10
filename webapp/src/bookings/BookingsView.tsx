@@ -100,14 +100,13 @@ export function BookingsView({ user }: { user: SessionUser }) {
   const bookings = useQuery({
     queryKey: [...KEY, { from, to, status, kind, constructionId, search }],
     queryFn: () =>
-      api.listBookings({
+      api.listAllBookings({
         from,
         to,
         status: status || undefined,
         kind: kind || undefined,
         constructionId: constructionId || undefined,
         search: search || undefined,
-        pageSize: 100,
       }),
     enabled: hasValidWindow,
   });

@@ -16,6 +16,11 @@ import { previousDateOnly, toDateOnly } from "./booking-periods";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// На VPS работает один процесс backend. Блокировка по чату не даёт двум
+// перекрывающимся cron/manual вызовам отправить один и тот же дайджест, пока
+// первый ещё ждёт Telegram и фиксирует результат в БД.
+const sendingReminderChats = new Set<string>();
+
 /** Занятость держат `booked`/`onAir`; по ним и напоминаем. */
 const ACTIVE_STATUSES: BookingStatus[] = ["booked", "onAir"];
 
@@ -180,7 +185,6 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
 
   // Группируем по личному чату адресата.
   const byChat = new Map<string, ReminderRow[]>();
-  const notifiedIds: string[] = [];
   for (const row of rows) {
     const chatId = recipientChatId(row);
     if (!chatId) {
@@ -193,24 +197,29 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
   }
 
   for (const [chatId, bucket] of byChat) {
-    const lines = ["🔔 <b>Подходит срок броней</b>"];
-    for (const row of bucket) {
-      lines.push(`• ${escapeHtml(bookingLabel(row))} — до ${previousDateOnly(row.endDate)}`);
-    }
-    if (rt.env.CRM_BASE_URL) lines.push(`Открыть: ${rt.env.CRM_BASE_URL}/#/bookings`);
-    if (await sendTelegramMessage(rt, lines.join("\n"), chatId)) {
-      notifiedIds.push(...bucket.map((row) => row.id));
-    } else {
+    if (sendingReminderChats.has(chatId)) {
       result.skipped += bucket.length;
+      continue;
     }
-  }
-
-  if (notifiedIds.length > 0) {
-    await rt.prisma.booking.updateMany({
-      where: { id: { in: notifiedIds } },
-      data: { reminderNotifiedAt: new Date() },
-    });
-    result.notified = notifiedIds.length;
+    sendingReminderChats.add(chatId);
+    const lines = ["🔔 <b>Подходит срок броней</b>"];
+    try {
+      for (const row of bucket) {
+        lines.push(`• ${escapeHtml(bookingLabel(row))} — до ${previousDateOnly(row.endDate)}`);
+      }
+      if (rt.env.CRM_BASE_URL) lines.push(`Открыть: ${rt.env.CRM_BASE_URL}/#/bookings`);
+      if (await sendTelegramMessage(rt, lines.join("\n"), chatId)) {
+        const marked = await rt.prisma.booking.updateMany({
+          where: { id: { in: bucket.map((row) => row.id) }, reminderNotifiedAt: null },
+          data: { reminderNotifiedAt: new Date() },
+        });
+        result.notified += marked.count;
+      } else {
+        result.skipped += bucket.length;
+      }
+    } finally {
+      sendingReminderChats.delete(chatId);
+    }
   }
   return result;
 }

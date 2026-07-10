@@ -164,7 +164,7 @@ describe("sendDueBookingReminders", () => {
     expect(res).toEqual({ candidates: 2, notified: 2, skipped: 0 });
     const chatIds = calls.map((c) => c.chat_id).sort();
     expect(chatIds).toEqual(["100", "200"]);
-    expect(marked[0]!.sort()).toEqual(["a", "b"]);
+    expect(marked.flat().sort()).toEqual(["a", "b"]);
   });
 
   test("без Telegram у адресата — пропускаем и не помечаем (уведомим позже)", async () => {
@@ -199,5 +199,37 @@ describe("sendDueBookingReminders", () => {
 
     expect(res).toEqual({ candidates: 1, notified: 0, skipped: 1 });
     expect(marked).toHaveLength(0);
+  });
+
+  test("перекрывающиеся запуски не дублируют дайджест одного чата", async () => {
+    let resolveTelegram: ((response: Response) => void) | undefined;
+    globalThis.fetch = (async (_url: string, init: any) => {
+      calls.push(JSON.parse(init.body));
+      return await new Promise<Response>((resolve) => {
+        resolveTelegram = resolve;
+      });
+    }) as unknown as typeof fetch;
+    const rows = [
+      reminderRow("a", new Date(), {
+        manager: { isActive: true, telegramChatId: "100", name: "M", email: "m@n.ru" },
+        createdBy: null,
+      }),
+    ];
+    const { prisma, marked } = prismaWith(rows);
+
+    const first = sendDueBookingReminders(runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(calls).toHaveLength(1);
+
+    const second = sendDueBookingReminders(runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }));
+    await Promise.resolve();
+    resolveTelegram!(new Response("{}", { status: 200 }));
+
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+    expect(calls).toHaveLength(1);
+    expect(firstResult).toEqual({ candidates: 1, notified: 1, skipped: 0 });
+    expect(secondResult).toEqual({ candidates: 1, notified: 0, skipped: 1 });
+    expect(marked).toEqual([["a"]]);
   });
 });

@@ -24,6 +24,11 @@ import { previousDateOnly } from "./booking-periods";
 const paginatedBookings = paginatedSchema(bookingSchema);
 export type PaginatedBookings = z.infer<typeof paginatedBookings>;
 
+/**
+ * Сетка броней — общий операционный календарь продаж: все авторизованные
+ * менеджеры видят и правят актуальные записи, чтобы не допустить двойного
+ * бронирования. Персональными остаются только напоминания (`/reminders`).
+ */
 export async function listBookings(
   rt: Runtime,
   query: ListBookingsQuery,
