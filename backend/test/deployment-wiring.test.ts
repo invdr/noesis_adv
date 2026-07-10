@@ -31,6 +31,12 @@ describe("deployment wiring for booking reminders", () => {
     );
     expect(dockerCompose).not.toContain("DATABASE_URL: postgresql://");
     expect(dockerEntrypoint).toContain("encodeURIComponent(process.argv[1])");
+    expect(noDockerDeploy).toContain(
+      "process.stdout.write(encodeURIComponent(process.argv[1]))' -- \"$1\"",
+    );
+    expect(dockerEntrypoint).toContain(
+      "console.log(encodeURIComponent(process.argv[1]))' -- \"$1\"",
+    );
     expect(dockerEntrypoint).toContain(
       'postgresql://$database_user:$database_password@postgres:5432/$database_name?schema=public',
     );

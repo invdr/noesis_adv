@@ -4,7 +4,7 @@ set -eu
 # Compose gives this container the same raw credentials as Postgres. Encode all
 # URL components here so passwords such as `pa:ss@word` remain valid for Prisma.
 urlencode() {
-  bun -e 'console.log(encodeURIComponent(process.argv[1]))' "$1"
+  bun -e 'console.log(encodeURIComponent(process.argv[1]))' -- "$1"
 }
 
 : "${POSTGRES_DB:=noesis}"
