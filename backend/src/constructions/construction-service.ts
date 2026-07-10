@@ -117,26 +117,33 @@ export async function archiveConstruction(
   id: string,
 ): Promise<Construction> {
   await requireConstruction(rt, id);
-  const activeBookings = await rt.prisma.booking.count({
-    where: {
-      constructionId: id,
-      status: { not: "cancelled" },
-      endDate: { gt: new Date() },
-    },
-  });
-  if (activeBookings > 0) {
-    throw new HttpError(
-      409,
-      "construction_has_active_bookings",
-      "У конструкции есть текущие или будущие брони — сначала отмените или перенесите их",
+  try {
+    const construction = await rt.prisma.$transaction(
+      async (tx) => {
+        const activeBookings = await tx.booking.count({
+          where: {
+            constructionId: id,
+            status: { not: "cancelled" },
+            endDate: { gt: new Date() },
+          },
+        });
+        if (activeBookings > 0) throw constructionHasActiveBookingsError();
+        return tx.construction.update({
+          where: { id },
+          data: { archivedAt: new Date() },
+          include: constructionInclude,
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    return dto(rt, construction);
+  } catch (err) {
+    // A concurrent booking reads this construction while this transaction reads
+    // its bookings. Serializable isolation aborts one side instead of allowing
+    // an archived construction with an active booking.
+    if (isSerializationFailure(err)) throw constructionHasActiveBookingsError();
+    throw err;
   }
-  const construction = await rt.prisma.construction.update({
-    where: { id },
-    data: { archivedAt: new Date() },
-    include: constructionInclude,
-  });
-  return dto(rt, construction);
 }
 
 /** Восстановить конструкцию из архива. */
@@ -198,6 +205,14 @@ function dto(rt: Runtime, construction: ConstructionRow): Construction {
 async function requireConstruction(rt: Runtime, id: string): Promise<void> {
   const exists = await rt.prisma.construction.count({ where: { id } });
   if (!exists) throw new HttpError(404, "not_found", "Конструкция не найдена");
+}
+
+function constructionHasActiveBookingsError(): HttpError {
+  return new HttpError(
+    409,
+    "construction_has_active_bookings",
+    "У конструкции есть текущие или будущие брони — сначала отмените или перенесите их",
+  );
 }
 
 /**

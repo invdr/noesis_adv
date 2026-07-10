@@ -116,15 +116,15 @@ describe("sendDueBookingReminders", () => {
   });
 
   function prismaWith(rows: any[]) {
-    const marked: string[][] = [];
+    const marked: any[] = [];
     return {
       marked,
       prisma: {
         booking: {
           findMany: async () => rows,
           updateMany: async ({ where }: any) => {
-            marked.push(where.id.in);
-            return { count: where.id.in.length };
+            marked.push(where);
+            return { count: 1 };
           },
         },
       },
@@ -164,7 +164,7 @@ describe("sendDueBookingReminders", () => {
     expect(res).toEqual({ candidates: 2, notified: 2, skipped: 0 });
     const chatIds = calls.map((c) => c.chat_id).sort();
     expect(chatIds).toEqual(["100", "200"]);
-    expect(marked.flat().sort()).toEqual(["a", "b"]);
+    expect(marked.map((where) => where.id).sort()).toEqual(["a", "b"]);
   });
 
   test("без Telegram у адресата — пропускаем и не помечаем (уведомим позже)", async () => {
@@ -230,6 +230,39 @@ describe("sendDueBookingReminders", () => {
     expect(calls).toHaveLength(1);
     expect(firstResult).toEqual({ candidates: 1, notified: 1, skipped: 0 });
     expect(secondResult).toEqual({ candidates: 1, notified: 0, skipped: 1 });
-    expect(marked).toEqual([["a"]]);
+    expect(marked.map((where) => where.id)).toEqual(["a"]);
+  });
+
+  test("не помечает перенесённую дату как уже уведомлённую", async () => {
+    const oldDate = new Date("2026-07-10T00:00:00.000Z");
+    const rows = [
+      reminderRow("a", oldDate, {
+        manager: { isActive: true, telegramChatId: "100", name: "M", email: "m@n.ru" },
+        createdBy: null,
+      }),
+    ];
+    const marked: any[] = [];
+    const prisma = {
+      booking: {
+        findMany: async () => rows,
+        updateMany: async ({ where }: any) => {
+          marked.push(where);
+          // A manager moved the reminder after the digest was sent.
+          return { count: 0 };
+        },
+      },
+    };
+
+    const res = await sendDueBookingReminders(
+      runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }),
+    );
+
+    expect(res).toEqual({ candidates: 1, notified: 0, skipped: 1 });
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toMatchObject({
+      id: "a",
+      reminderAt: oldDate,
+      reminderNotifiedAt: null,
+    });
   });
 });

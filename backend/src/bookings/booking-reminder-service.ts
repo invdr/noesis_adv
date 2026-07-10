@@ -209,11 +209,20 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
       }
       if (rt.env.CRM_BASE_URL) lines.push(`Открыть: ${rt.env.CRM_BASE_URL}/#/bookings`);
       if (await sendTelegramMessage(rt, lines.join("\n"), chatId)) {
-        const marked = await rt.prisma.booking.updateMany({
-          where: { id: { in: bucket.map((row) => row.id) }, reminderNotifiedAt: null },
-          data: { reminderNotifiedAt: new Date() },
-        });
-        result.notified += marked.count;
+        const marked = await Promise.all(
+          bucket.map((row) =>
+            rt.prisma.booking.updateMany({
+              // A manager can move a reminder while Telegram is responding.
+              // Only acknowledge exactly the date that was included in this digest;
+              // the new date remains unnotified and will be picked up next time.
+              where: { id: row.id, reminderAt: row.reminderAt, reminderNotifiedAt: null },
+              data: { reminderNotifiedAt: new Date() },
+            }),
+          ),
+        );
+        const markedCount = marked.reduce((total, update) => total + update.count, 0);
+        result.notified += markedCount;
+        result.skipped += bucket.length - markedCount;
       } else {
         result.skipped += bucket.length;
       }

@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import sharp from "sharp";
 import type { Runtime } from "../src/runtime";
 import {
+  archiveConstruction,
   createConstruction,
   updateConstruction,
 } from "../src/constructions/construction-service";
@@ -490,5 +491,33 @@ describe("updateConstruction", () => {
       status: 409,
       code: "construction_side_has_bookings",
     });
+  });
+
+  test("архивирование повторно проверяет брони внутри сериализуемой транзакции", async () => {
+    const { db } = makeDb();
+    const rt = runtimeWith(db);
+    const created = await createConstruction(
+      rt,
+      { name: "СФ-014", status: "draft" } as any,
+      new Map(),
+      "user_1",
+    );
+    const originalTransaction = db.$transaction;
+    let transactionStarted = false;
+    db.$transaction = async (arg: any) => {
+      if (typeof arg === "function") {
+        transactionStarted = true;
+        // A booking arrived after the initial existence check but before the
+        // archive transaction received its consistent view.
+        db.booking.count = async () => 1;
+      }
+      return originalTransaction(arg);
+    };
+
+    await expect(archiveConstruction(rt, created.id)).rejects.toMatchObject({
+      status: 409,
+      code: "construction_has_active_bookings",
+    });
+    expect(transactionStarted).toBe(true);
   });
 });
