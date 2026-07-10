@@ -265,6 +265,8 @@ build_frontends() {
   export PUBLIC_API_URL="${PUBLIC_API_URL:-}"
   export PUBLIC_YANDEX_MAPS_API_KEY="${PUBLIC_YANDEX_MAPS_API_KEY:-}"
   export VITE_API_URL="${VITE_API_URL:-}"
+  # CRM использует тот же ключ Яндекс-карт (пикер координат конструкции).
+  export VITE_YANDEX_MAPS_API_KEY="${VITE_YANDEX_MAPS_API_KEY:-${PUBLIC_YANDEX_MAPS_API_KEY:-}}"
   export SITE_URL BUILD_KEEP_RELEASES
 
   bash "$ROOT/infra/build-website.sh"

@@ -69,8 +69,11 @@ BUILD_TOKEN_VAL="$(get_env BUILD_WORKER_TOKEN)"
 SITE_URL="${SITE_URL_VAL:-${SITE_URL:-http://168.222.140.78}}" \
 PUBLIC_YANDEX_MAPS_API_KEY="${PUBLIC_YANDEX_MAPS_API_KEY_VAL:-${PUBLIC_YANDEX_MAPS_API_KEY:-}}" \
   bash infra/build-website.sh
-# CRM (webapp) собирается как раньше (раздаётся nginx с ../webapp/dist).
-VITE_API_URL="${VITE_API_URL:-}" bun run build:webapp
+# CRM (webapp) собирается как раньше (раздаётся nginx с ../webapp/dist). Тот же
+# ключ Яндекс-карт, что и у сайта, — для пикера координат конструкции в CRM.
+VITE_API_URL="${VITE_API_URL:-}" \
+VITE_YANDEX_MAPS_API_KEY="${VITE_YANDEX_MAPS_API_KEY:-${PUBLIC_YANDEX_MAPS_API_KEY_VAL:-${PUBLIC_YANDEX_MAPS_API_KEY:-}}}" \
+  bun run build:webapp
 
 # Сообщаем backend об успешной публикации сайта (сбрасывает «нужна пересборка»
 # и индикатор в CRM). Тихо пропускаем, если токен сборщика не настроен.

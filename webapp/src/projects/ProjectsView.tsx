@@ -23,6 +23,7 @@ import { api, ApiError } from "../api/client";
 import { ProjectDocuments } from "../documents/ProjectDocuments";
 import { parseOptionalNumberInput } from "../shared/number";
 import { ProjectProgress } from "./ProjectProgress";
+import { CoordinatePicker } from "./CoordinatePicker";
 
 const KEY = ["constructions"];
 const FORMAT_KEYS = Object.keys(CONSTRUCTION_FORMAT_LABEL) as ConstructionFormat[];
@@ -597,7 +598,15 @@ function ProjectFormBody({
         <div className="card-body">
           <h3 className="section-title">Расположение на карте</h3>
           <p className="hint" style={{ marginTop: 0 }}>Координаты для карты города. Заполняются парой.</p>
-          <div className="row wrap" style={{ gap: 12 }}>
+          <CoordinatePicker
+            lat={lat}
+            lng={lng}
+            onChange={(nextLat, nextLng) => {
+              setLat(nextLat);
+              setLng(nextLng);
+            }}
+          />
+          <div className="row wrap" style={{ gap: 12, marginTop: 12, alignItems: "flex-end" }}>
             <Field label="Широта (lat)">
               <input value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" placeholder="43.3169" />
               {err("lat")}
@@ -606,6 +615,18 @@ function ProjectFormBody({
               <input value={lng} onChange={(e) => setLng(e.target.value)} inputMode="decimal" placeholder="45.6942" />
               {err("lng")}
             </Field>
+            {(lat !== "" || lng !== "") && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setLat("");
+                  setLng("");
+                }}
+              >
+                Очистить координаты
+              </button>
+            )}
           </div>
         </div>
       </div>
