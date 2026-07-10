@@ -65,12 +65,14 @@ export async function addDealDocument(
 
   try {
     const name = input.name?.trim() || stripExtension(file.name);
-    await rt.prisma.dealDocument.create({
-      data: { leadId, type: input.type, name, assetId: asset.id, createdById: user.id },
-    });
-    await rt.prisma.lead.update({
-      where: { id: leadId },
-      data: { dealNoDocuments: false },
+    await rt.prisma.$transaction(async (tx) => {
+      await tx.dealDocument.create({
+        data: { leadId, type: input.type, name, assetId: asset.id, createdById: user.id },
+      });
+      await tx.lead.update({
+        where: { id: leadId },
+        data: { dealNoDocuments: false },
+      });
     });
   } catch (err) {
     await deleteAsset(rt, asset.id).catch(() => {});
@@ -121,21 +123,28 @@ export async function setDealNoDocuments(
 ): Promise<LeadDetail> {
   await requireEditableLead(rt, user, leadId);
   if (noDocuments) {
-    const documentsCount = await rt.prisma.dealDocument.count({
-      where: { leadId },
-    });
-    if (documentsCount > 0) {
+    const updated = await rt.prisma.$transaction((tx) =>
+      tx.lead.updateMany({
+        // This condition and update are one statement. addDealDocument writes
+        // its row and clears this flag in the same transaction, so concurrent
+        // operations always finish with the flag cleared when a document exists.
+        where: { id: leadId, dealDocuments: { none: {} } },
+        data: { dealNoDocuments: true },
+      }),
+    );
+    if (updated.count === 0) {
       throw new HttpError(
         422,
         "documents_attached",
         "Нельзя отметить сделку без документов, пока документы прикреплены",
       );
     }
+  } else {
+    await rt.prisma.lead.update({
+      where: { id: leadId },
+      data: { dealNoDocuments: false },
+    });
   }
-  await rt.prisma.lead.update({
-    where: { id: leadId },
-    data: { dealNoDocuments: noDocuments },
-  });
   return detailOrThrow(rt, user, leadId);
 }
 

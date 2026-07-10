@@ -12,6 +12,7 @@ import {
   type BookingStatus,
   type Construction,
   type Contact,
+  type Lead,
   type SessionUser,
   type UpsertBookingInput,
 } from "@noesis/contracts";
@@ -114,6 +115,10 @@ export function BookingsView({ user }: { user: SessionUser }) {
     queryKey: ["booking-clients"],
     queryFn: () => api.listContacts({ kind: "client" }),
   });
+  const leads = useQuery({
+    queryKey: ["booking-leads"],
+    queryFn: () => api.listAllLeads(),
+  });
   const brands = useQuery({
     queryKey: ["booking-brands"],
     queryFn: () => api.listBookingBrands(false),
@@ -162,6 +167,7 @@ export function BookingsView({ user }: { user: SessionUser }) {
         user={user}
         constructions={allConstructions}
         clients={clients.data ?? []}
+        leads={leads.data?.items ?? []}
         brands={brands.data ?? []}
         reasons={reasons.data ?? []}
         users={users.data ?? []}
@@ -331,6 +337,7 @@ function BookingForm({
   user,
   constructions,
   clients,
+  leads,
   brands,
   reasons,
   users,
@@ -340,6 +347,7 @@ function BookingForm({
   user: SessionUser;
   constructions: Construction[];
   clients: Contact[];
+  leads: Lead[];
   brands: { id: string; name: string }[];
   reasons: { id: string; name: string }[];
   users: AdminUser[];
@@ -353,6 +361,7 @@ function BookingForm({
   const [constructionSideId, setConstructionSideId] = useState(booking?.side.id ?? "");
   const selectedSide = selectedBookingSide(selectedConstruction, constructionSideId);
   const [clientId, setClientId] = useState(booking?.client?.id ?? "");
+  const [leadId, setLeadId] = useState(booking?.lead?.id ?? "");
   const [serviceReasonId, setServiceReasonId] = useState(booking?.serviceReason?.id ?? "");
   const [brandId, setBrandId] = useState(booking?.brand?.id ?? "");
   const [campaignNote, setCampaignNote] = useState(booking?.campaignNote ?? "");
@@ -407,6 +416,7 @@ function BookingForm({
         constructionId,
         constructionSideId: constructionSideId || null,
         clientId: kind === "commercial" ? clientId || null : null,
+        leadId: leadId || null,
         serviceReasonId: kind === "service" ? serviceReasonId || null : null,
         brandId: brandId || null,
         campaignNote: campaignNote.trim() || null,
@@ -532,6 +542,16 @@ function BookingForm({
               {err("serviceReasonId")}
             </Field>
           )}
+          <Field label="Заявка (необязательно)">
+            <select value={leadId} onChange={(e) => setLeadId(e.target.value)}>
+              <option value="">Не выбрана</option>
+              {leads.map((lead) => (
+                <option key={lead.id} value={lead.id}>
+                  {lead.name}{lead.phone ? ` · ${lead.phone}` : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Бренд">
             <select value={brandId} onChange={(e) => setBrandId(e.target.value)}>
               <option value="">Не выбран</option>

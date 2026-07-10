@@ -398,6 +398,19 @@ export const api = {
   listLeads(params: LeadListParams = {}) {
     return request<PaginatedLeads>(`/api/leads${leadQuery(params)}`);
   },
+  async listAllLeads(
+    params: Omit<LeadListParams, "page" | "pageSize"> = {},
+  ) {
+    const first = await this.listLeads({ ...params, page: 1, pageSize: 100 });
+    const pages = Math.ceil(first.total / first.pageSize);
+    if (pages <= 1) return first;
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, index) =>
+        this.listLeads({ ...params, page: index + 2, pageSize: first.pageSize }),
+      ),
+    );
+    return { ...first, items: [...first.items, ...rest.flatMap((page) => page.items)] };
+  },
   getAgenda(scope?: "mine" | "all") {
     return request<LeadAgendaResponse>(`/api/leads/agenda${scope ? `?scope=${scope}` : ""}`);
   },

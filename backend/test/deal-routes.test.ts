@@ -34,6 +34,42 @@ function runtimeWith(
     filesDir,
     documentAsset,
   } = opts;
+  const prisma = {
+    session: {
+      findUnique: async ({ where }: { where: { tokenHash: string } }) =>
+        where.tokenHash === tokenHash(TOKEN)
+          ? {
+              id: `session-${role}`,
+              userId: `user-${role}`,
+              expiresAt: new Date(Date.now() + 60_000),
+              lastSeenAt: new Date(),
+              user: {
+                id: `user-${role}`,
+                email: `${role}@example.com`,
+                name: null,
+                role,
+                mustChangePassword: false,
+                isActive: true,
+              },
+            }
+          : null,
+      update: async () => ({}),
+    },
+    lead: {
+      findUnique: async () =>
+        leadExists ? { id: "lead1", assigneeId: leadAssigneeId } : null,
+      update: async () => ({}),
+      updateMany: async () => ({ count: documentCount > 0 ? 0 : 1 }),
+    },
+    dealDocument: {
+      findFirst: async () =>
+        docExists
+          ? { id: "doc1", leadId: "lead1", assetId: "a1", asset: documentAsset }
+          : null,
+      count: async () => documentCount,
+    },
+  };
+
   return {
     env: {
       CORS_ORIGINS: [ORIGIN],
@@ -43,37 +79,8 @@ function runtimeWith(
       FILES_DIR: filesDir,
     },
     prisma: {
-      session: {
-        findUnique: async ({ where }: { where: { tokenHash: string } }) =>
-          where.tokenHash === tokenHash(TOKEN)
-            ? {
-                id: `session-${role}`,
-                userId: `user-${role}`,
-                expiresAt: new Date(Date.now() + 60_000),
-                lastSeenAt: new Date(),
-                user: {
-                  id: `user-${role}`,
-                  email: `${role}@example.com`,
-                  name: null,
-                  role,
-                  mustChangePassword: false,
-                  isActive: true,
-                },
-              }
-            : null,
-        update: async () => ({}),
-      },
-      lead: {
-        findUnique: async () =>
-          leadExists ? { id: "lead1", assigneeId: leadAssigneeId } : null,
-      },
-      dealDocument: {
-        findFirst: async () =>
-          docExists
-            ? { id: "doc1", leadId: "lead1", assetId: "a1", asset: documentAsset }
-            : null,
-        count: async () => documentCount,
-      },
+      ...prisma,
+      $transaction: async <T>(callback: (tx: typeof prisma) => Promise<T>) => callback(prisma),
     },
   } as unknown as Runtime;
 }

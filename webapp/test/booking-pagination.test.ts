@@ -30,6 +30,29 @@ describe("api.listAllBookings", () => {
   });
 });
 
+describe("api.listAllLeads", () => {
+  test("загружает все страницы, чтобы в форме брони можно было выбрать любую заявку", async () => {
+    const requestedPages: string[] = [];
+    globalThis.fetch = (async (url: string) => {
+      const page = new URL(url).searchParams.get("page")!;
+      requestedPages.push(page);
+      const items =
+        page === "1"
+          ? Array.from({ length: 100 }, (_, i) => ({ id: `lead-${i}` }))
+          : [{ id: "lead-100" }];
+      return new Response(
+        JSON.stringify({ items, page: Number(page), pageSize: 100, total: 101 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as unknown as typeof fetch;
+
+    const result = await api.listAllLeads();
+
+    expect(requestedPages).toEqual(["1", "2"]);
+    expect(result.items).toHaveLength(101);
+  });
+});
+
 describe("api.listAllProjects", () => {
   test("загружает все страницы, чтобы форма брони не теряла конструкции", async () => {
     const requestedPages: string[] = [];
