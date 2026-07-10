@@ -6,18 +6,36 @@ function d(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-function runtimeWithRows(rows: any[]): Runtime {
+function runtimeWithRows(
+  rows: any[],
+  onFindMany?: (args: { where: unknown }) => void,
+): Runtime {
   return {
     env: {},
     prisma: {
       construction: {
-        findMany: async () => rows,
+        findMany: async (args: { where: unknown }) => {
+          onFindMany?.(args);
+          return rows;
+        },
       },
     },
   } as unknown as Runtime;
 }
 
 describe("getInventoryAnalytics", () => {
+  test("учитывает только опубликованные конструкции", async () => {
+    let where: unknown;
+    await getInventoryAnalytics(
+      runtimeWithRows([], (args) => {
+        where = args.where;
+      }),
+      { from: "2026-07-01", to: "2026-08-01" },
+    );
+
+    expect(where).toMatchObject({ status: "published" });
+  });
+
   test("считает загрузку по сторонам/дням и распределяет выручку по дням пересечения", async () => {
     const rt = runtimeWithRows([
       {

@@ -154,7 +154,7 @@ export function toLeadDetailDto(args: {
   referrer: ReferrerRefRow | null;
   bookings: DealBookingRow[];
   dealDocuments: DealDocumentRow[];
-  cfg: { publicBase: string };
+  canAccessDealDocuments: boolean;
 }): LeadDetail {
   return {
     ...toLeadDto(args.lead),
@@ -165,7 +165,7 @@ export function toLeadDetailDto(args: {
     related: args.related.map(toLeadDto),
     referrer: args.referrer ? toReferrerRef(args.referrer) : null,
     bookings: args.bookings.map(toDealBookingSummary),
-    dealDocuments: args.dealDocuments.map((d) => toDealDocumentDto(d, args.cfg)),
-    dealNoDocuments: args.lead.dealNoDocuments,
+    dealDocuments: args.dealDocuments.map(toDealDocumentDto),
+    dealNoDocuments: args.canAccessDealDocuments ? args.lead.dealNoDocuments : false,
   };
 }

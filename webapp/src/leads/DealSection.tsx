@@ -90,37 +90,35 @@ export function DealSection({
           </ul>
         )}
 
-        <h4 className="deal-subtitle">Документы</h4>
-        {detail.dealDocuments.length === 0 ? (
-          <p className="empty" style={{ marginBottom: 8 }}>
-            {detail.dealNoDocuments ? "Отмечено «без документов»." : "Документы не прикреплены."}
-          </p>
-        ) : (
-          <ul className="deal-docs">
-            {detail.dealDocuments.map((doc) => (
-              <li key={doc.id} className="deal-doc">
-                <span className="badge badge-neutral">{DEAL_DOCUMENT_TYPE_LABEL[doc.type]}</span>
-                <a href={doc.asset.url} target="_blank" rel="noopener" className="deal-doc-name">
-                  {doc.name}
-                </a>
-                {editable && (
-                  <button
-                    type="button"
-                    className="link-btn danger"
-                    onClick={() => {
-                      if (window.confirm("Удалить документ безвозвратно?")) removeDoc.mutate(doc.id);
-                    }}
-                  >
-                    удалить
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-
         {editable && (
           <>
+            <h4 className="deal-subtitle">Документы</h4>
+            {detail.dealDocuments.length === 0 ? (
+              <p className="empty" style={{ marginBottom: 8 }}>
+                {detail.dealNoDocuments ? "Отмечено «без документов»." : "Документы не прикреплены."}
+              </p>
+            ) : (
+              <ul className="deal-docs">
+                {detail.dealDocuments.map((doc) => (
+                  <li key={doc.id} className="deal-doc">
+                    <span className="badge badge-neutral">{DEAL_DOCUMENT_TYPE_LABEL[doc.type]}</span>
+                    <a href={doc.asset.url} target="_blank" rel="noopener" className="deal-doc-name">
+                      {doc.name}
+                    </a>
+                    <button
+                      type="button"
+                      className="link-btn danger"
+                      onClick={() => {
+                        if (window.confirm("Удалить документ безвозвратно?")) removeDoc.mutate(doc.id);
+                      }}
+                    >
+                      удалить
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <form
               className="deal-upload"
               onSubmit={(e) => {

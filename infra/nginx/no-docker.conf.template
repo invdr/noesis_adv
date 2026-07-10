@@ -69,6 +69,12 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
+  # Закрывающие документы сделки лежат в `deals/`, но раздавать их напрямую
+  # нельзя: CRM скачивает их через auth-gated API-маршрут.
+  location ^~ /files/deals/ {
+    return 404;
+  }
+
   location /files/ {
     alias {{NOESIS_FILES_DIR}}/;
     try_files $uri =404;

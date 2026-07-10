@@ -9,9 +9,11 @@ import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged } from "../http/auth";
 import { parseMultipart } from "../http/multipart";
+import { readAssetBytes } from "../files/file-service";
 import {
   addDealDocument,
   deleteDealDocument,
+  getDealDocumentAsset,
   setDealNoDocuments,
 } from "./deal-service";
 
@@ -42,6 +44,20 @@ export function dealRoutes(rt: Runtime): Hono<AppEnv> {
     return c.json(detail, 201);
   });
 
+  app.get("/:id/documents/:docId/download", auth, async (c) => {
+    const asset = await getDealDocumentAsset(
+      rt,
+      c.get("user"),
+      c.req.param("id"),
+      c.req.param("docId"),
+    );
+    c.header("Content-Type", asset.mimeType);
+    c.header("Content-Disposition", attachmentDisposition(asset.originalName));
+    c.header("Cache-Control", "private, no-store");
+    c.header("X-Content-Type-Options", "nosniff");
+    return c.body(await readAssetBytes(rt, asset));
+  });
+
   app.delete("/:id/documents/:docId", auth, async (c) => {
     const detail = await deleteDealDocument(
       rt,
@@ -64,4 +80,9 @@ export function dealRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   return app;
+}
+
+function attachmentDisposition(filename: string): string {
+  const encoded = encodeURIComponent(filename).replace(/'/g, "%27");
+  return `attachment; filename="document"; filename*=UTF-8''${encoded}`;
 }

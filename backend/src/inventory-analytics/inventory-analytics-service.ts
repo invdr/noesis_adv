@@ -63,6 +63,9 @@ export async function getInventoryAnalytics(
 
   const constructions = await rt.prisma.construction.findMany({
     where: {
+      // Черновики ещё не составляют продаваемый инвентарь: их стороны не должны
+      // занижать загрузку и увеличивать число свободных сторон.
+      status: "published",
       OR: [
         { archivedAt: null },
         { sides: { some: { bookings: { some: overlapWhere } } } },

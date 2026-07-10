@@ -13,22 +13,27 @@ import type {
   DealDocument,
   DealDocumentType,
 } from "@noesis/contracts";
-import { toAssetDto } from "../files/file-dto";
 import { previousDateOnly, toDateOnly } from "../bookings/booking-periods";
 
 export type DealDocumentRow = PrismaDealDocument & { asset: PrismaAsset };
 
 export const dealDocumentInclude = { asset: true } as const;
 
-export function toDealDocumentDto(
-  row: DealDocumentRow,
-  cfg: { publicBase: string },
-): DealDocument {
+export function toDealDocumentDto(row: DealDocumentRow): DealDocument {
   return {
     id: row.id,
     type: row.type as DealDocumentType,
     name: row.name,
-    asset: toAssetDto(row.asset, cfg),
+    // Это не URL из публичного `/files/`: маршрут требует сессию и права на заявку.
+    asset: {
+      id: row.asset.id,
+      kind: row.asset.kind,
+      originalName: row.asset.originalName,
+      mimeType: row.asset.mimeType,
+      size: row.asset.size,
+      url: `/api/leads/${row.leadId}/documents/${row.id}/download`,
+      createdAt: row.asset.createdAt.toISOString(),
+    },
     createdAt: row.createdAt.toISOString(),
   };
 }

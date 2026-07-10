@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import sharp from "sharp";
 import type { Runtime } from "../src/runtime";
 import { deleteAsset, storeUpload } from "../src/files/file-service";
@@ -104,6 +104,24 @@ describe("storeUpload", () => {
     expect(asset.kind).toBe("document");
     expect(asset.renditions).toBeUndefined();
     expect(await listFiles(dir)).toHaveLength(1);
+  });
+
+  test("документ сделки хранится в закрытой подпапке", async () => {
+    const db = memoryAsset();
+    const rt = runtimeWith(db);
+    const asset = await storeUpload(
+      rt,
+      { bytes: PDF, originalName: "Договор.pdf" },
+      { storageScope: "deal" },
+    );
+
+    const stored = db.store.get(asset.id)!;
+    const storageKey = stored.storageKey as string;
+    expect(storageKey).toStartWith("deals/");
+    const files = await listFiles(dir);
+    expect(files.map((file) => relative(dir, file).replaceAll("\\", "/"))).toEqual([
+      storageKey,
+    ]);
   });
 
   test("сбой записи в БД не оставляет сирот на диске (решение №1/№4)", async () => {

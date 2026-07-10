@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { toDealBookingSummary, type DealBookingRow } from "../src/leads/deal-dto";
+import {
+  toDealBookingSummary,
+  toDealDocumentDto,
+  type DealBookingRow,
+  type DealDocumentRow,
+} from "../src/leads/deal-dto";
 
 function bookingRow(over: Partial<DealBookingRow> = {}): DealBookingRow {
   return {
@@ -46,5 +51,35 @@ describe("toDealBookingSummary", () => {
     const s = toDealBookingSummary(bookingRow({ kind: "service", totalPrice: null }));
     expect(s.kind).toBe("service");
     expect(s.totalPrice).toBeNull();
+  });
+});
+
+describe("toDealDocumentDto", () => {
+  test("не раскрывает публичный URL файлового хранилища", () => {
+    const row = {
+      id: "doc1",
+      leadId: "lead1",
+      type: "contract",
+      name: "Договор",
+      assetId: "asset1",
+      createdById: "user1",
+      createdAt: new Date("2026-07-10T12:00:00.000Z"),
+      asset: {
+        id: "asset1",
+        kind: "document",
+        originalName: "contract.pdf",
+        mimeType: "application/pdf",
+        size: 123,
+        storageKey: "deals/ab/abcdef.pdf",
+        renditions: [],
+        createdById: "user1",
+        createdAt: new Date("2026-07-10T12:00:00.000Z"),
+      },
+    } as DealDocumentRow;
+
+    const dto = toDealDocumentDto(row);
+    expect(dto.asset.url).toBe("/api/leads/lead1/documents/doc1/download");
+    expect(dto.asset.url).not.toContain("/files/");
+    expect(dto.asset.renditions).toBeUndefined();
   });
 });

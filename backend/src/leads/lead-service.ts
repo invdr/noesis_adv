@@ -598,6 +598,7 @@ export async function getLeadDetail(
   if (!lead) return null;
 
   if (!(await canViewLead(rt, user, lead))) return null;
+  const canAccessDealDocuments = canEditLead(user, lead);
 
   const [notes, statusHistory, assignHistory, contactHistory, related, referrer, bookings, dealDocuments] = await Promise.all([
     rt.prisma.leadNote.findMany({
@@ -639,11 +640,13 @@ export async function getLeadDetail(
       include: dealBookingInclude,
       orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
     }),
-    rt.prisma.dealDocument.findMany({
-      where: { leadId: id },
-      include: dealDocumentInclude,
-      orderBy: [{ type: "asc" }, { createdAt: "asc" }],
-    }),
+    canAccessDealDocuments
+      ? rt.prisma.dealDocument.findMany({
+          where: { leadId: id },
+          include: dealDocumentInclude,
+          orderBy: [{ type: "asc" }, { createdAt: "asc" }],
+        })
+      : Promise.resolve([]),
   ]);
 
   return toLeadDetailDto({
@@ -656,7 +659,7 @@ export async function getLeadDetail(
     referrer,
     bookings,
     dealDocuments,
-    cfg: { publicBase: rt.env.FILES_PUBLIC_BASE },
+    canAccessDealDocuments,
   });
 }
 
@@ -715,12 +718,18 @@ async function canViewLead(
 }
 
 /** Может ли пользователь редактировать заявку (своя/неназначенная/admin). */
+export function canEditLead(
+  user: SessionUser,
+  lead: { assigneeId: string | null },
+): boolean {
+  return user.role === "admin" || lead.assigneeId === user.id || lead.assigneeId === null;
+}
+
 export function assertCanEdit(
   user: SessionUser,
   lead: { assigneeId: string | null },
 ): void {
-  if (user.role === "admin") return;
-  if (lead.assigneeId === user.id || lead.assigneeId === null) return;
+  if (canEditLead(user, lead)) return;
   throw new HttpError(403, "forbidden", "Заявку ведёт другой менеджер");
 }
 

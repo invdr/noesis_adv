@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 import { describe, expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { UserRole } from "@noesis/contracts";
 import { createApp } from "../src/app";
 import { SESSION_COOKIE } from "../src/auth/auth-service";
@@ -14,15 +17,28 @@ function tokenHash(token: string): string {
 
 function runtimeWith(
   role: UserRole,
-  opts: { leadAssigneeId?: string | null; leadExists?: boolean; docExists?: boolean } = {},
+  opts: {
+    leadAssigneeId?: string | null;
+    leadExists?: boolean;
+    docExists?: boolean;
+    filesDir?: string;
+    documentAsset?: Record<string, unknown>;
+  } = {},
 ): Runtime {
-  const { leadAssigneeId = null, leadExists = true, docExists = false } = opts;
+  const {
+    leadAssigneeId = null,
+    leadExists = true,
+    docExists = false,
+    filesDir,
+    documentAsset,
+  } = opts;
   return {
     env: {
       CORS_ORIGINS: [ORIGIN],
       COOKIE_SECURE: false,
       SESSION_TTL_HOURS: 12,
       FILES_PUBLIC_BASE: "/files",
+      FILES_DIR: filesDir,
     },
     prisma: {
       session: {
@@ -50,7 +66,10 @@ function runtimeWith(
           leadExists ? { id: "lead1", assigneeId: leadAssigneeId } : null,
       },
       dealDocument: {
-        findFirst: async () => (docExists ? { id: "doc1", leadId: "lead1", assetId: "a1" } : null),
+        findFirst: async () =>
+          docExists
+            ? { id: "doc1", leadId: "lead1", assetId: "a1", asset: documentAsset }
+            : null,
       },
     },
   } as unknown as Runtime;
@@ -103,6 +122,52 @@ describe("dealRoutes", () => {
       headers: auth(),
     });
     expect(res.status).toBe(404);
+  });
+
+  test("GET /:id/documents/:docId/download без сессии — 401", async () => {
+    const app = createApp(runtimeWith("admin"));
+    const res = await app.request("/api/leads/lead1/documents/doc1/download", {
+      headers: { Origin: ORIGIN },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test("GET /:id/documents/:docId/download на чужой заявке — 403", async () => {
+    const app = createApp(runtimeWith("manager", { leadAssigneeId: "someone-else" }));
+    const res = await app.request("/api/leads/lead1/documents/doc1/download", {
+      headers: auth(),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test("GET /:id/documents/:docId/download отдаёт файл только через закрытый маршрут", async () => {
+    const filesDir = await mkdtemp(join(tmpdir(), "deal-download-"));
+    try {
+      await mkdir(join(filesDir, "deals", "ab"), { recursive: true });
+      await writeFile(join(filesDir, "deals", "ab", "contract.pdf"), "private document");
+      const app = createApp(
+        runtimeWith("admin", {
+          docExists: true,
+          filesDir,
+          documentAsset: {
+            id: "a1",
+            storageKey: "deals/ab/contract.pdf",
+            mimeType: "application/pdf",
+            originalName: "contract.pdf",
+          },
+        }),
+      );
+
+      const res = await app.request("/api/leads/lead1/documents/doc1/download", {
+        headers: auth(),
+      });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("private document");
+      expect(res.headers.get("cache-control")).toBe("private, no-store");
+      expect(res.headers.get("content-disposition")).toContain("attachment");
+    } finally {
+      await rm(filesDir, { recursive: true, force: true });
+    }
   });
 
   test("без сессии — 401", async () => {

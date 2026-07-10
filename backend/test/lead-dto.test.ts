@@ -106,7 +106,7 @@ describe("toLeadDetailDto", () => {
       referrer: { id: "c_realtor", fullName: "Пётр Риелтор", kind: "realtor" },
       bookings: [],
       dealDocuments: [],
-      cfg: { publicBase: "/files" },
+      canAccessDealDocuments: true,
     });
     expect(() => leadDetailSchema.parse(dto)).not.toThrow();
     expect(dto.notes[0]?.authorEmail).toBe("manager@noesis-grozny.ru");

@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import sharp from "sharp";
 import { fileTypeFromBuffer } from "file-type";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Asset as PrismaAsset } from "@prisma/client";
 import {
   DOCUMENT_MAX_BYTES,
   DOCUMENT_MIME_EXT,
@@ -23,6 +23,9 @@ export interface UploadInput {
   bytes: Uint8Array;
   originalName: string;
 }
+
+/** Место хранения файла. Закрытые документы сделки не должны попасть под `/files/`. */
+export type AssetStorageScope = "public" | "deal";
 
 /** Результат валидации: распознанный тип по содержимому. */
 export interface ValidatedUpload {
@@ -117,21 +120,22 @@ export async function toWebp(
 export async function storeUpload(
   rt: Runtime,
   input: UploadInput,
-  opts: { createdById?: string | null } = {},
+  opts: { createdById?: string | null; storageScope?: AssetStorageScope } = {},
 ): Promise<Asset> {
   const validated = await validateUpload(input.bytes);
   const dir = filesDir(rt.env);
+  const prefix = opts.storageScope === "deal" ? "deals" : "";
   const written: string[] = [];
 
   try {
-    const name = await writeOriginalUnique(dir, validated.ext, input.bytes);
-    const originalKey = shardKey(name, validated.ext);
+    const name = await writeOriginalUnique(dir, prefix, validated.ext, input.bytes);
+    const originalKey = scopedKey(prefix, shardKey(name, validated.ext));
     written.push(originalKey);
 
     const renditions: StoredRendition[] = [];
     if (validated.kind === "image") {
       for (const variant of await renderImageVariants(input.bytes)) {
-        const key = shardKey(`${name}_${variant.width}`, "webp");
+        const key = scopedKey(prefix, shardKey(`${name}_${variant.width}`, "webp"));
         await writeBinary(dir, key, variant.bytes);
         written.push(key);
         renditions.push({ width: variant.width, key });
@@ -172,6 +176,25 @@ export async function deleteAsset(rt: Runtime, id: string): Promise<void> {
   await cleanupKeys(filesDir(rt.env), keys);
 }
 
+/** Прочитать бинарь уже проверенного и авторизованного вызывающим кода файла. */
+export async function readAssetBytes(
+  rt: Runtime,
+  asset: Pick<PrismaAsset, "storageKey">,
+): Promise<ArrayBuffer> {
+  try {
+    const bytes = await readFile(join(filesDir(rt.env), asset.storageKey));
+    return bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
+  } catch (err) {
+    if (isFileNotFound(err)) {
+      throw new HttpError(404, "not_found", "Файл не найден");
+    }
+    throw err;
+  }
+}
+
 // --- внутреннее ---
 
 /** Абсолютный путь к каталогу хранения. */
@@ -189,6 +212,10 @@ function shardKey(name: string, ext: string): string {
   return `${name.slice(0, 2)}/${name}.${ext}`;
 }
 
+function scopedKey(prefix: string, key: string): string {
+  return prefix ? `${prefix}/${key}` : key;
+}
+
 /**
  * Записать оригинал под обезличенным именем и вернуть это имя. Флаг `wx` не даёт
  * перезаписать существующий файл, поэтому коллизия имён (практически невозможная
@@ -196,13 +223,14 @@ function shardKey(name: string, ext: string): string {
  */
 async function writeOriginalUnique(
   dir: string,
+  prefix: string,
   ext: string,
   data: Uint8Array,
 ): Promise<string> {
   for (let attempt = 0; ; attempt++) {
     const name = randomName();
     try {
-      await writeBinary(dir, shardKey(name, ext), data);
+      await writeBinary(dir, scopedKey(prefix, shardKey(name, ext)), data);
       return name;
     } catch (err) {
       if (isFileExists(err) && attempt < 4) continue;
@@ -254,6 +282,15 @@ function isFileExists(err: unknown): boolean {
     err !== null &&
     "code" in err &&
     (err as { code?: unknown }).code === "EEXIST"
+  );
+}
+
+function isFileNotFound(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: unknown }).code === "ENOENT"
   );
 }
 

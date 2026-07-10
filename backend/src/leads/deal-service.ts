@@ -51,7 +51,7 @@ export async function addDealDocument(
   const asset = await storeUpload(
     rt,
     { bytes: await fileBytes(file), originalName: file.name },
-    { createdById: user.id },
+    { createdById: user.id, storageScope: "deal" },
   );
   // Закрывающие документы — PDF/офис или скан (изображение).
   if (asset.kind !== "document" && asset.kind !== "image") {
@@ -94,6 +94,22 @@ export async function deleteDealDocument(
     console.error(`[deal] не удалён файл ${doc.assetId}:`, e),
   );
   return detailOrThrow(rt, user, leadId);
+}
+
+/** Вернуть файл закрывающего документа после проверки прав на его заявку. */
+export async function getDealDocumentAsset(
+  rt: Runtime,
+  user: SessionUser,
+  leadId: string,
+  docId: string,
+) {
+  await requireEditableLead(rt, user, leadId);
+  const doc = await rt.prisma.dealDocument.findFirst({
+    where: { id: docId, leadId },
+    include: { asset: true },
+  });
+  if (!doc) throw new HttpError(404, "not_found", "Документ не найден");
+  return doc.asset;
 }
 
 /** Переключить отметку «по сделке документов нет». */
