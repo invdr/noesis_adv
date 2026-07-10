@@ -34,4 +34,14 @@ describe("deployment wiring for booking reminders", () => {
     expect(deploymentGuide).toContain("NOESIS_BACKEND_PORT");
     expect(deploymentGuide).toContain("http://127.0.0.1:3001/api/internal/bookings/reminders/notify");
   });
+
+  test("инструкция no-docker запускает требующий root деплой через sudo", async () => {
+    const [deploymentGuide, readme] = await Promise.all([
+      readFile(resolve(root, "docs/DEPLOYMENT_VPS.md"), "utf8"),
+      readFile(resolve(root, "README.md"), "utf8"),
+    ]);
+
+    expect(deploymentGuide).toContain("sudo bash infra/deploy-no-docker.sh");
+    expect(readme).toContain("sudo bash infra/deploy-no-docker.sh");
+  });
 });

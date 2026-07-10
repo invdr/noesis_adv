@@ -92,8 +92,8 @@ bun run deploy:vps
 ```bash
 cp infra/no-docker.env.example infra/no-docker.env
 # заполнить секреты и домен
-bash infra/deploy-no-docker.sh   # первый запуск сам установит bun при необходимости
-# дальше можно: bun run deploy:vps:no-docker
+sudo bash infra/deploy-no-docker.sh  # нужен root; первый запуск сам установит bun
+# дальше также: sudo bash infra/deploy-no-docker.sh
 ```
 
 ## Документы

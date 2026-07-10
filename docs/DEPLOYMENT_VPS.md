@@ -43,8 +43,8 @@ Noesis backend ──▶ host PostgreSQL:5432, отдельная БД/роль
 cd /var/www/noesis_adv
 cp infra/no-docker.env.example infra/no-docker.env
 # заполнить POSTGRES_PASSWORD, ADMIN_PASSWORD, BUILD_WORKER_TOKEN
-bash infra/deploy-no-docker.sh   # первый запуск сам установит bun при необходимости
-# последующие запуски можно делать и так: bun run deploy:vps:no-docker
+sudo bash infra/deploy-no-docker.sh  # нужен root; первый запуск сам установит bun
+# последующие запуски также: sudo bash infra/deploy-no-docker.sh
 ```
 
 Что делает скрипт:
