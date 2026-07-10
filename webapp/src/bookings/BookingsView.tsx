@@ -11,15 +11,22 @@ import {
   type BookingKind,
   type BookingStatus,
   type Construction,
-  type ConstructionSide,
   type Contact,
   type SessionUser,
   type UpsertBookingInput,
 } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
+import {
+  DAY_MS,
+  dateOnlyMs,
+  displayInclusivePeriod,
+  monthStart,
+  previousDateOnly,
+  productToday,
+  shiftDateOnly,
+} from "../shared/date";
 
 const KEY = ["bookings"];
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const STATUS_KEYS: BookingStatus[] = ["booked", "onAir", "completed", "cancelled"];
 const KIND_KEYS: BookingKind[] = ["commercial", "service"];
@@ -33,19 +40,31 @@ const statusBadge: Record<BookingStatus, string> = {
 
 interface InventoryRow {
   construction: Construction;
-  side: ConstructionSide | null;
+  side: Construction["sides"][number];
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
+type BookingSideConstruction = Pick<Construction, "sideCount" | "sides"> | null;
+
+export function selectedBookingSide(
+  construction: BookingSideConstruction,
+  sideId: string,
+): Construction["sides"][number] | null {
+  const selected = construction?.sides.find((side) => side.id === sideId);
+  if (selected) return selected;
+  return construction?.sideCount === 1 ? (construction.sides[0] ?? null) : null;
 }
 
-function monthStart(value: string): string {
-  return `${value.slice(0, 8)}01`;
+export function nextBookingSideId(
+  construction: BookingSideConstruction,
+  sideId: string,
+): string {
+  if (!construction) return "";
+  if (construction.sides.some((side) => side.id === sideId)) return sideId;
+  return construction.sideCount === 1 ? (construction.sides[0]?.id ?? "") : "";
 }
 
 function ms(value: string): number {
-  return new Date(`${value}T00:00:00.000Z`).getTime();
+  return dateOnlyMs(value);
 }
 
 function rub(value: number | null | undefined): string {
@@ -56,11 +75,7 @@ function rub(value: number | null | undefined): string {
 function sideRows(constructions: Construction[]): InventoryRow[] {
   const rows: InventoryRow[] = [];
   for (const c of constructions) {
-    if (c.sideCount === 2) {
-      rows.push({ construction: c, side: "A" }, { construction: c, side: "B" });
-    } else {
-      rows.push({ construction: c, side: null });
-    }
+    for (const side of c.sides) rows.push({ construction: c, side });
   }
   return rows;
 }
@@ -68,13 +83,15 @@ function sideRows(constructions: Construction[]): InventoryRow[] {
 export function BookingsView({ user }: { user: SessionUser }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Booking | null | undefined>(undefined);
-  const [from, setFrom] = useState(monthStart(today()));
-  const [to, setTo] = useState(addBookingMonths(monthStart(today()), 6));
+  const [from, setFrom] = useState(monthStart(productToday()));
+  const [toInclusive, setToInclusive] = useState(previousDateOnly(addBookingMonths(monthStart(productToday()), 6)));
   const [status, setStatus] = useState("");
   const [kind, setKind] = useState("");
   const [constructionId, setConstructionId] = useState("");
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
+  const to = shiftDateOnly(toInclusive, 1);
+  const hasValidWindow = Boolean(from && to && from < to);
 
   const constructions = useQuery({
     queryKey: ["booking-constructions"],
@@ -92,6 +109,7 @@ export function BookingsView({ user }: { user: SessionUser }) {
         search: search || undefined,
         pageSize: 100,
       }),
+    enabled: hasValidWindow,
   });
   const clients = useQuery({
     queryKey: ["booking-clients"],
@@ -134,8 +152,8 @@ export function BookingsView({ user }: { user: SessionUser }) {
       : allConstructions,
   );
 
-  const windowStart = ms(from);
-  const windowEnd = ms(to);
+  const windowStart = Number.isFinite(ms(from)) ? ms(from) : 0;
+  const windowEnd = Number.isFinite(ms(to)) ? ms(to) : windowStart + DAY_MS;
   const windowDays = Math.max(1, Math.round((windowEnd - windowStart) / DAY_MS));
 
   if (editing !== undefined) {
@@ -163,7 +181,7 @@ export function BookingsView({ user }: { user: SessionUser }) {
           + Новая бронь
         </button>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <input type="date" value={toInclusive} onChange={(e) => setToInclusive(e.target.value)} />
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Все статусы</option>
           {STATUS_KEYS.map((s) => (
@@ -190,13 +208,14 @@ export function BookingsView({ user }: { user: SessionUser }) {
       </div>
 
       {error && <p className="alert alert-error" role="alert">{error}</p>}
+      {!hasValidWindow && <p className="alert alert-error">Укажите корректный период.</p>}
 
       <div className="card">
         <table className="table-flush table-hover">
           <thead>
             <tr>
               <th style={{ width: 260 }}>Конструкция</th>
-              <th>Занятость: {from} – {to}</th>
+              <th>Занятость: {displayInclusivePeriod(from, to)}</th>
               <th style={{ width: 260 }}>Брони</th>
             </tr>
           </thead>
@@ -205,14 +224,19 @@ export function BookingsView({ user }: { user: SessionUser }) {
               const rowBookings = allBookings.filter(
                 (b) =>
                   b.construction.id === row.construction.id &&
-                  (row.side === null ? b.side === null : b.side === row.side),
+                  b.side.id === row.side.id,
               );
               return (
-                <tr key={`${row.construction.id}-${row.side ?? "single"}`}>
+                <tr key={`${row.construction.id}-${row.side.id}`}>
                   <td>
                     <strong>{row.construction.code ?? row.construction.name}</strong>
                     <div className="subtle">{row.construction.address ?? row.construction.name}</div>
-                    <div className="subtle">{row.side ? `Сторона ${row.side}` : "Односторонняя"}</div>
+                    <div className="subtle">
+                      {row.construction.sideCount === 1
+                        ? "Односторонняя"
+                        : `Сторона ${row.side.code}`}
+                      {row.side.description ? ` · ${row.side.description}` : ""}
+                    </div>
                   </td>
                   <td>
                     <div style={{ position: "relative", height: 38, background: "var(--surface-muted)", borderRadius: 6, overflow: "hidden" }}>
@@ -225,7 +249,7 @@ export function BookingsView({ user }: { user: SessionUser }) {
                             key={b.id}
                             type="button"
                             onClick={() => setEditing(b)}
-                            title={`${b.startDate}–${b.endDate}: ${bookingTitle(b)}`}
+                            title={`${displayInclusivePeriod(b.startDate, b.endDate)}: ${bookingTitle(b)}`}
                             style={{
                               position: "absolute",
                               left: `${left}%`,
@@ -257,7 +281,7 @@ export function BookingsView({ user }: { user: SessionUser }) {
                         {rowBookings.map((b) => (
                           <div key={b.id}>
                             <button className="link-btn" onClick={() => setEditing(b)}>
-                              {b.startDate}–{b.endDate}
+                              {displayInclusivePeriod(b.startDate, b.endDate)}
                             </button>
                             <span className={`badge ${statusBadge[b.status]}`} style={{ marginLeft: 6 }}>
                               {BOOKING_STATUS_LABEL[b.status]}
@@ -327,12 +351,13 @@ function BookingForm({
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "booked");
   const [constructionId, setConstructionId] = useState(booking?.construction.id ?? constructions[0]?.id ?? "");
   const selectedConstruction = constructions.find((c) => c.id === constructionId) ?? null;
-  const [side, setSide] = useState<"" | ConstructionSide>(booking?.side ?? "");
+  const [constructionSideId, setConstructionSideId] = useState(booking?.side.id ?? "");
+  const selectedSide = selectedBookingSide(selectedConstruction, constructionSideId);
   const [clientId, setClientId] = useState(booking?.client?.id ?? "");
   const [serviceReasonId, setServiceReasonId] = useState(booking?.serviceReason?.id ?? "");
   const [brandId, setBrandId] = useState(booking?.brand?.id ?? "");
   const [campaignNote, setCampaignNote] = useState(booking?.campaignNote ?? "");
-  const [startDate, setStartDate] = useState(booking?.startDate ?? today());
+  const [startDate, setStartDate] = useState(booking?.startDate ?? productToday());
   const [durationMonths, setDurationMonths] = useState(String(booking?.durationMonths ?? 1));
   const [basePricePerMonth, setBasePricePerMonth] = useState(
     booking?.basePricePerMonth != null ? String(booking.basePricePerMonth) : "",
@@ -341,7 +366,7 @@ function BookingForm({
     booking?.totalPrice != null ? String(booking.totalPrice) : "",
   );
   const [priceNote, setPriceNote] = useState(booking?.priceNote ?? "");
-  const [reminderAt, setReminderAt] = useState(booking?.reminderAt ?? defaultBookingReminder(addBookingMonths(today(), 1)));
+  const [reminderAt, setReminderAt] = useState(booking?.reminderAt ?? defaultBookingReminder(addBookingMonths(productToday(), 1)));
   const [managerId, setManagerId] = useState(booking?.manager?.id ?? user.id);
   const [newBrandName, setNewBrandName] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -349,18 +374,20 @@ function BookingForm({
 
   const duration = Math.max(1, Number(durationMonths) || 1);
   const endDate = startDate ? addBookingMonths(startDate, duration) : "";
+  const endDateInclusive = previousDateOnly(endDate);
 
   useEffect(() => {
-    if (booking || !selectedConstruction) return;
-    const base = selectedConstruction.pricePerMonth;
+    if (booking || !selectedSide) return;
+    const base = selectedSide.effectivePricePerMonth;
     setBasePricePerMonth(base != null ? String(base) : "");
     const total = bookingDefaultTotal(base, duration);
     setTotalPrice(total != null ? String(total) : "");
-  }, [booking, selectedConstruction, duration]);
+  }, [booking, selectedSide, duration]);
 
   useEffect(() => {
-    if (selectedConstruction?.sideCount === 1) setSide("");
-  }, [selectedConstruction?.sideCount]);
+    const nextSideId = nextBookingSideId(selectedConstruction, constructionSideId);
+    if (nextSideId !== constructionSideId) setConstructionSideId(nextSideId);
+  }, [selectedConstruction, constructionSideId]);
 
   const save = useMutation({
     mutationFn: () => {
@@ -370,7 +397,7 @@ function BookingForm({
         kind,
         status,
         constructionId,
-        side: side || null,
+        constructionSideId: constructionSideId || null,
         clientId: kind === "commercial" ? clientId || null : null,
         serviceReasonId: kind === "service" ? serviceReasonId || null : null,
         brandId: brandId || null,
@@ -429,14 +456,18 @@ function BookingForm({
             </select>
             {err("constructionId")}
           </Field>
-          {selectedConstruction?.sideCount === 2 && (
+          {selectedConstruction && selectedConstruction.sideCount > 1 && (
             <Field label="Сторона">
-              <select value={side} onChange={(e) => setSide(e.target.value as "" | ConstructionSide)}>
+              <select value={constructionSideId} onChange={(e) => setConstructionSideId(e.target.value)}>
                 <option value="">Выберите сторону</option>
-                <option value="A">Сторона A</option>
-                <option value="B">Сторона B</option>
+                {selectedConstruction.sides.map((side) => (
+                  <option key={side.id} value={side.id}>
+                    Сторона {side.code}
+                    {side.description ? ` · ${side.description}` : ""}
+                  </option>
+                ))}
               </select>
-              {err("side")}
+              {err("constructionSideId") || err("side")}
             </Field>
           )}
           <div className="row wrap" style={{ gap: 12 }}>
@@ -448,8 +479,8 @@ function BookingForm({
               <input inputMode="numeric" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} />
               {err("durationMonths")}
             </Field>
-            <Field label="Окончание">
-              <input value={endDate} readOnly />
+            <Field label="Окончание включительно">
+              <input value={endDateInclusive} readOnly />
             </Field>
           </div>
         </div>

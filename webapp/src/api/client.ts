@@ -11,6 +11,8 @@ import type {
   ContactDetail,
   CompleteNextContactInput,
   ContactType,
+  InventoryAnalyticsQuery,
+  InventoryAnalyticsResponse,
   ListContactsQuery,
   UpsertContactInput,
   SetLeadReferrerInput,
@@ -178,6 +180,7 @@ export interface BookingListParams {
   status?: string;
   kind?: string;
   constructionId?: string;
+  constructionSideId?: string;
   search?: string;
 }
 
@@ -475,6 +478,13 @@ export const api = {
   },
   cancelBooking(id: string) {
     return request<Booking>(`/api/bookings/${id}/cancel`, { method: "POST" });
+  },
+
+  inventoryAnalytics(params: InventoryAnalyticsQuery) {
+    const q = new URLSearchParams();
+    q.set("from", params.from);
+    q.set("to", params.to);
+    return request<InventoryAnalyticsResponse>(`/api/inventory-analytics?${q.toString()}`);
   },
 
   partnerAnalytics(params: PartnerAnalyticsQuery = {}) {

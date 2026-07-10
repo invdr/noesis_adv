@@ -10,23 +10,31 @@ import {
 import { api } from "../api/client";
 import { sourceLabel } from "../leads/shared";
 import { analyticsToCsv, downloadCsv } from "./analytics-csv";
+import { InventoryAnalyticsView } from "./InventoryAnalyticsView";
 import { PartnerAnalyticsView } from "./PartnerAnalyticsView";
 
-type AnalyticsTab = "leads" | "partners";
+type AnalyticsTab = "inventory" | "leads" | "partners";
 
 /**
- * Раздел «Аналитика» с вкладками. Лидовая аналитика (`LeadAnalyticsView`) —
- * только admin; аналитика риелторов (`PartnerAnalyticsView`) — всем ролям.
- * Менеджер видит лишь вкладку «Риелторы» и открывается сразу на ней.
+ * Раздел «Аналитика» с вкладками. Инвентарь и риелторы доступны всем,
+ * лидовая аналитика (`LeadAnalyticsView`) — только admin.
  */
 export function AnalyticsView({ user }: { user: SessionUser }) {
   const isAdmin = user.role === "admin";
-  const [tab, setTab] = useState<AnalyticsTab>(isAdmin ? "leads" : "partners");
+  const [tab, setTab] = useState<AnalyticsTab>("inventory");
 
   return (
     <div className="stack" style={{ gap: "1.25rem" }}>
-      {isAdmin && (
-        <div className="segmented" role="tablist" aria-label="Раздел аналитики">
+      <div className="segmented" role="tablist" aria-label="Раздел аналитики">
+        <button
+          role="tab"
+          aria-selected={tab === "inventory"}
+          className={tab === "inventory" ? "is-active" : ""}
+          onClick={() => setTab("inventory")}
+        >
+          Инвентарь
+        </button>
+        {isAdmin && (
           <button
             role="tab"
             aria-selected={tab === "leads"}
@@ -35,22 +43,20 @@ export function AnalyticsView({ user }: { user: SessionUser }) {
           >
             Заявки
           </button>
-          <button
-            role="tab"
-            aria-selected={tab === "partners"}
-            className={tab === "partners" ? "is-active" : ""}
-            onClick={() => setTab("partners")}
-          >
-            Риелторы
-          </button>
-        </div>
-      )}
+        )}
+        <button
+          role="tab"
+          aria-selected={tab === "partners"}
+          className={tab === "partners" ? "is-active" : ""}
+          onClick={() => setTab("partners")}
+        >
+          Риелторы
+        </button>
+      </div>
 
-      {isAdmin && tab === "leads" ? (
-        <LeadAnalyticsView />
-      ) : (
-        <PartnerAnalyticsView user={user} />
-      )}
+      {tab === "inventory" && <InventoryAnalyticsView />}
+      {isAdmin && tab === "leads" && <LeadAnalyticsView />}
+      {tab === "partners" && <PartnerAnalyticsView user={user} />}
     </div>
   );
 }

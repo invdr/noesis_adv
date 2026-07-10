@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BADGE_PALETTE,
@@ -13,6 +13,7 @@ import {
   type Construction,
   type ConstructionFormat,
   type ConstructionLighting,
+  type ConstructionSide,
   type ConstructionSideCount,
   type ConstructionStatus,
   type Developer,
@@ -20,6 +21,7 @@ import {
 } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
 import { ProjectDocuments } from "../documents/ProjectDocuments";
+import { parseOptionalNumberInput } from "../shared/number";
 import { ProjectProgress } from "./ProjectProgress";
 
 const KEY = ["constructions"];
@@ -28,19 +30,21 @@ const LIGHTING_KEYS = Object.keys(
   CONSTRUCTION_LIGHTING_LABEL,
 ) as ConstructionLighting[];
 const BADGE_KEYS = Object.keys(BADGE_PALETTE) as BadgeColor[];
+const SIDE_CODES = ["A", "B", "C"] as const satisfies readonly ConstructionSide[];
 
 const STATUS_LABEL: Record<ConstructionStatus, string> = {
   draft: "Черновик",
   published: "Опубликована",
 };
 
-/** Строка «» / число → number | null (пусто = не задано). */
-const num = (s: string): number | null => {
-  const t = s.trim();
-  if (t === "") return null;
-  const n = Number(t.replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-};
+class LocalFormError extends Error {
+  constructor(
+    message: string,
+    readonly fields: Record<string, string>,
+  ) {
+    super(message);
+  }
+}
 
 /** Раздел конструкций: список с фильтрами или форма редактирования. */
 export function ProjectsView({ isAdmin }: { isAdmin: boolean }) {
@@ -166,9 +170,50 @@ type GalleryItem =
   | { kind: "existing"; asset: Asset }
   | { kind: "new"; file: File; url: string };
 
+interface SideFormState {
+  code: ConstructionSide;
+  description: string;
+  pricePerMonth: string;
+  trafficPerDay: string;
+  grp: string;
+  photoKey: string;
+}
+
 const keyOf = (item: GalleryItem) => (item.kind === "existing" ? item.asset.id : item.url);
 const previewOf = (item: GalleryItem) =>
   item.kind === "existing" ? (item.asset.renditions?.thumbnailUrl ?? item.asset.url) : item.url;
+
+function activeSideCodes(sideCount: ConstructionSideCount): readonly ConstructionSide[] {
+  return SIDE_CODES.slice(0, sideCount);
+}
+
+function sideFormsFromConstruction(
+  construction: Construction | null,
+  sideCount: ConstructionSideCount,
+): SideFormState[] {
+  return activeSideCodes(sideCount).map((code) => {
+    const side = construction?.sides.find((s) => s.code === code);
+    const isNewSide = side === undefined;
+    return {
+      code,
+      description: side?.description ?? "",
+      pricePerMonth: side?.pricePerMonth != null ? String(side.pricePerMonth) : "",
+      trafficPerDay:
+        side?.trafficPerDay != null
+          ? String(side.trafficPerDay)
+          : isNewSide && construction?.trafficPerDay != null
+            ? String(construction.trafficPerDay)
+            : "",
+      grp:
+        side?.grp != null
+          ? String(side.grp)
+          : isNewSide && construction?.grp != null
+            ? String(construction.grp)
+            : "",
+      photoKey: side?.photo?.id ?? "",
+    };
+  });
+}
 
 function ProjectForm({
   id,
@@ -216,6 +261,9 @@ function ProjectFormBody({
   const [format, setFormat] = useState<ConstructionFormat>(construction?.format ?? "cityFormat");
   const [size, setSize] = useState(construction?.size ?? "");
   const [sideCount, setSideCount] = useState<ConstructionSideCount>(construction?.sideCount ?? 1);
+  const [sides, setSides] = useState<SideFormState[]>(() =>
+    sideFormsFromConstruction(construction, construction?.sideCount ?? 1),
+  );
   const [lighting, setLighting] = useState<ConstructionLighting>(construction?.lighting ?? "none");
   const [grp, setGrp] = useState(construction?.grp != null ? String(construction.grp) : "");
   const [trafficPerDay, setTrafficPerDay] = useState(construction?.trafficPerDay != null ? String(construction.trafficPerDay) : "");
@@ -233,6 +281,16 @@ function ProjectFormBody({
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setSides((prev) =>
+      activeSideCodes(sideCount).map((code) => {
+        const existing = prev.find((side) => side.code === code);
+        if (existing) return existing;
+        return sideFormsFromConstruction(construction, sideCount).find((side) => side.code === code)!;
+      }),
+    );
+  }, [construction, sideCount]);
 
   const liveOwners = useMemo(
     // Текущий владелец мог уйти в архив — оставим его в списке выбора.
@@ -276,6 +334,12 @@ function ProjectFormBody({
   const save = useMutation({
     mutationFn: () => {
       const newFiles: File[] = [];
+      const parseErrors: Record<string, string> = {};
+      const numberValue = (field: string, value: string): number | null => {
+        const parsed = parseOptionalNumberInput(value);
+        if (parsed.error) parseErrors[field] = parsed.error;
+        return parsed.value;
+      };
       const images = items.map((item) => {
         if (item.kind === "existing") return { kind: "existing" as const, assetId: item.asset.id };
         const uploadIndex = newFiles.length;
@@ -283,8 +347,29 @@ function ProjectFormBody({
         return { kind: "new" as const, uploadIndex };
       });
       const coverIndex = items.findIndex((it) => keyOf(it) === coverKey);
-      const price = num(pricePerMonth);
-      const traffic = num(trafficPerDay);
+      const sideInputs = sides.map((side, index) => {
+        const photoIndex = side.photoKey
+          ? items.findIndex((item) => keyOf(item) === side.photoKey)
+          : -1;
+        const sidePrice = numberValue(`sides.${index}.pricePerMonth`, side.pricePerMonth);
+        const sideTraffic = numberValue(`sides.${index}.trafficPerDay`, side.trafficPerDay);
+        return {
+          code: side.code,
+          description: side.description.trim() || null,
+          pricePerMonth: sidePrice != null ? Math.round(sidePrice) : null,
+          trafficPerDay: sideTraffic != null ? Math.round(sideTraffic) : null,
+          grp: numberValue(`sides.${index}.grp`, side.grp),
+          photoIndex: photoIndex >= 0 ? photoIndex : null,
+        };
+      });
+      const price = numberValue("pricePerMonth", pricePerMonth);
+      const traffic = numberValue("trafficPerDay", trafficPerDay);
+      const parsedLat = numberValue("lat", lat);
+      const parsedLng = numberValue("lng", lng);
+      const parsedGrp = numberValue("grp", grp);
+      if (Object.keys(parseErrors).length > 0) {
+        throw new LocalFormError("Проверьте числовые поля", parseErrors);
+      }
       const data: UpsertConstructionInput = {
         name: name.trim(),
         slug: slug.trim() || undefined,
@@ -292,13 +377,14 @@ function ProjectFormBody({
         address: address.trim() || undefined,
         district: district.trim() || undefined,
         ownerId: ownerId || undefined,
-        lat: num(lat),
-        lng: num(lng),
+        lat: parsedLat,
+        lng: parsedLng,
         format,
         size: size.trim() || undefined,
         sideCount,
+        sides: sideInputs,
         lighting,
-        grp: num(grp),
+        grp: parsedGrp,
         trafficPerDay: traffic != null ? Math.round(traffic) : null,
         pricePerMonth: price != null ? Math.round(price) : null,
         description: description.trim() || undefined,
@@ -312,6 +398,11 @@ function ProjectFormBody({
     },
     onSuccess: onClose,
     onError: (e: unknown) => {
+      if (e instanceof LocalFormError) {
+        setError(e.message);
+        setFieldErrors(e.fields);
+        return;
+      }
       if (e instanceof ApiError) {
         setError(e.message);
         setFieldErrors(e.fields ?? {});
@@ -328,6 +419,11 @@ function ProjectFormBody({
     setFieldErrors({});
     setError("");
     save.mutate();
+  };
+  const updateSide = (code: ConstructionSide, patch: Partial<SideFormState>) => {
+    setSides((prev) =>
+      prev.map((side) => (side.code === code ? { ...side, ...patch } : side)),
+    );
   };
 
   return (
@@ -403,9 +499,73 @@ function ProjectFormBody({
             <select value={String(sideCount)} onChange={(e) => setSideCount(Number(e.target.value) as ConstructionSideCount)}>
               <option value="1">{CONSTRUCTION_SIDE_COUNT_LABEL[1]}</option>
               <option value="2">{CONSTRUCTION_SIDE_COUNT_LABEL[2]}</option>
+              <option value="3">{CONSTRUCTION_SIDE_COUNT_LABEL[3]}</option>
             </select>
             {err("sideCount")}
           </Field>
+
+          <div style={{ display: "grid", gap: 12, marginBottom: "1rem" }}>
+            {sides.map((side, index) => (
+              <div
+                key={side.code}
+                style={{ background: "var(--surface-muted)", border: "1px solid var(--border)", borderRadius: 6, padding: 14 }}
+              >
+                  <h4 style={{ margin: "0 0 0.75rem" }}>Сторона {side.code}</h4>
+                  <Field label="Направление / описание">
+                    <input
+                      value={side.description}
+                      onChange={(e) => updateSide(side.code, { description: e.target.value })}
+                      placeholder="напр. к центру, к выезду, фасад"
+                    />
+                    {err(`sides.${index}.description`)}
+                  </Field>
+                  <div className="row wrap" style={{ gap: 12 }}>
+                    <Field label="Цена стороны, ₽/мес">
+                      <input
+                        value={side.pricePerMonth}
+                        onChange={(e) => updateSide(side.code, { pricePerMonth: e.target.value })}
+                        inputMode="numeric"
+                        placeholder="пусто → цена конструкции"
+                      />
+                      {err(`sides.${index}.pricePerMonth`)}
+                    </Field>
+                    <Field label="Трафик стороны">
+                      <input
+                        value={side.trafficPerDay}
+                        onChange={(e) => updateSide(side.code, { trafficPerDay: e.target.value })}
+                        inputMode="numeric"
+                        placeholder="если известен"
+                      />
+                      {err(`sides.${index}.trafficPerDay`)}
+                    </Field>
+                    <Field label="GRP стороны">
+                      <input
+                        value={side.grp}
+                        onChange={(e) => updateSide(side.code, { grp: e.target.value })}
+                        inputMode="decimal"
+                        placeholder="если известен"
+                      />
+                      {err(`sides.${index}.grp`)}
+                    </Field>
+                  </div>
+                  <Field label="Фото стороны">
+                    <select
+                      value={side.photoKey}
+                      onChange={(e) => updateSide(side.code, { photoKey: e.target.value })}
+                    >
+                      <option value="">Не выбрано</option>
+                      {items.map((item, itemIndex) => (
+                        <option key={keyOf(item)} value={keyOf(item)}>
+                          Фото {itemIndex + 1}
+                          {keyOf(item) === coverKey ? " · обложка" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {err(`sides.${index}.photoIndex`)}
+                  </Field>
+              </div>
+            ))}
+          </div>
 
           <Field label="Подсветка">
             <select value={lighting} onChange={(e) => setLighting(e.target.value as ConstructionLighting)}>

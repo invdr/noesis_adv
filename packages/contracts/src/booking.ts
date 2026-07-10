@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { paginationQuerySchema } from "./common";
-import { constructionSideSchema } from "./construction";
+import { constructionSideDetailsSchema, constructionSideSchema } from "./construction";
 
 // --- Справочники бронирования ---
 
@@ -80,10 +80,26 @@ export const BOOKING_STATUS_BUSY: Record<BookingStatus, boolean> = {
   cancelled: false,
 };
 
-/** Дата без времени, календарный день в формате YYYY-MM-DD. */
+function isRealDateOnly(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/** Дата без времени, реальный календарный день в формате YYYY-MM-DD. */
 export const dateOnlySchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Дата в формате ГГГГ-ММ-ДД");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Дата в формате ГГГГ-ММ-ДД")
+  .refine(isRealDateOnly, "Некорректная календарная дата");
 
 const CONTACT_SUMMARY = z.object({
   id: z.string(),
@@ -109,8 +125,19 @@ const BOOKING_CONSTRUCTION_SUMMARY = z.object({
   name: z.string(),
   code: z.string().nullable(),
   address: z.string().nullable(),
-  sideCount: z.union([z.literal(1), z.literal(2)]),
+  sideCount: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   pricePerMonth: z.number().int().nullable(),
+});
+
+const BOOKING_SIDE_SUMMARY = constructionSideDetailsSchema.pick({
+  id: true,
+  code: true,
+  description: true,
+  pricePerMonth: true,
+  effectivePricePerMonth: true,
+  priceLabel: true,
+  trafficPerDay: true,
+  grp: true,
 });
 
 export const bookingSchema = z.object({
@@ -118,7 +145,7 @@ export const bookingSchema = z.object({
   kind: bookingKindSchema,
   status: bookingStatusSchema,
   construction: BOOKING_CONSTRUCTION_SUMMARY,
-  side: constructionSideSchema.nullable(),
+  side: BOOKING_SIDE_SUMMARY,
   client: CONTACT_SUMMARY.nullable(),
   serviceReason: bookingServiceReasonSchema.nullable(),
   brand: bookingBrandSchema.nullable(),
@@ -147,6 +174,8 @@ export const upsertBookingSchema = z
     kind: bookingKindSchema,
     status: bookingStatusSchema.default("booked"),
     constructionId: z.string().min(1, "Выберите конструкцию"),
+    constructionSideId: z.string().min(1).nullable().optional(),
+    /** Legacy fallback для старых форм: backend резолвит код в `constructionSideId`. */
     side: constructionSideSchema.nullable().optional(),
     clientId: z.string().min(1).nullable().optional(),
     serviceReasonId: z.string().min(1).nullable().optional(),
@@ -189,6 +218,7 @@ export const listBookingsQuerySchema = paginationQuerySchema.extend({
   status: bookingStatusSchema.optional(),
   kind: bookingKindSchema.optional(),
   constructionId: z.string().optional(),
+  constructionSideId: z.string().optional(),
   search: z.string().trim().max(120).optional(),
 });
 export type ListBookingsQuery = z.infer<typeof listBookingsQuerySchema>;

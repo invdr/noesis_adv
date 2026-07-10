@@ -33,20 +33,23 @@ export const CONSTRUCTION_FORMAT_LABEL: Record<ConstructionFormat, string> = {
   other: "Другое",
 };
 
-/**
- * Сторона инвентаря. Хранится на брони: у односторонней конструкции `null`,
- * у двусторонней — A или B.
- */
-export const constructionSideSchema = z.enum(["A", "B"]);
+/** Код продаваемой стороны конструкции. */
+export const constructionSideSchema = z.enum(["A", "B", "C"]);
 export type ConstructionSide = z.infer<typeof constructionSideSchema>;
+export const CONSTRUCTION_SIDE_CODES = ["A", "B", "C"] as const satisfies readonly ConstructionSide[];
 
 /** Количество продаваемых сторон конструкции. */
-export const constructionSideCountSchema = z.union([z.literal(1), z.literal(2)]);
+export const constructionSideCountSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+]);
 export type ConstructionSideCount = z.infer<typeof constructionSideCountSchema>;
 
 export const CONSTRUCTION_SIDE_COUNT_LABEL: Record<ConstructionSideCount, string> = {
   1: "Односторонняя",
   2: "Двусторонняя (A/B)",
+  3: "Трёхсторонняя (A/B/C)",
 };
 
 /** Подсветка конструкции. */
@@ -133,6 +136,23 @@ export function pricePerMonthLabel(pricePerMonth: number | null): string {
   return `${RUB.format(pricePerMonth)} ₽/мес`;
 }
 
+/** Продаваемая сторона конструкции. `pricePerMonth=null` означает наследовать цену конструкции. */
+export const constructionSideDetailsSchema = z.object({
+  id: z.string(),
+  code: constructionSideSchema,
+  /** Направление/описание стороны для менеджера и публичной карточки. */
+  description: z.string().nullable(),
+  /** Переопределение цены стороны; `null` → дефолт конструкции. */
+  pricePerMonth: z.number().int().nullable(),
+  /** Итоговая цена стороны с учётом дефолта конструкции. */
+  effectivePricePerMonth: z.number().int().nullable(),
+  priceLabel: z.string(),
+  trafficPerDay: z.number().int().nullable(),
+  grp: z.number().nullable(),
+  photo: assetSchema.optional(),
+});
+export type ConstructionSideDetails = z.infer<typeof constructionSideDetailsSchema>;
+
 // --- DTO, который отдаёт API ---
 
 /**
@@ -159,6 +179,8 @@ export const constructionSchema = z.object({
   size: z.string().nullable(),
   /** Количество продаваемых сторон. Сама сторона выбирается в брони. */
   sideCount: constructionSideCountSchema,
+  /** Реальные продаваемые стороны A/B/C. */
+  sides: z.array(constructionSideDetailsSchema),
   lighting: constructionLightingSchema,
   /** Рейтинг GRP (охват), если известен. */
   grp: z.number().nullable(),
@@ -200,6 +222,22 @@ export type ConstructionImageInput = z.infer<
   typeof constructionImageInputSchema
 >;
 
+export const constructionSideInputSchema = z.object({
+  code: constructionSideSchema,
+  description: z.string().trim().max(500).nullable().optional(),
+  pricePerMonth: z
+    .number()
+    .int()
+    .positive("Цена должна быть больше 0")
+    .nullable()
+    .optional(),
+  trafficPerDay: z.number().int().nonnegative().nullable().optional(),
+  grp: z.number().nonnegative().nullable().optional(),
+  /** Индекс фото в итоговом массиве `images`; `null` — без отдельного фото стороны. */
+  photoIndex: z.number().int().nonnegative().nullable().optional(),
+});
+export type ConstructionSideInput = z.infer<typeof constructionSideInputSchema>;
+
 /**
  * Данные сохранения конструкции. Обязательность зависит от статуса: черновик —
  * только название; публикация — строгий набор (адрес, гео, цена, фото).
@@ -226,6 +264,7 @@ export const upsertConstructionSchema = z
     format: constructionFormatSchema.default("cityFormat"),
     size: z.string().trim().max(MAX_CONSTRUCTION_SIZE).optional(),
     sideCount: constructionSideCountSchema.default(1),
+    sides: z.array(constructionSideInputSchema).max(3).optional(),
     lighting: constructionLightingSchema.default("none"),
     grp: z.number().nonnegative().nullable().optional(),
     trafficPerDay: z.number().int().nonnegative().nullable().optional(),
@@ -268,6 +307,36 @@ export const upsertConstructionSchema = z
     const hasLng = v.lng != null;
     if (hasLat !== hasLng) {
       issue("lng", "Укажите обе координаты (широту и долготу)");
+    }
+
+    const activeCodes = CONSTRUCTION_SIDE_CODES.slice(0, v.sideCount);
+    const seenCodes = new Set<ConstructionSide>();
+    for (const [index, side] of (v.sides ?? []).entries()) {
+      if (!activeCodes.includes(side.code)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["sides", index, "code"],
+          message: "Сторона не входит в выбранное количество сторон",
+        });
+      }
+      if (seenCodes.has(side.code)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["sides", index, "code"],
+          message: "Сторона указана дважды",
+        });
+      }
+      seenCodes.add(side.code);
+      if (
+        side.photoIndex != null &&
+        (side.photoIndex < 0 || side.photoIndex >= images.length)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["sides", index, "photoIndex"],
+          message: "Фото стороны вне набора фото",
+        });
+      }
     }
 
     if (v.status !== "published") return; // черновик — достаточно названия

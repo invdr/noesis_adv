@@ -93,6 +93,53 @@ describe("upsertConstructionSchema — обязательность по сос�
     expect(res.success).toBe(true);
   });
 
+  test("трёхсторонняя конструкция с параметрами сторон проходит", () => {
+    const res = upsertConstructionSchema.safeParse({
+      name: "Пилон A/B/C",
+      status: "published",
+      address: "Грозный, Черноречье",
+      lat: 43.287,
+      lng: 45.679,
+      sideCount: 3,
+      sides: [
+        { code: "A", description: "к центру", trafficPerDay: 18000 },
+        { code: "B", description: "к выезду", pricePerMonth: 42000 },
+        { code: "C", description: "пешеходная", grp: 1.2 },
+      ],
+      format: "pillar",
+      lighting: "external",
+      ...cover,
+    });
+    expect(res.success).toBe(true);
+  });
+
+  test("сторону вне выбранного количества сторон не принимает", () => {
+    const res = upsertConstructionSchema.safeParse({
+      name: "СФ-014",
+      status: "draft",
+      sideCount: 2,
+      sides: [{ code: "C" }],
+    });
+    expect(res.success).toBe(false);
+    expect(res.success ? [] : res.error.issues.map((i) => i.path.join("."))).toContain(
+      "sides.0.code",
+    );
+  });
+
+  test("фото стороны должно ссылаться на итоговую галерею", () => {
+    const res = upsertConstructionSchema.safeParse({
+      name: "СФ-014",
+      status: "draft",
+      sideCount: 1,
+      images: [{ kind: "new", uploadIndex: 0 }],
+      sides: [{ code: "A", photoIndex: 2 }],
+    });
+    expect(res.success).toBe(false);
+    expect(res.success ? [] : res.error.issues.map((i) => i.path.join("."))).toContain(
+      "sides.0.photoIndex",
+    );
+  });
+
   test("одна координата без пары → ошибка", () => {
     const res = upsertConstructionSchema.safeParse({
       name: "СФ-014",

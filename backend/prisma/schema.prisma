@@ -113,6 +113,7 @@ model Asset {
   developerLogos     Developer[]         @relation("DeveloperLogo")
   constructionCovers Construction[]      @relation("ConstructionCover")
   constructionImages ConstructionImage[] @relation("ConstructionImageAsset")
+  constructionSidePhotos ConstructionSide[] @relation("ConstructionSidePhoto")
   newsCovers         News[]              @relation("NewsCover")
   documentFiles      Document[]          @relation("DocumentFile")
   progressPhotos     ProgressPhoto[]     @relation("ProgressPhotoAsset")
@@ -477,7 +478,7 @@ model Construction {
   format        String              @default("cityFormat")
   /// Габариты свободной строкой («1,2 × 1,8 м»).
   size          String?
-  /// Количество продаваемых сторон: 1 — односторонняя, 2 — A/B.
+  /// Количество продаваемых сторон: 1 — A, 2 — A/B, 3 — A/B/C.
   sideCount     Int                 @default(1)
   /// Подсветка: none|internal|external (валидирует Zod).
   lighting      String              @default("none")
@@ -499,6 +500,7 @@ model Construction {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   images        ConstructionImage[]
+  sides         ConstructionSide[]
   documents     Document[]
   progress      ProgressAlbum[]
   leads         Lead[]
@@ -508,6 +510,31 @@ model Construction {
   @@index([archivedAt])
   @@index([ownerId])
   @@index([format])
+}
+
+/// Продаваемая сторона конструкции: A/B/C со своими коммерческими параметрами.
+model ConstructionSide {
+  id             String       @id @default(cuid())
+  constructionId String
+  construction   Construction @relation(fields: [constructionId], references: [id], onDelete: Cascade)
+  /// Код стороны: A, B или C (валидирует Zod/сервис).
+  code           String
+  /// Направление/описание стороны.
+  description    String?
+  /// Переопределение цены за месяц. null → дефолт Construction.pricePerMonth.
+  pricePerMonth  Int?
+  trafficPerDay  Int?
+  grp            Float?
+  photoId        String?
+  photo          Asset?       @relation("ConstructionSidePhoto", fields: [photoId], references: [id], onDelete: SetNull)
+  bookings       Booking[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([constructionId, code])
+  @@unique([id, constructionId])
+  @@index([constructionId])
+  @@index([photoId])
 }
 
 /// Бренд/кампания, которую размещают на конструкции. Не обязательно совпадает с
@@ -547,8 +574,9 @@ model Booking {
   status            BookingStatus         @default(booked)
   constructionId    String
   construction      Construction          @relation(fields: [constructionId], references: [id], onDelete: Restrict)
-  /// Сторона брони: null у односторонней конструкции, "A"/"B" у двусторонней.
-  side              String?
+  /// Конкретная продаваемая сторона конструкции.
+  constructionSideId String
+  constructionSide   ConstructionSide      @relation(fields: [constructionSideId, constructionId], references: [id, constructionId], onDelete: Restrict)
   /// Плательщик для commercial-брони (Contact kind=client). Для service — null.
   clientId          String?
   client            Contact?              @relation("BookingClient", fields: [clientId], references: [id], onDelete: SetNull)
@@ -580,9 +608,9 @@ model Booking {
   updatedAt         DateTime              @updatedAt
 
   @@index([constructionId])
+  @@index([constructionSideId])
   @@index([status])
   @@index([kind])
-  @@index([side])
   @@index([startDate])
   @@index([endDate])
   @@index([clientId])

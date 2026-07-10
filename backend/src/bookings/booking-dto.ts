@@ -3,6 +3,7 @@ import type {
   BookingBrand as PrismaBookingBrand,
   BookingServiceReason as PrismaBookingServiceReason,
   Construction as PrismaConstruction,
+  ConstructionSide as PrismaConstructionSide,
   Contact as PrismaContact,
   Lead as PrismaLead,
   User as PrismaUser,
@@ -15,9 +16,11 @@ import type {
   BookingStatus,
   ConstructionSide,
 } from "@noesis/contracts";
+import { pricePerMonthLabel } from "@noesis/contracts";
 
 export type BookingRow = PrismaBooking & {
   construction: PrismaConstruction;
+  constructionSide: PrismaConstructionSide;
   client: PrismaContact | null;
   serviceReason: PrismaBookingServiceReason | null;
   brand: PrismaBookingBrand | null;
@@ -28,6 +31,7 @@ export type BookingRow = PrismaBooking & {
 
 export const bookingInclude = {
   construction: true,
+  constructionSide: true,
   client: true,
   serviceReason: true,
   brand: true,
@@ -91,10 +95,27 @@ export function toBookingDto(row: BookingRow): Booking {
       name: row.construction.name,
       code: row.construction.code,
       address: row.construction.address,
-      sideCount: row.construction.sideCount === 2 ? 2 : 1,
+      sideCount:
+        row.construction.sideCount === 3
+          ? 3
+          : row.construction.sideCount === 2
+            ? 2
+            : 1,
       pricePerMonth: row.construction.pricePerMonth,
     },
-    side: row.side as ConstructionSide | null,
+    side: {
+      id: row.constructionSide.id,
+      code: row.constructionSide.code as ConstructionSide,
+      description: row.constructionSide.description,
+      pricePerMonth: row.constructionSide.pricePerMonth,
+      effectivePricePerMonth:
+        row.constructionSide.pricePerMonth ?? row.construction.pricePerMonth,
+      priceLabel: pricePerMonthLabel(
+        row.constructionSide.pricePerMonth ?? row.construction.pricePerMonth,
+      ),
+      trafficPerDay: row.constructionSide.trafficPerDay,
+      grp: row.constructionSide.grp,
+    },
     client: contactSummary(row.client),
     serviceReason: row.serviceReason
       ? toBookingServiceReasonDto(row.serviceReason)

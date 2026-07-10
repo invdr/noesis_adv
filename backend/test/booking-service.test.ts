@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Runtime } from "../src/runtime";
-import { createBooking } from "../src/bookings/booking-service";
+import { createBooking, updateBooking } from "../src/bookings/booking-service";
 
 function runtimeWith(prisma: any): Runtime {
   return { env: {}, prisma } as unknown as Runtime;
@@ -14,7 +14,24 @@ const user = {
   mustChangePassword: false,
 };
 
-function makeDb() {
+function makeSide(code: "A" | "B" | "C", overrides: Record<string, unknown> = {}) {
+  return {
+    id: `side${code}`,
+    constructionId: "c1",
+    code,
+    description: null,
+    pricePerMonth: null,
+    trafficPerDay: null,
+    grp: null,
+    photoId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+function makeDb(options: { sideCount?: 1 | 2 | 3; pricePerMonth?: number | null } = {}) {
+  const sideCount = options.sideCount ?? 2;
   const construction = {
     id: "c1",
     slug: "sf-1",
@@ -27,11 +44,11 @@ function makeDb() {
     ownerId: null,
     format: "cityFormat",
     size: null,
-    sideCount: 2,
+    sideCount,
     lighting: "none",
     grp: null,
     trafficPerDay: null,
-    pricePerMonth: 45_000,
+    pricePerMonth: options.pricePerMonth ?? 45_000,
     description: null,
     coverId: null,
     badges: [],
@@ -41,6 +58,11 @@ function makeDb() {
     createdAt: new Date(),
     updatedAt: new Date(),
   };
+  const sides = [
+    makeSide("A"),
+    makeSide("B", { pricePerMonth: 40_000 }),
+    makeSide("C", { pricePerMonth: 55_000 }),
+  ].slice(0, sideCount);
   const client = {
     id: "client1",
     kind: "client",
@@ -55,6 +77,7 @@ function makeDb() {
     return {
       ...row,
       construction,
+      constructionSide: sides.find((side) => side.id === row.constructionSideId) ?? sides[0],
       client: row.clientId ? client : null,
       serviceReason: null,
       brand: null,
@@ -69,7 +92,7 @@ function makeDb() {
   }
 
   const db: any = {
-    construction: { findUnique: async () => construction },
+    construction: { findUnique: async () => ({ ...construction, sides }) },
     contact: { findFirst: async () => client },
     bookingBrand: { findFirst: async () => null },
     bookingServiceReason: { findFirst: async () => null },
@@ -81,8 +104,7 @@ function makeDb() {
       findFirst: async ({ where }: any) => {
         const found = bookings.find((b) => {
           if (where.id?.not && b.id === where.id.not) return false;
-          if (b.constructionId !== where.constructionId) return false;
-          if ((b.side ?? null) !== (where.side ?? null)) return false;
+          if (b.constructionSideId !== where.constructionSideId) return false;
           if (where.status?.not && b.status === where.status.not) return false;
           return b.startDate < where.startDate.lt && b.endDate > where.endDate.gt;
         });
@@ -106,14 +128,14 @@ function makeDb() {
     },
     $transaction: async (fn: any) => fn(db),
   };
-  return { db, bookings };
+  return { db, bookings, construction, sides };
 }
 
 const input = {
   kind: "commercial" as const,
   status: "booked" as const,
   constructionId: "c1",
-  side: "A" as const,
+  constructionSideId: "sideA",
   clientId: "client1",
   startDate: "2026-05-05",
   durationMonths: 1,
@@ -127,7 +149,11 @@ describe("booking-service", () => {
 
     await expect(
       createBooking(rt, user, { ...input, startDate: "2026-05-20" }),
-    ).rejects.toMatchObject({ status: 409, code: "booking_overlap" });
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "booking_overlap",
+      message: expect.stringContaining("2026-05-05–2026-06-04"),
+    });
   });
 
   test("разрешает стык-в-стык и другую сторону", async () => {
@@ -136,7 +162,7 @@ describe("booking-service", () => {
     await createBooking(rt, user, input);
 
     await createBooking(rt, user, { ...input, startDate: "2026-06-05" });
-    await createBooking(rt, user, { ...input, startDate: "2026-05-20", side: "B" });
+    await createBooking(rt, user, { ...input, startDate: "2026-05-20", constructionSideId: "sideB" });
 
     expect(bookings).toHaveLength(3);
   });
@@ -147,5 +173,97 @@ describe("booking-service", () => {
     await createBooking(rt, user, { ...input, status: "cancelled" });
     await createBooking(rt, user, { ...input, startDate: "2026-05-20" });
     expect(bookings).toHaveLength(2);
+  });
+
+  test("односторонняя конструкция технически бронирует сторону A без выбора", async () => {
+    const { db, bookings } = makeDb({ sideCount: 1 });
+    const rt = runtimeWith(db);
+
+    await createBooking(rt, user, { ...input, constructionSideId: undefined });
+
+    expect(bookings[0]!.constructionSideId).toBe("sideA");
+  });
+
+  test("односторонняя конструкция отклоняет явный legacy-код не-A", async () => {
+    const { db } = makeDb({ sideCount: 1 });
+    const rt = runtimeWith(db);
+
+    await expect(
+      createBooking(rt, user, {
+        ...input,
+        constructionSideId: undefined,
+        side: "B",
+      }),
+    ).rejects.toMatchObject({ status: 422, code: "invalid_side" });
+  });
+
+  test("невалидный explicit constructionSideId не падает на legacy side", async () => {
+    const { db } = makeDb();
+    const rt = runtimeWith(db);
+
+    await expect(
+      createBooking(rt, user, {
+        ...input,
+        constructionSideId: "missing-side",
+        side: "B",
+      }),
+    ).rejects.toMatchObject({ status: 422, code: "invalid_side" });
+  });
+
+  test("конфликт explicit constructionSideId и legacy side отклоняется", async () => {
+    const { db } = makeDb();
+    const rt = runtimeWith(db);
+
+    await expect(
+      createBooking(rt, user, {
+        ...input,
+        constructionSideId: "sideA",
+        side: "B",
+      }),
+    ).rejects.toMatchObject({ status: 422, code: "invalid_side" });
+  });
+
+  test("трёхсторонняя конструкция считает пересечения отдельно для C", async () => {
+    const { db, bookings } = makeDb({ sideCount: 3 });
+    const rt = runtimeWith(db);
+
+    await createBooking(rt, user, { ...input, constructionSideId: "sideC" });
+    await expect(
+      createBooking(rt, user, { ...input, constructionSideId: "sideC", startDate: "2026-05-20" }),
+    ).rejects.toMatchObject({ status: 409, code: "booking_overlap" });
+    await createBooking(rt, user, { ...input, constructionSideId: "sideB", startDate: "2026-05-20" });
+
+    expect(bookings).toHaveLength(2);
+  });
+
+  test("дефолт цены берётся со стороны, затем с конструкции", async () => {
+    const { db, bookings } = makeDb();
+    const rt = runtimeWith(db);
+
+    await createBooking(rt, user, { ...input, constructionSideId: "sideB", startDate: "2026-07-01" });
+    await createBooking(rt, user, { ...input, constructionSideId: "sideA", startDate: "2026-07-01" });
+
+    expect(bookings[0]!.basePricePerMonth).toBe(40_000);
+    expect(bookings[0]!.totalPrice).toBe(40_000);
+    expect(bookings[1]!.basePricePerMonth).toBe(45_000);
+    expect(bookings[1]!.totalPrice).toBe(45_000);
+  });
+
+  test("обновление без полей цены сохраняет снимок стоимости", async () => {
+    const { db, bookings, sides, construction } = makeDb();
+    const rt = runtimeWith(db);
+
+    await createBooking(rt, user, { ...input, constructionSideId: "sideB" });
+    (sides[1] as any).pricePerMonth = 60_000;
+    (construction as any).pricePerMonth = 70_000;
+    await updateBooking(rt, user, "b1", {
+      ...input,
+      constructionSideId: "sideB",
+      startDate: "2026-06-05",
+      durationMonths: 2,
+    });
+
+    expect(bookings[0]!.basePricePerMonth).toBe(40_000);
+    expect(bookings[0]!.totalPrice).toBe(40_000);
   });
 });

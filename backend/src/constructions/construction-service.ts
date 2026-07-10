@@ -1,8 +1,11 @@
 import { Prisma } from "@prisma/client";
 import {
+  CONSTRUCTION_SIDE_CODES,
   constructionSchema,
   paginatedSchema,
   type Construction,
+  type ConstructionSide,
+  type ConstructionSideInput,
   type ListConstructionsQuery,
   type UpsertConstructionInput,
 } from "@noesis/contracts";
@@ -256,6 +259,7 @@ async function saveConstruction(
   }
 
   const newAssetIds: string[] = [];
+  let removedAssetIds: string[] = [];
   let committed = false;
   try {
     // Грузим новые файлы (каждый коммитит свой Asset).
@@ -285,10 +289,6 @@ async function saveConstruction(
       input.coverIndex !== undefined && input.coverIndex < finalAssets.length
         ? finalAssets[input.coverIndex]!.assetId
         : null;
-    const removedAssetIds = (current?.images ?? [])
-      .map((i) => i.assetId)
-      .filter((aid) => !finalAssets.some((f) => f.assetId === aid));
-
     const imageCreate = finalAssets.map((f) => ({
       position: f.position,
       asset: { connect: { id: f.assetId } },
@@ -315,25 +315,84 @@ async function saveConstruction(
 
     const saved = current
       ? await rt.prisma.$transaction(async (tx) => {
-          await tx.constructionImage.deleteMany({
-            where: { constructionId: current!.id },
-          });
-          return tx.construction.update({
+          const fresh = await tx.construction.findUnique({
             where: { id: current!.id },
-            data: { ...scalars, slug, coverId, images: { create: imageCreate } },
             include: constructionInclude,
           });
-        })
-      : await rt.prisma.construction.create({
-          data: {
-            ...scalars,
-            slug,
-            coverId,
-            createdById: userId,
-            images: { create: imageCreate },
-          },
-          include: constructionInclude,
-        });
+          if (!fresh) throw new HttpError(404, "not_found", "Конструкция не найдена");
+          if (fresh.archivedAt) {
+            throw new HttpError(
+              409,
+              "construction_archived",
+              "Конструкция в архиве — сначала восстановите",
+            );
+          }
+          if (
+            input.expectedUpdatedAt &&
+            fresh.updatedAt.toISOString() !== input.expectedUpdatedAt
+          ) {
+            throw new HttpError(
+              409,
+              "stale_update",
+              "Карточку обновил другой сотрудник, обновите страницу",
+            );
+          }
+
+          const freshAssetIds = new Set(fresh.images.map((i) => i.assetId));
+          for (const item of items) {
+            if (item.kind === "existing" && !freshAssetIds.has(item.assetId)) {
+              throw new HttpError(422, "unknown_image", "Фото не принадлежит этой конструкции");
+            }
+          }
+          removedAssetIds = fresh.images
+            .map((i) => i.assetId)
+            .filter((aid) => !finalAssets.some((f) => f.assetId === aid));
+
+          await tx.constructionImage.deleteMany({
+            where: { constructionId: fresh.id },
+          });
+          const updated = await tx.construction.update({
+            where: { id: fresh.id },
+            data: { ...scalars, slug, coverId, images: { create: imageCreate } },
+          });
+          await syncConstructionSides(tx, {
+            constructionId: updated.id,
+            constructionGrp: input.grp ?? null,
+            constructionTrafficPerDay: input.trafficPerDay ?? null,
+            sideCount: input.sideCount,
+            sideInputs: input.sides ?? [],
+            finalAssets,
+            current: fresh,
+          });
+          return tx.construction.findUniqueOrThrow({
+            where: { id: updated.id },
+            include: constructionInclude,
+          });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+      : await rt.prisma.$transaction(async (tx) => {
+          const created = await tx.construction.create({
+            data: {
+              ...scalars,
+              slug,
+              coverId,
+              createdById: userId,
+              images: { create: imageCreate },
+            },
+          });
+          await syncConstructionSides(tx, {
+            constructionId: created.id,
+            constructionGrp: input.grp ?? null,
+            constructionTrafficPerDay: input.trafficPerDay ?? null,
+            sideCount: input.sideCount,
+            sideInputs: input.sides ?? [],
+            finalAssets,
+            current: null,
+          });
+          return tx.construction.findUniqueOrThrow({
+            where: { id: created.id },
+            include: constructionInclude,
+          });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     committed = true;
 
     // После коммита убранные фото удаляем навсегда.
@@ -348,8 +407,114 @@ async function saveConstruction(
     if (!committed) {
       for (const aid of newAssetIds) await deleteAsset(rt, aid).catch(() => {});
     }
+    if (isSerializationFailure(err)) {
+      throw new HttpError(
+        409,
+        "construction_update_conflict",
+        "Конструкцию изменили параллельно, обновите карточку и повторите",
+      );
+    }
     throw err;
   }
+}
+
+interface FinalAsset {
+  assetId: string;
+  position: number;
+}
+
+async function syncConstructionSides(
+  tx: Prisma.TransactionClient,
+  args: {
+    constructionId: string;
+    constructionGrp: number | null;
+    constructionTrafficPerDay: number | null;
+    sideCount: 1 | 2 | 3;
+    sideInputs: ConstructionSideInput[];
+    finalAssets: FinalAsset[];
+    current: ConstructionRow | null;
+  },
+): Promise<void> {
+  const activeCodes = CONSTRUCTION_SIDE_CODES.slice(0, args.sideCount);
+  const activeCodeSet = new Set<ConstructionSide>(activeCodes);
+  const inputByCode = new Map(args.sideInputs.map((side) => [side.code, side]));
+  const currentByCode = new Map(
+    (args.current?.sides ?? []).map((side) => [side.code as ConstructionSide, side]),
+  );
+  const removedSides = (args.current?.sides ?? []).filter(
+    (side) => !activeCodeSet.has(side.code as ConstructionSide),
+  );
+  if (removedSides.length > 0) {
+    const bookings = await tx.booking.count({
+      where: { constructionSideId: { in: removedSides.map((side) => side.id) } },
+    });
+    if (bookings > 0) {
+      throw sideHasBookingsError();
+    }
+    try {
+      await tx.constructionSide.deleteMany({
+        where: { id: { in: removedSides.map((side) => side.id) } },
+      });
+    } catch (err) {
+      if (isSideDeletionRace(err)) throw sideHasBookingsError();
+      throw err;
+    }
+  }
+
+  for (const code of activeCodes) {
+    const input = inputByCode.get(code);
+    const currentSide = currentByCode.get(code);
+    const photoId =
+      input?.photoIndex != null
+        ? (args.finalAssets[input.photoIndex]?.assetId ?? null)
+        : (input ? null : (currentSide?.photoId ?? null));
+    const data = {
+      description:
+        input !== undefined ? (input.description ?? null) : (currentSide?.description ?? null),
+      pricePerMonth:
+        input !== undefined ? (input.pricePerMonth ?? null) : (currentSide?.pricePerMonth ?? null),
+      trafficPerDay:
+        input !== undefined
+          ? (input.trafficPerDay ?? null)
+          : currentSide !== undefined
+            ? currentSide.trafficPerDay
+            : args.constructionTrafficPerDay,
+      grp:
+        input !== undefined
+          ? (input.grp ?? null)
+          : currentSide !== undefined
+            ? currentSide.grp
+            : args.constructionGrp,
+      photoId,
+    };
+
+    await tx.constructionSide.upsert({
+      where: { constructionId_code: { constructionId: args.constructionId, code } },
+      update: data,
+      create: {
+        constructionId: args.constructionId,
+        code,
+        ...data,
+      },
+    });
+  }
+}
+
+function sideHasBookingsError(): HttpError {
+  return new HttpError(
+    409,
+    "construction_side_has_bookings",
+    "Нельзя уменьшить число сторон: на удаляемой стороне есть брони",
+    { sideCount: "На удаляемой стороне есть брони" },
+  );
+}
+
+function isSideDeletionRace(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003";
+}
+
+function isSerializationFailure(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
 }
 
 /** slug заморожен: при создании — из имени (или ручной), при правке — прежний. */

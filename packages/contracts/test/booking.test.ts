@@ -62,7 +62,37 @@ describe("upsertBookingSchema", () => {
         ...base,
         kind: "commercial",
         clientId: "contact1",
-        side: "A",
+        constructionSideId: "sideA",
+      }).success,
+    ).toBe(true);
+  });
+
+  test("нереальную календарную дату отклоняет", () => {
+    expect(
+      upsertBookingSchema.safeParse({
+        ...base,
+        kind: "commercial",
+        clientId: "contact1",
+        startDate: "2026-02-30",
+      }).success,
+    ).toBe(false);
+    expect(
+      upsertBookingSchema.safeParse({
+        ...base,
+        kind: "commercial",
+        clientId: "contact1",
+        startDate: "2026-13-01",
+      }).success,
+    ).toBe(false);
+  });
+
+  test("legacy-код стороны ещё принимается как fallback", () => {
+    expect(
+      upsertBookingSchema.safeParse({
+        ...base,
+        kind: "commercial",
+        clientId: "contact1",
+        side: "C",
       }).success,
     ).toBe(true);
   });

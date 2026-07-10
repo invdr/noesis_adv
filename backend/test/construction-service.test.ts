@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Prisma } from "@prisma/client";
 import sharp from "sharp";
 import type { Runtime } from "../src/runtime";
 import {
@@ -28,8 +29,16 @@ afterEach(async () => {
 function makeDb() {
   const assets = new Map<string, any>();
   const constructions = new Map<string, any>();
+  const constructionSides = new Map<string, any>();
   let seq = 0;
   const id = (p: string) => `${p}_${++seq}`;
+
+  function sidesFor(constructionId: string) {
+    return [...constructionSides.values()]
+      .filter((s) => s.constructionId === constructionId)
+      .sort((a, b) => a.code.localeCompare(b.code))
+      .map((s) => ({ ...s, photo: s.photoId ? (assets.get(s.photoId) ?? null) : null }));
+  }
 
   function buildRow(data: any, existing?: any) {
     const imageCreate = data.images?.create ?? [];
@@ -68,6 +77,7 @@ function makeDb() {
       createdAt: existing?.createdAt ?? new Date(),
       updatedAt: new Date(Date.now() + (existing ? 1000 : 0)),
       images,
+      sides: existing?.id ? sidesFor(existing.id) : [],
     };
   }
 
@@ -97,7 +107,15 @@ function makeDb() {
         if (where?.id !== undefined) return constructions.has(where.id) ? 1 : 0;
         return constructions.size;
       },
-      findUnique: async ({ where }: any) => constructions.get(where.id) ?? null,
+      findUnique: async ({ where }: any) => {
+        const row = constructions.get(where.id);
+        return row ? { ...row, sides: sidesFor(row.id) } : null;
+      },
+      findUniqueOrThrow: async ({ where }: any) => {
+        const row = constructions.get(where.id);
+        if (!row) throw new Error("not found");
+        return { ...row, sides: sidesFor(row.id) };
+      },
       create: async ({ data }: any) => {
         const row = buildRow(data);
         constructions.set(row.id, row);
@@ -110,10 +128,45 @@ function makeDb() {
       },
     },
     constructionImage: { deleteMany: async () => ({ count: 0 }) },
+    constructionSide: {
+      deleteMany: async ({ where }: any) => {
+        let count = 0;
+        for (const side of [...constructionSides.values()]) {
+          const byId = where?.id?.in?.includes(side.id);
+          const byInactiveCode =
+            where?.constructionId === side.constructionId &&
+            where?.code?.notIn &&
+            !where.code.notIn.includes(side.code);
+          if (byId || byInactiveCode) {
+            constructionSides.delete(side.id);
+            count++;
+          }
+        }
+        return { count };
+      },
+      upsert: async ({ where, update, create }: any) => {
+        const key = `${where.constructionId_code.constructionId}:${where.constructionId_code.code}`;
+        const existing = [...constructionSides.values()].find(
+          (s) =>
+            `${s.constructionId}:${s.code}` === key,
+        );
+        const row = existing
+          ? { ...existing, ...update, updatedAt: new Date() }
+          : {
+              id: id("side"),
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              ...create,
+            };
+        constructionSides.set(row.id, row);
+        return row;
+      },
+    },
+    booking: { count: async () => 0 },
     $transaction: async (arg: any) =>
       typeof arg === "function" ? arg(db) : Promise.all(arg),
   };
-  return { db, assets, constructions };
+  return { db, assets, constructions, constructionSides };
 }
 
 function runtimeWith(db: any): Runtime {
@@ -268,5 +321,174 @@ describe("updateConstruction", () => {
         "user_1",
       ),
     ).rejects.toMatchObject({ status: 409 });
+  });
+
+  test("уменьшение числа сторон запрещено, если на удаляемой стороне есть брони", async () => {
+    const { db } = makeDb();
+    const rt = runtimeWith(db);
+    const created = await createConstruction(
+      rt,
+      { name: "СФ-014", status: "draft", sideCount: 2 } as any,
+      new Map(),
+      "user_1",
+    );
+    db.booking.count = async () => 1;
+
+    await expect(
+      updateConstruction(
+        rt,
+        created.id,
+        {
+          name: "СФ-014",
+          status: "draft",
+          sideCount: 1,
+          expectedUpdatedAt: created.updatedAt,
+        } as any,
+        new Map(),
+        "user_1",
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "construction_side_has_bookings",
+    });
+  });
+
+  test("уменьшение числа сторон проверяет свежие стороны внутри транзакции", async () => {
+    const { db, constructionSides } = makeDb();
+    const rt = runtimeWith(db);
+    const created = await createConstruction(
+      rt,
+      { name: "СФ-014", status: "draft", sideCount: 1 } as any,
+      new Map(),
+      "user_1",
+    );
+    const originalTransaction = db.$transaction;
+    db.$transaction = async (arg: any) => {
+      if (typeof arg === "function") {
+        constructionSides.set("side_race_b", {
+          id: "side_race_b",
+          constructionId: created.id,
+          code: "B",
+          description: null,
+          pricePerMonth: null,
+          trafficPerDay: null,
+          grp: null,
+          photoId: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        db.booking.count = async ({ where }: any) =>
+          where.constructionSideId?.in?.includes("side_race_b") ? 1 : 0;
+      }
+      return originalTransaction(arg);
+    };
+
+    await expect(
+      updateConstruction(
+        rt,
+        created.id,
+        {
+          name: "СФ-014",
+          status: "draft",
+          sideCount: 1,
+        } as any,
+        new Map(),
+        "user_1",
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "construction_side_has_bookings",
+    });
+  });
+
+  test("очищенные метрики существующей стороны не заменяются дефолтами конструкции", async () => {
+    const { db, constructionSides } = makeDb();
+    const rt = runtimeWith(db);
+    let saved = await createConstruction(
+      rt,
+      {
+        name: "СФ-014",
+        status: "draft",
+        sideCount: 2,
+        trafficPerDay: 1_000,
+        grp: 2.5,
+      } as any,
+      new Map(),
+      "user_1",
+    );
+
+    saved = await updateConstruction(
+      rt,
+      saved.id,
+      {
+        name: "СФ-014",
+        status: "draft",
+        sideCount: 2,
+        trafficPerDay: 1_000,
+        grp: 2.5,
+        expectedUpdatedAt: saved.updatedAt,
+        sides: [
+          { code: "A", trafficPerDay: null, grp: null },
+          { code: "B", trafficPerDay: null, grp: null },
+        ],
+      } as any,
+      new Map(),
+      "user_1",
+    );
+
+    await updateConstruction(
+      rt,
+      saved.id,
+      {
+        name: "СФ-014",
+        status: "draft",
+        sideCount: 2,
+        trafficPerDay: 2_000,
+        grp: 3.5,
+        expectedUpdatedAt: saved.updatedAt,
+      } as any,
+      new Map(),
+      "user_1",
+    );
+
+    const sides = [...constructionSides.values()].filter((side) => side.constructionId === saved.id);
+    expect(sides.map((side) => side.trafficPerDay)).toEqual([null, null]);
+    expect(sides.map((side) => side.grp)).toEqual([null, null]);
+  });
+
+  test("гонка при удалении стороны переводится в конфликт 409", async () => {
+    const { db } = makeDb();
+    const rt = runtimeWith(db);
+    const created = await createConstruction(
+      rt,
+      { name: "СФ-014", status: "draft", sideCount: 2 } as any,
+      new Map(),
+      "user_1",
+    );
+    db.booking.count = async () => 0;
+    db.constructionSide.deleteMany = async () => {
+      throw new Prisma.PrismaClientKnownRequestError("fk failed", {
+        code: "P2003",
+        clientVersion: "test",
+      });
+    };
+
+    await expect(
+      updateConstruction(
+        rt,
+        created.id,
+        {
+          name: "СФ-014",
+          status: "draft",
+          sideCount: 1,
+          expectedUpdatedAt: created.updatedAt,
+        } as any,
+        new Map(),
+        "user_1",
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "construction_side_has_bookings",
+    });
   });
 });

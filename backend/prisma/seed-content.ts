@@ -52,8 +52,17 @@ interface ConstructionSeed {
   grp: number | null;
   trafficPerDay: number | null;
   pricePerMonth: number | null;
+  sides?: ConstructionSideSeed[];
   description: string;
   image: string;
+}
+
+interface ConstructionSideSeed {
+  code: "A" | "B" | "C";
+  description: string;
+  pricePerMonth?: number | null;
+  trafficPerDay?: number | null;
+  grp?: number | null;
 }
 
 const CONSTRUCTIONS: ConstructionSeed[] = [
@@ -72,6 +81,10 @@ const CONSTRUCTIONS: ConstructionSeed[] = [
     grp: 2.8,
     trafficPerDay: 38_000,
     pricePerMonth: 45_000,
+    sides: [
+      { code: "A", description: "к проспекту, поток к центру", trafficPerDay: 38_000, grp: 2.8 },
+      { code: "B", description: "от центра к Минутке", pricePerMonth: 42_000, trafficPerDay: 34_000, grp: 2.4 },
+    ],
     description: "Центральная пешеходная и автомобильная локация для кампаний с высокой частотой контакта.",
     image: "image_67f78a99726f2.webp",
   },
@@ -90,6 +103,10 @@ const CONSTRUCTIONS: ConstructionSeed[] = [
     grp: 3.4,
     trafficPerDay: 52_000,
     pricePerMonth: 52_000,
+    sides: [
+      { code: "A", description: "въезд на площадь", trafficPerDay: 52_000, grp: 3.4 },
+      { code: "B", description: "выезд с площади", pricePerMonth: 49_000, trafficPerDay: 47_000, grp: 3.1 },
+    ],
     description: "Заметная точка на городском транспортном узле с устойчивым ежедневным потоком.",
     image: "image_67f78a9a76a4f.webp",
   },
@@ -103,7 +120,7 @@ const CONSTRUCTIONS: ConstructionSeed[] = [
     lng: 45.684,
     format: "billboard",
     size: "3 × 6 м",
-    sideCount: 2,
+    sideCount: 3,
     lighting: "external",
     grp: 4.1,
     trafficPerDay: 44_000,
@@ -175,11 +192,16 @@ const CONSTRUCTIONS: ConstructionSeed[] = [
     lng: 45.679,
     format: "pillar",
     size: "1,4 × 3 м",
-    sideCount: 2,
+    sideCount: 3,
     lighting: "external",
     grp: null,
     trafficPerDay: 18_000,
     pricePerMonth: null,
+    sides: [
+      { code: "A", description: "в сторону центра района", trafficPerDay: 18_000, grp: null },
+      { code: "B", description: "к выезду из района", trafficPerDay: 16_000, grp: null },
+      { code: "C", description: "пешеходный фасад", trafficPerDay: 9_000, grp: null },
+    ],
     description: "Пилон для локальных кампаний и навигационных сообщений в районе.",
     image: "image_687e23156f398.webp",
   },
@@ -213,6 +235,63 @@ const LEGACY_CONSTRUCTION_SLUGS = [
   "plaza",
   "triumph",
 ] as const;
+
+function sideSeedsFor(p: ConstructionSeed): ConstructionSideSeed[] {
+  const codes = ["A", "B", "C"].slice(0, p.sideCount) as ("A" | "B" | "C")[];
+  const allowed = new Set(codes);
+  const outOfRange = p.sides?.find((side) => !allowed.has(side.code));
+  if (outOfRange) {
+    throw new Error(
+      `Seed construction ${p.code} declares side ${outOfRange.code} outside sideCount=${p.sideCount}`,
+    );
+  }
+  return codes.map((code) => {
+    const explicit = p.sides?.find((side) => side.code === code);
+    return {
+      code,
+      description: explicit?.description ?? "",
+      pricePerMonth: explicit?.pricePerMonth ?? null,
+      trafficPerDay: explicit?.trafficPerDay ?? p.trafficPerDay,
+      grp: explicit?.grp ?? p.grp,
+    };
+  });
+}
+
+async function syncSeedConstructionSides(
+  rt: Runtime,
+  constructionId: string,
+  p: ConstructionSeed,
+  photoId: string | null,
+): Promise<void> {
+  const sides = sideSeedsFor(p);
+  await rt.prisma.constructionSide.deleteMany({
+    where: {
+      constructionId,
+      code: { notIn: sides.map((side) => side.code) },
+    },
+  });
+  for (const side of sides) {
+    await rt.prisma.constructionSide.upsert({
+      where: { constructionId_code: { constructionId, code: side.code } },
+      update: {
+        description: side.description || null,
+        pricePerMonth: side.pricePerMonth ?? null,
+        trafficPerDay: side.trafficPerDay ?? null,
+        grp: side.grp ?? null,
+        photoId,
+      },
+      create: {
+        constructionId,
+        code: side.code,
+        description: side.description || null,
+        pricePerMonth: side.pricePerMonth ?? null,
+        trafficPerDay: side.trafficPerDay ?? null,
+        grp: side.grp ?? null,
+        photoId,
+      },
+    });
+  }
+}
 
 /** Метка новости: имя задаёт slug и порядок. */
 interface NewsLabelSeed {
@@ -386,7 +465,7 @@ async function seedConstructions(
     const slug = slugify(p.name);
     if (await rt.prisma.construction.findUnique({ where: { slug } })) continue;
     const coverId = await ensureAsset(rt, p.image, cache);
-    await rt.prisma.construction.create({
+    const construction = await rt.prisma.construction.create({
       data: {
         slug,
         name: p.name,
@@ -411,6 +490,7 @@ async function seedConstructions(
           : undefined,
       },
     });
+    await syncSeedConstructionSides(rt, construction.id, p, coverId);
   }
 }
 
@@ -598,6 +678,7 @@ async function refreshLegacyDemoContent(rt: Runtime): Promise<boolean> {
             : undefined,
       },
     });
+    await syncSeedConstructionSides(rt, current.id, p, coverId);
   }
 
   const labels = await upsertNewsLabels(rt);

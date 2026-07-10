@@ -19,6 +19,7 @@ import {
   toDateOnly,
   type BookingRow,
 } from "./booking-dto";
+import { previousDateOnly } from "./booking-periods";
 
 const paginatedBookings = paginatedSchema(bookingSchema);
 export type PaginatedBookings = z.infer<typeof paginatedBookings>;
@@ -31,6 +32,7 @@ export async function listBookings(
   if (query.status) where.status = query.status;
   if (query.kind) where.kind = query.kind;
   if (query.constructionId) where.constructionId = query.constructionId;
+  if (query.constructionSideId) where.constructionSideId = query.constructionSideId;
   if (query.from) where.endDate = { gt: dateOnlyToDate(query.from) };
   if (query.to) where.startDate = { lt: dateOnlyToDate(query.to) };
   if (query.search) {
@@ -127,12 +129,13 @@ async function saveBooking(
 
         const construction = await tx.construction.findUnique({
           where: { id: input.constructionId },
+          include: { sides: { orderBy: { code: "asc" } } },
         });
         if (!construction || construction.archivedAt) {
           throw new HttpError(422, "invalid_construction", "Конструкция не найдена или в архиве");
         }
 
-        const normalizedSide = normalizeSide(construction.sideCount, input.side ?? null);
+        const constructionSide = resolveConstructionSide(construction, input);
         const startDate = dateOnlyToDate(input.startDate);
         const endDateOnly = addBookingMonths(input.startDate, input.durationMonths);
         const endDate = dateOnlyToDate(endDateOnly);
@@ -141,23 +144,27 @@ async function saveBooking(
         await validateLinks(tx, input);
         await ensureNoOverlap(tx, {
           bookingId: existingId,
-          constructionId: construction.id,
-          side: normalizedSide,
+          constructionSideId: constructionSide.id,
           startDate,
           endDate,
           status: input.status,
         });
 
+        const catalogPricePerMonth = constructionSide.pricePerMonth ?? construction.pricePerMonth;
         const basePricePerMonth =
           input.basePricePerMonth !== undefined
             ? input.basePricePerMonth
-            : construction.pricePerMonth;
+            : current
+              ? current.basePricePerMonth
+              : catalogPricePerMonth;
         const totalPrice =
           input.kind === "service"
             ? null
             : input.totalPrice !== undefined
               ? input.totalPrice
-              : bookingDefaultTotal(basePricePerMonth, input.durationMonths);
+              : current
+                ? current.totalPrice
+                : bookingDefaultTotal(basePricePerMonth, input.durationMonths);
         const managerId =
           input.managerId !== undefined ? input.managerId : (current?.managerId ?? user.id);
 
@@ -165,7 +172,7 @@ async function saveBooking(
           kind: input.kind,
           status: input.status,
           constructionId: construction.id,
-          side: normalizedSide,
+          constructionSideId: constructionSide.id,
           clientId: input.kind === "commercial" ? (input.clientId ?? null) : null,
           serviceReasonId:
             input.kind === "service" ? (input.serviceReasonId ?? null) : null,
@@ -224,19 +231,54 @@ function normalizeReminder(
   return dateOnlyToDate(defaultBookingReminder(endDate));
 }
 
-function normalizeSide(sideCount: number, side: "A" | "B" | null): "A" | "B" | null {
-  if (sideCount === 1) {
-    if (side) {
-      throw new HttpError(422, "invalid_side", "У односторонней конструкции сторона не выбирается", {
-        side: "У односторонней конструкции сторона не выбирается",
+type ConstructionSideForBooking = {
+  id: string;
+  constructionId: string;
+  code: string;
+  pricePerMonth: number | null;
+};
+
+function resolveConstructionSide(
+  construction: {
+    id: string;
+    sideCount: number;
+    sides: ConstructionSideForBooking[];
+  },
+  input: UpsertBookingInput,
+): ConstructionSideForBooking {
+  const activeCodes = ["A", "B", "C"].slice(0, construction.sideCount);
+  const invalidSide = (): never => {
+    const message =
+      construction.sideCount === 1
+        ? "У односторонней конструкции используется сторона A"
+        : "Выберите сторону конструкции";
+    throw new HttpError(422, "invalid_side", message, {
+      constructionSideId: message,
+      side: message,
+    });
+  };
+
+  if (input.constructionSideId) {
+    const side = construction.sides.find((s) => s.id === input.constructionSideId);
+    if (!side || !activeCodes.includes(side.code)) return invalidSide();
+    if (input.side && input.side !== side.code) return invalidSide();
+    return side;
+  }
+
+  if (construction.sideCount === 1) {
+    if (input.side && input.side !== "A") return invalidSide();
+    const sideA = construction.sides.find((side) => side.code === "A");
+    if (!sideA) {
+      throw new HttpError(422, "invalid_side", "У конструкции не заведена сторона A", {
+        constructionSideId: "У конструкции не заведена сторона A",
       });
     }
-    return null;
+    return sideA;
   }
-  if (side !== "A" && side !== "B") {
-    throw new HttpError(422, "invalid_side", "Выберите сторону A или B", {
-      side: "Выберите сторону A или B",
-    });
+
+  const side = input.side ? construction.sides.find((s) => s.code === input.side) : null;
+  if (!side || !activeCodes.includes(side.code)) {
+    return invalidSide();
   }
   return side;
 }
@@ -285,8 +327,7 @@ async function ensureNoOverlap(
   tx: Prisma.TransactionClient,
   args: {
     bookingId: string | null;
-    constructionId: string;
-    side: "A" | "B" | null;
+    constructionSideId: string;
     startDate: Date;
     endDate: Date;
     status: string;
@@ -296,8 +337,7 @@ async function ensureNoOverlap(
   const conflict = await tx.booking.findFirst({
     where: {
       ...(args.bookingId ? { id: { not: args.bookingId } } : {}),
-      constructionId: args.constructionId,
-      side: args.side === null ? null : args.side,
+      constructionSideId: args.constructionSideId,
       status: { not: "cancelled" },
       startDate: { lt: args.endDate },
       endDate: { gt: args.startDate },
@@ -313,7 +353,7 @@ async function ensureNoOverlap(
   throw new HttpError(
     409,
     "booking_overlap",
-    `Период пересекается с бронью «${label}» (${toDateOnly(conflict.startDate)}–${toDateOnly(conflict.endDate)})`,
+    `Период пересекается с бронью «${label}» (${toDateOnly(conflict.startDate)}–${previousDateOnly(conflict.endDate)})`,
   );
 }
 
