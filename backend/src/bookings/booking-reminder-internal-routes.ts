@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { HttpError } from "../http/errors";
+import { safeTokenEquals } from "../http/token";
 import { sendDueBookingReminders } from "./booking-reminder-service";
 
 /**
@@ -16,7 +17,7 @@ export function bookingReminderInternalRoutes(rt: Runtime): Hono<AppEnv> {
   app.use("*", async (c, next) => {
     const token = rt.env.REMINDER_CRON_TOKEN;
     if (!token) throw new HttpError(404, "not_found", "Не найдено");
-    if (c.req.header("x-reminder-token") !== token) {
+    if (!safeTokenEquals(c.req.header("x-reminder-token"), token)) {
       throw new HttpError(401, "unauthorized", "Неверный токен рассылки");
     }
     await next();

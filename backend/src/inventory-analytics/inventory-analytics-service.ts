@@ -96,8 +96,18 @@ export async function getInventoryAnalytics(
   let bookingsCount = 0;
   let bookingsWithoutPrice = 0;
 
-  const rows = constructions.map((construction) => {
-    const sides: InventorySideAnalytics[] = construction.sides.map((side) => {
+  const rows = constructions.flatMap((construction) => {
+    // Архивная конструкция попадает в аналитику только из-за брони в окне
+    // (см. OR выше). Её пустые стороны — не продаваемый инвентарь: считаем лишь
+    // стороны с бронями, чтобы не завышать «свободные стороны»/знаменатель
+    // загрузки. У активной конструкции показываем все стороны.
+    const sourceSides =
+      construction.archivedAt == null
+        ? construction.sides
+        : construction.sides.filter((side) => side.bookings.length > 0);
+    if (sourceSides.length === 0) return [];
+
+    const sides: InventorySideAnalytics[] = sourceSides.map((side) => {
       const bookings = side.bookings;
       const occupancy = mergeOverlaps(bookings, from, to);
       const status = occupancyStatus(occupancy.occupiedDays, totalDays);
@@ -129,13 +139,15 @@ export async function getInventoryAnalytics(
       };
     });
 
-    return {
-      constructionId: construction.id,
-      name: construction.name,
-      code: construction.code,
-      address: construction.address,
-      sides,
-    };
+    return [
+      {
+        constructionId: construction.id,
+        name: construction.name,
+        code: construction.code,
+        address: construction.address,
+        sides,
+      },
+    ];
   });
 
   const totalSideDays = totalSides * totalDays;

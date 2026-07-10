@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { Prisma } from "@prisma/client";
 import type { Runtime } from "../src/runtime";
 import { createBooking, listBookings, updateBooking } from "../src/bookings/booking-service";
 
@@ -307,5 +308,40 @@ describe("listBookings search", () => {
     expect(targets).toContain("serviceReason");
     expect(targets).toContain("brand");
     expect(targets).toContain("client");
+  });
+});
+
+describe("booking-service concurrency", () => {
+  // Целостность занятости держится на Serializable + SSI Postgres: параллельная
+  // продажа той же стороны/периода упирается в сериализационный сбой (`P2034`),
+  // который сервис обязан отдать как понятный 409, а не как 500. Реальный
+  // конкурентный прогон требует Postgres (в песочнице его нет), поэтому проверяем
+  // само отображение ошибки: транзакция бросает P2034 → HttpError 409.
+  test("сериализационный сбой транзакции отдаётся как 409 booking_conflict", async () => {
+    const serializationFailure = new Prisma.PrismaClientKnownRequestError(
+      "could not serialize access due to read/write dependencies",
+      { code: "P2034", clientVersion: "test" },
+    );
+    const rt = runtimeWith({
+      $transaction: async () => {
+        throw serializationFailure;
+      },
+    });
+
+    await expect(createBooking(rt, user, input)).rejects.toMatchObject({
+      status: 409,
+      code: "booking_conflict",
+    });
+  });
+
+  test("прочие ошибки транзакции пробрасываются как есть", async () => {
+    const boom = new Error("boom");
+    const rt = runtimeWith({
+      $transaction: async () => {
+        throw boom;
+      },
+    });
+
+    await expect(createBooking(rt, user, input)).rejects.toBe(boom);
   });
 });

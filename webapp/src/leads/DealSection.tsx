@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   BOOKING_STATUS_LABEL,
   DEAL_DOCUMENT_TYPE_LABEL,
+  UPLOAD_ACCEPT,
   type DealDocumentType,
   type LeadDetail,
 } from "@noesis/contracts";
@@ -144,7 +145,7 @@ export function DealSection({
               <input
                 type="file"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
+                accept={UPLOAD_ACCEPT}
               />
               <button type="submit" className="btn-primary" disabled={!file || addDoc.isPending}>
                 Прикрепить

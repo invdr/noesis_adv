@@ -3,6 +3,7 @@ import { reportBuildSchema } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { HttpError } from "../http/errors";
+import { safeTokenEquals } from "../http/token";
 import { claimBuild, markPublished, reportBuildResult } from "./site-build-service";
 
 /**
@@ -17,7 +18,7 @@ export function siteBuildInternalRoutes(rt: Runtime): Hono<AppEnv> {
   app.use("*", async (c, next) => {
     const token = rt.env.BUILD_WORKER_TOKEN;
     if (!token) throw new HttpError(404, "not_found", "Не найдено");
-    if (c.req.header("x-build-token") !== token) {
+    if (!safeTokenEquals(c.req.header("x-build-token"), token)) {
       throw new HttpError(401, "unauthorized", "Неверный токен сборщика");
     }
     await next();

@@ -95,5 +95,62 @@ describe("getInventoryAnalytics", () => {
     expect(sideB.status).toBe("free");
     expect(sideB.effectivePricePerMonth).toBe(40_000);
   });
+
+  test("у архивной конструкции считает только стороны с бронями (пустые не завышают инвентарь)", async () => {
+    const rt = runtimeWithRows([
+      // Активная конструкция: обе стороны свободны — обе идут в инвентарь.
+      {
+        id: "c1",
+        name: "СФ-1",
+        code: "СФ-1",
+        address: "Грозный",
+        archivedAt: null,
+        pricePerMonth: 45_000,
+        sides: [
+          { id: "c1A", code: "A", description: null, pricePerMonth: null, trafficPerDay: null, grp: null, bookings: [] },
+          { id: "c1B", code: "B", description: null, pricePerMonth: null, trafficPerDay: null, grp: null, bookings: [] },
+        ],
+      },
+      // Архивная конструкция попала в окно из-за брони на A; свободная сторона B
+      // — не продаваемый инвентарь и не должна попадать в свободные/знаменатель.
+      {
+        id: "c2",
+        name: "СФ-2",
+        code: "СФ-2",
+        address: "Грозный",
+        archivedAt: d("2026-01-01"),
+        pricePerMonth: 50_000,
+        sides: [
+          {
+            id: "c2A",
+            code: "A",
+            description: null,
+            pricePerMonth: null,
+            trafficPerDay: null,
+            grp: null,
+            bookings: [
+              {
+                kind: "commercial",
+                status: "booked",
+                startDate: d("2026-07-01"),
+                endDate: d("2026-08-01"),
+                totalPrice: 50_000,
+              },
+            ],
+          },
+          { id: "c2B", code: "B", description: null, pricePerMonth: null, trafficPerDay: null, grp: null, bookings: [] },
+        ],
+      },
+    ]);
+
+    const result = await getInventoryAnalytics(rt, { from: "2026-07-01", to: "2026-08-01" });
+
+    // 2 (активные A/B) + 1 (архивная A с бронью), архивная B отброшена.
+    expect(result.totalSides).toBe(3);
+    expect(result.freeSides).toBe(2);
+    const archived = result.constructions.find((c) => c.constructionId === "c2")!;
+    expect(archived.sides).toHaveLength(1);
+    expect(archived.sides[0]!.sideCode).toBe("A");
+  });
 });
 
