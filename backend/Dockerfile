@@ -20,12 +20,14 @@ RUN bun install --frozen-lockfile || bun install
 COPY tsconfig.base.json ./
 COPY packages/contracts ./packages/contracts
 COPY backend ./backend
+COPY infra/docker-backend-entrypoint.sh /usr/local/bin/noesis-backend
 
 # Prisma client
 RUN bun run --cwd backend prisma:generate
+RUN chmod +x /usr/local/bin/noesis-backend
 
 EXPOSE 3000
 ENV PORT=3000
 
 # Применяем миграции и запускаем API
-CMD ["sh", "-c", "bun run --cwd backend prisma:deploy && bun run --cwd backend start"]
+CMD ["/usr/local/bin/noesis-backend"]

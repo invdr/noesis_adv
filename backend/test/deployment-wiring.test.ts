@@ -16,14 +16,23 @@ describe("deployment wiring for booking reminders", () => {
     expect(dockerCompose).toContain("TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}");
   });
 
-  test("кодирует реквизиты PostgreSQL перед записью DATABASE_URL без Docker", async () => {
-    const noDockerDeploy = await readFile(resolve(root, "infra/deploy-no-docker.sh"), "utf8");
+  test("кодирует реквизиты PostgreSQL перед записью DATABASE_URL с Docker и без него", async () => {
+    const [noDockerDeploy, dockerCompose, dockerEntrypoint] = await Promise.all([
+      readFile(resolve(root, "infra/deploy-no-docker.sh"), "utf8"),
+      readFile(resolve(root, "infra/docker-compose.prod.yml"), "utf8"),
+      readFile(resolve(root, "infra/docker-backend-entrypoint.sh"), "utf8"),
+    ]);
 
     expect(noDockerDeploy).toContain("urlencode()");
     expect(noDockerDeploy).toContain("encodeURIComponent(process.argv[1])");
     expect(noDockerDeploy).toContain('database_password="$(urlencode "$POSTGRES_PASSWORD")"');
     expect(noDockerDeploy).toContain(
       'postgresql://$database_user:$database_password@127.0.0.1:5432/$database_name?schema=public',
+    );
+    expect(dockerCompose).not.toContain("DATABASE_URL: postgresql://");
+    expect(dockerEntrypoint).toContain("encodeURIComponent(process.argv[1])");
+    expect(dockerEntrypoint).toContain(
+      'postgresql://$database_user:$database_password@postgres:5432/$database_name?schema=public',
     );
   });
 

@@ -25,7 +25,11 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-noesis}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-noesis}?schema=public
+      # The container entrypoint URL-encodes these before building DATABASE_URL.
+      # Keep the raw values here: Postgres itself needs the unescaped password.
+      POSTGRES_DB: ${POSTGRES_DB:-noesis}
+      POSTGRES_USER: ${POSTGRES_USER:-noesis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в infra/.env}
       PORT: 3000
       CORS_ORIGINS: ${CORS_ORIGINS:-https://noesis-grozny.ru}
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
