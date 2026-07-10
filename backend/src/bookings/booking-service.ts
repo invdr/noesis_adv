@@ -22,6 +22,7 @@ import {
 import { previousDateOnly } from "./booking-periods";
 
 const paginatedBookings = paginatedSchema(bookingSchema);
+const REMINDER_CLAIM_TTL_MS = 5 * 60 * 1000;
 export type PaginatedBookings = z.infer<typeof paginatedBookings>;
 
 /**
@@ -106,9 +107,21 @@ export async function cancelBooking(
     include: bookingInclude,
   });
   if (!current) throw new HttpError(404, "not_found", "Бронь не найдена");
+  if (hasActiveReminderClaim(current)) {
+    throw new HttpError(
+      409,
+      "reminder_delivery_in_progress",
+      "Напоминание уже отправляется — повторите отмену через несколько секунд",
+    );
+  }
   const row = await rt.prisma.booking.update({
     where: { id },
-    data: { status: "cancelled", managerId: current.managerId ?? user.id },
+    data: {
+      status: "cancelled",
+      managerId: current.managerId ?? user.id,
+      reminderSendingToken: null,
+      reminderSendingAt: null,
+    },
     include: bookingInclude,
   });
   return toBookingDto(row);
@@ -181,10 +194,19 @@ async function saveBooking(
               : current
                 ? current.totalPrice
                 : bookingDefaultTotal(basePricePerMonth, input.durationMonths);
-        // Смена даты напоминания перевзвешивает Telegram-дайджест (дедуп сбрасываем).
+        // Changing the date or private recipient schedules a fresh digest.
         const reminderChanged =
           (current?.reminderAt?.getTime() ?? null) !== (reminderDate?.getTime() ?? null);
-        const reminderNotifiedAt = reminderChanged
+        const managerChanged = current?.managerId !== managerId;
+        const reminderDeliveryChanged = reminderChanged || managerChanged;
+        if (reminderDeliveryChanged && hasActiveReminderClaim(current)) {
+          throw new HttpError(
+            409,
+            "reminder_delivery_in_progress",
+            "Напоминание уже отправляется — повторите смену даты или ответственного через несколько секунд",
+          );
+        }
+        const reminderNotifiedAt = reminderDeliveryChanged
           ? null
           : (current?.reminderNotifiedAt ?? null);
 
@@ -207,6 +229,12 @@ async function saveBooking(
           priceNote: input.priceNote ?? null,
           reminderAt: reminderDate,
           reminderNotifiedAt,
+          reminderSendingToken: reminderDeliveryChanged
+            ? null
+            : (current?.reminderSendingToken ?? null),
+          reminderSendingAt: reminderDeliveryChanged
+            ? null
+            : (current?.reminderSendingAt ?? null),
           managerId,
         };
 
@@ -238,6 +266,14 @@ async function saveBooking(
 
 function dateOnlyToDate(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
+}
+
+function hasActiveReminderClaim(current: BookingRow | null): boolean {
+  return Boolean(
+    current?.reminderSendingToken &&
+      current.reminderSendingAt &&
+      current.reminderSendingAt.getTime() > Date.now() - REMINDER_CLAIM_TTL_MS,
+  );
 }
 
 function normalizeReminder(

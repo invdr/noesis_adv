@@ -10,6 +10,10 @@ const initialMigrationPath = join(
   import.meta.dir,
   "../prisma/migrations/20260708000000_init/migration.sql",
 );
+const reminderClaimMigrationPath = join(
+  import.meta.dir,
+  "../prisma/migrations/20260710200000_booking_reminder_claim/migration.sql",
+);
 
 describe("construction sides migration", () => {
   test("keeps the historical initial schema intact and applies bookings forward", async () => {
@@ -39,5 +43,13 @@ describe("construction sides migration", () => {
     expect(sql).toContain("COALESCE(b.\"side\", 'A')");
     expect(sql).toContain("Booking_constructionSideId_constructionId_fkey");
     expect(sql).toContain("REFERENCES \"ConstructionSide\"(\"id\", \"constructionId\")");
+  });
+
+  test("adds an expiring reminder-delivery claim as a forward migration", async () => {
+    const sql = await readFile(reminderClaimMigrationPath, "utf8");
+
+    expect(sql).toContain('ADD COLUMN "reminderSendingToken" TEXT');
+    expect(sql).toContain('ADD COLUMN "reminderSendingAt" TIMESTAMP(3)');
+    expect(sql).toContain('CREATE INDEX "Booking_reminderSendingAt_idx"');
   });
 });

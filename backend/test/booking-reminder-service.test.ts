@@ -122,8 +122,9 @@ describe("sendDueBookingReminders", () => {
       prisma: {
         booking: {
           findMany: async () => rows,
-          updateMany: async ({ where }: any) => {
-            marked.push(where);
+          updateMany: async ({ where, data }: any) => {
+            if (data.reminderSendingToken) return { count: 1 };
+            if (data.reminderNotifiedAt) marked.push(where);
             return { count: 1 };
           },
         },
@@ -218,8 +219,7 @@ describe("sendDueBookingReminders", () => {
     const { prisma, marked } = prismaWith(rows);
 
     const first = sendDueBookingReminders(runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }));
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let i = 0; i < 8 && !resolveTelegram; i++) await Promise.resolve();
     expect(calls).toHaveLength(1);
 
     const second = sendDueBookingReminders(runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }));
@@ -245,9 +245,10 @@ describe("sendDueBookingReminders", () => {
     const prisma = {
       booking: {
         findMany: async () => rows,
-        updateMany: async ({ where }: any) => {
+        updateMany: async ({ where, data }: any) => {
+          if (data.reminderSendingToken) return { count: 1 };
           marked.push(where);
-          // A manager moved the reminder after the digest was sent.
+          // A manager moved the reminder after the digest was claimed.
           return { count: 0 };
         },
       },
@@ -266,7 +267,7 @@ describe("sendDueBookingReminders", () => {
     });
   });
 
-  test("не подтверждает приватное напоминание после смены ответственного", async () => {
+  test("не отправляет приватное напоминание, если получатель сменился до lease", async () => {
     const rows = [
       reminderRow("a", new Date(), {
         manager: { isActive: true, telegramChatId: "old-chat", name: "M", email: "m@n.ru" },
@@ -277,10 +278,13 @@ describe("sendDueBookingReminders", () => {
     const prisma = {
       booking: {
         findMany: async () => rows,
-        updateMany: async ({ where }: any) => {
+        updateMany: async ({ where, data }: any) => {
+          if (data.reminderSendingToken) {
+            marked.push(where);
+            // Admin reassigned before the sender claimed this snapshot.
+            return { count: 0 };
+          }
           marked.push(where);
-          // The manager changed after the Telegram request began, so the
-          // conditional update must leave the reminder pending for the new one.
           return { count: 0 };
         },
       },
@@ -291,7 +295,7 @@ describe("sendDueBookingReminders", () => {
     );
 
     expect(res).toEqual({ candidates: 1, notified: 0, skipped: 1 });
-    expect(calls.map((call) => call.chat_id)).toEqual(["old-chat"]);
+    expect(calls).toHaveLength(0);
     expect(marked[0]?.AND).toEqual([
       { manager: { is: { isActive: true, telegramChatId: "old-chat" } } },
     ]);

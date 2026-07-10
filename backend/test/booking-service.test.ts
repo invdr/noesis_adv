@@ -287,6 +287,36 @@ describe("booking-service", () => {
     expect(bookings[0]!.reminderNotifiedAt).toBeNull();
   });
 
+  test("смена ответственного перевзвешивает личное напоминание", async () => {
+    const { db, bookings } = makeDb();
+    const rt = runtimeWith(db);
+    const admin = { ...user, id: "admin", role: "admin" as const };
+    await createBooking(rt, user, input);
+    bookings[0]!.reminderNotifiedAt = new Date();
+
+    await updateBooking(rt, admin, "b1", { ...input, managerId: "u2" });
+
+    expect(bookings[0]!.managerId).toBe("u2");
+    expect(bookings[0]!.reminderNotifiedAt).toBeNull();
+  });
+
+  test("не меняет дату или получателя, пока Telegram держит активную lease", async () => {
+    const { db, bookings } = makeDb();
+    const rt = runtimeWith(db);
+    const admin = { ...user, id: "admin", role: "admin" as const };
+    await createBooking(rt, user, input);
+    bookings[0]!.reminderSendingToken = "claim";
+    bookings[0]!.reminderSendingAt = new Date();
+
+    await expect(
+      updateBooking(rt, admin, "b1", { ...input, managerId: "u2" }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "reminder_delivery_in_progress",
+    });
+    expect(bookings[0]!.managerId).toBe("u1");
+  });
+
   test("менеджер не может переназначить приватное напоминание другому сотруднику", async () => {
     const { db, bookings } = makeDb();
     const rt = runtimeWith(db);

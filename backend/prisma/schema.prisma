@@ -611,6 +611,10 @@ model Booking {
   /// Когда по этому напоминанию уже ушёл Telegram-дайджест (дедуп cron-рассылки).
   /// Сбрасывается в null при смене `reminderAt`, чтобы перенос срока перевзвёл напоминание.
   reminderNotifiedAt DateTime?
+  /// Краткая lease-резервация перед внешней отправкой Telegram: смена получателя/даты
+  /// не может вклиниться между проверкой адресата и sendMessage.
+  reminderSendingToken String?
+  reminderSendingAt    DateTime?
   managerId         String?
   manager           User?                 @relation("BookingManager", fields: [managerId], references: [id], onDelete: SetNull)
   createdById       String?
@@ -630,6 +634,7 @@ model Booking {
   @@index([leadId])
   @@index([managerId])
   @@index([reminderAt])
+  @@index([reminderSendingAt])
 }
 
 /// Фото галереи конструкции — упорядоченная связь Construction↔Asset. Обложка задаётся

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import {
   BOOKING_REMINDER_UPCOMING_DAYS,
@@ -15,6 +16,7 @@ import { sendTelegramMessage } from "../notifications/telegram";
 import { previousDateOnly, toDateOnly } from "./booking-periods";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REMINDER_CLAIM_TTL_MS = 5 * 60 * 1000;
 
 // На VPS работает один процесс backend. Блокировка по чату не даёт двум
 // перекрывающимся cron/manual вызовам отправить один и тот же дайджест, пока
@@ -141,6 +143,10 @@ interface ReminderDelivery {
   recipientWhere: Prisma.BookingWhereInput;
 }
 
+interface ClaimedReminderDelivery extends ReminderDelivery {
+  claimToken: string;
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -167,11 +173,18 @@ function bookingLabel(row: ReminderRow): string {
  * без токена бота ничего не помечаем.
  */
 export async function sendDueBookingReminders(rt: Runtime): Promise<DueRemindersResult> {
+  const now = new Date();
+  const staleClaimBefore = new Date(now.getTime() - REMINDER_CLAIM_TTL_MS);
   const rows = (await rt.prisma.booking.findMany({
     where: {
       status: { in: ACTIVE_STATUSES },
-      reminderAt: { not: null, lte: new Date() },
+      reminderAt: { not: null, lte: now },
       reminderNotifiedAt: null,
+      OR: [
+        { reminderSendingToken: null },
+        { reminderSendingAt: null },
+        { reminderSendingAt: { lt: staleClaimBefore } },
+      ],
     },
     include: {
       ...reminderInclude,
@@ -209,40 +222,99 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
       continue;
     }
     sendingReminderChats.add(chatId);
+    const claimedBucket = await claimReminderDeliveries(rt, bucket, staleClaimBefore);
+    result.skipped += bucket.length - claimedBucket.length;
+    if (claimedBucket.length === 0) {
+      sendingReminderChats.delete(chatId);
+      continue;
+    }
     const lines = ["🔔 <b>Подходит срок броней</b>"];
     try {
-      for (const { row } of bucket) {
+      for (const { row } of claimedBucket) {
         lines.push(`• ${escapeHtml(bookingLabel(row))} — до ${previousDateOnly(row.endDate)}`);
       }
       if (rt.env.CRM_BASE_URL) lines.push(`Открыть: ${rt.env.CRM_BASE_URL}/#/bookings`);
       if (await sendTelegramMessage(rt, lines.join("\n"), chatId)) {
         const marked = await Promise.all(
-          bucket.map(({ row, recipientWhere }) =>
+          claimedBucket.map(({ row, recipientWhere, claimToken }) =>
             rt.prisma.booking.updateMany({
-              // A manager can move a reminder or change its recipient while
-              // Telegram is responding. Acknowledge only the exact snapshot;
-              // an updated date or recipient stays unnotified for a fresh send.
+              // The lease prevents recipient/date changes after the claim and
+              // before sendMessage; this is still defensive against stale work.
               where: {
                 id: row.id,
                 reminderAt: row.reminderAt,
                 reminderNotifiedAt: null,
+                reminderSendingToken: claimToken,
                 AND: [recipientWhere],
               },
-              data: { reminderNotifiedAt: new Date() },
+              data: {
+                reminderNotifiedAt: new Date(),
+                reminderSendingToken: null,
+                reminderSendingAt: null,
+              },
             }),
           ),
         );
         const markedCount = marked.reduce((total, update) => total + update.count, 0);
         result.notified += markedCount;
-        result.skipped += bucket.length - markedCount;
+        result.skipped += claimedBucket.length - markedCount;
       } else {
-        result.skipped += bucket.length;
+        await releaseReminderClaims(rt, claimedBucket);
+        result.skipped += claimedBucket.length;
       }
+    } catch (err) {
+      await releaseReminderClaims(rt, claimedBucket).catch(() => {});
+      throw err;
     } finally {
       sendingReminderChats.delete(chatId);
     }
   }
   return result;
+}
+
+async function claimReminderDeliveries(
+  rt: Runtime,
+  deliveries: ReminderDelivery[],
+  staleClaimBefore: Date,
+): Promise<ClaimedReminderDelivery[]> {
+  const claims = await Promise.all(
+    deliveries.map(async (delivery) => {
+      const claimToken: string = randomUUID();
+      const claimed = await rt.prisma.booking.updateMany({
+        // The recipient snapshot is checked before claiming. Once claimed,
+        // booking-service rejects recipient/date changes until this short lease
+        // is released or expires, so sendMessage cannot target a stale chat.
+        where: {
+          id: delivery.row.id,
+          reminderAt: delivery.row.reminderAt,
+          reminderNotifiedAt: null,
+          OR: [
+            { reminderSendingToken: null },
+            { reminderSendingAt: null },
+            { reminderSendingAt: { lt: staleClaimBefore } },
+          ],
+          AND: [delivery.recipientWhere],
+        },
+        data: { reminderSendingToken: claimToken, reminderSendingAt: new Date() },
+      });
+      return claimed.count > 0 ? { ...delivery, claimToken } : null;
+    }),
+  );
+  return claims.filter((claim): claim is ClaimedReminderDelivery => claim !== null);
+}
+
+async function releaseReminderClaims(
+  rt: Runtime,
+  deliveries: ClaimedReminderDelivery[],
+): Promise<void> {
+  await Promise.all(
+    deliveries.map(({ row, claimToken }) =>
+      rt.prisma.booking.updateMany({
+        where: { id: row.id, reminderSendingToken: claimToken },
+        data: { reminderSendingToken: null, reminderSendingAt: null },
+      }),
+    ),
+  );
 }
 
 function recipientSnapshot(
