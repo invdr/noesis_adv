@@ -20,6 +20,12 @@ import type {
   LeadAssignEvent as PrismaLeadAssignEvent,
   LeadContactEvent as PrismaLeadContactEvent,
 } from "@prisma/client";
+import {
+  toDealBookingSummary,
+  toDealDocumentDto,
+  type DealBookingRow,
+  type DealDocumentRow,
+} from "./deal-dto";
 
 /** Минимум полей этапа, нужный DTO заявки. */
 type StageRefRow = Pick<PrismaStage, "id" | "name" | "kind" | "funnelId">;
@@ -137,7 +143,7 @@ export function toLeadContactEventDto(event: LeadContactEventRow): LeadContactEv
   };
 }
 
-/** Сборка полной карточки: заявка + заметки + истории + связанные + реферер. */
+/** Сборка полной карточки: заявка + заметки + истории + связанные + реферер + сделка. */
 export function toLeadDetailDto(args: {
   lead: LeadRow;
   notes: LeadNoteRow[];
@@ -146,6 +152,9 @@ export function toLeadDetailDto(args: {
   contactHistory: LeadContactEventRow[];
   related: LeadRow[];
   referrer: ReferrerRefRow | null;
+  bookings: DealBookingRow[];
+  dealDocuments: DealDocumentRow[];
+  cfg: { publicBase: string };
 }): LeadDetail {
   return {
     ...toLeadDto(args.lead),
@@ -155,5 +164,8 @@ export function toLeadDetailDto(args: {
     contactHistory: args.contactHistory.map(toLeadContactEventDto),
     related: args.related.map(toLeadDto),
     referrer: args.referrer ? toReferrerRef(args.referrer) : null,
+    bookings: args.bookings.map(toDealBookingSummary),
+    dealDocuments: args.dealDocuments.map((d) => toDealDocumentDto(d, args.cfg)),
+    dealNoDocuments: args.lead.dealNoDocuments,
   };
 }

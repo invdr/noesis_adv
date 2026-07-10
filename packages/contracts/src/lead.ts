@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { stageKindSchema } from "./stage";
 import { WEB_SOURCE_IDS } from "./source";
+import { dealBookingSummarySchema, dealDocumentSchema } from "./deal";
 
 /**
  * Источник заявки — id строки управляемого справочника (`source.ts`).
@@ -259,6 +260,12 @@ export const leadDetailSchema = leadSchema.extend({
   related: z.array(leadSchema),
   /** Развёрнутый реферер (если задан) — для показа/выбора в карточке. */
   referrer: leadReferrerRefSchema.nullable(),
+  /** Брони сделки (привязанные к заявке через `leadId`), read-only. */
+  bookings: z.array(dealBookingSummarySchema),
+  /** Прикреплённые закрывающие документы сделки. */
+  dealDocuments: z.array(dealDocumentSchema),
+  /** Отметка «по сделке документов нет» (мелкая сделка без бумаг). */
+  dealNoDocuments: z.boolean(),
 });
 export type LeadDetail = z.infer<typeof leadDetailSchema>;
 

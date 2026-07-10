@@ -58,6 +58,8 @@ model User {
   authoredNews           News[]             @relation("NewsAuthor")
   /// Документы, загруженные пользователем.
   authoredDocuments      Document[]         @relation("DocumentAuthor")
+  /// Закрывающие документы сделок, загруженные пользователем.
+  authoredDealDocuments  DealDocument[]     @relation("DealDocumentAuthor")
   /// Альбомы фотоотчётов, заведённые пользователем.
   authoredProgress       ProgressAlbum[]    @relation("ProgressAlbumAuthor")
   /// Контакты CRM, заведённые пользователем вручную.
@@ -117,6 +119,7 @@ model Asset {
   newsCovers         News[]              @relation("NewsCover")
   documentFiles      Document[]          @relation("DocumentFile")
   progressPhotos     ProgressPhoto[]     @relation("ProgressPhotoAsset")
+  dealDocuments      DealDocument[]      @relation("DealDocumentFile")
 
   @@index([kind])
   @@index([createdById])
@@ -322,6 +325,11 @@ model Lead {
   assignEvents      LeadAssignEvent[]
   contactEvents     LeadContactEvent[]
   bookings          Booking[]
+  /// Закрывающие документы сделки (договор/счёт/акт), прикреплённые к заявке.
+  dealDocuments     DealDocument[]
+  /// Явная отметка «по сделке документов нет» (мелкая сделка без бумаг): чтобы
+  /// сделка читалась как завершённая, а не «документы забыли».
+  dealNoDocuments   Boolean            @default(false)
 
   @@index([stageId])
   @@index([createdAt])
@@ -748,6 +756,33 @@ model Document {
 
   @@index([constructionId])
   @@index([categoryId])
+}
+
+/// Тип закрывающего документа сделки.
+enum DealDocumentType {
+  contract
+  invoice
+  act
+  other
+}
+
+/// Закрывающий документ сделки (Этап 4): файл (asset), прикреплённый к заявке
+/// как договор/счёт/акт/иное. Сама «сделка» — это выигранная заявка; отдельной
+/// сущности нет. Удаление документа сразу и навсегда (файл с диска чистит
+/// сервис); удаление заявки сносит документы каскадом.
+model DealDocument {
+  id          String           @id @default(cuid())
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type        DealDocumentType @default(other)
+  name        String
+  assetId     String
+  asset       Asset            @relation("DealDocumentFile", fields: [assetId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?            @relation("DealDocumentAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+
+  @@index([leadId])
 }
 
 /// Состояние сборки сайта для очереди автопересборки лендинга (Веха 4.2).

@@ -35,6 +35,7 @@ const baseLead: LeadRow = {
   nextContactTypeId: null,
   consentAt: now,
   consentIp: "203.0.113.7",
+  dealNoDocuments: false,
   createdAt: now,
   updatedAt: now,
 };
@@ -103,6 +104,9 @@ describe("toLeadDetailDto", () => {
       contactHistory: [contact],
       related: [{ ...baseLead, id: "rel1" }],
       referrer: { id: "c_realtor", fullName: "Пётр Риелтор", kind: "realtor" },
+      bookings: [],
+      dealDocuments: [],
+      cfg: { publicBase: "/files" },
     });
     expect(() => leadDetailSchema.parse(dto)).not.toThrow();
     expect(dto.notes[0]?.authorEmail).toBe("manager@noesis-grozny.ru");

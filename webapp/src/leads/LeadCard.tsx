@@ -7,6 +7,7 @@ import { copyToClipboard } from "../ui/clipboard";
 import { navigate } from "../router";
 import { listProjectOptions } from "../projects/project-options";
 import { canEditLead, formatDateTime, nextContactBadge, sourceLabel } from "./shared";
+import { DealSection } from "./DealSection";
 
 /** Элемент единой ленты активности заявки (этап, заметка, назначение, задача). */
 interface ActivityItem {
@@ -762,6 +763,8 @@ export function LeadCard({
           </form>
         )}
       </Section>
+
+          <DealSection leadId={leadId} detail={d} editable={editable} />
 
           <CollapsibleSection
             title="Активность"

@@ -81,6 +81,9 @@ export function leadDetail(over: Partial<LeadDetail> = {}): LeadDetail {
     ],
     related: [],
     referrer: null,
+    bookings: [],
+    dealDocuments: [],
+    dealNoDocuments: false,
     ...over,
   };
 }

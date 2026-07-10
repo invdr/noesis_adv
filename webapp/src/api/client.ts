@@ -22,6 +22,7 @@ import type {
   CreatedUserResponse,
   CreateUserInput,
   CreateDocumentInput,
+  CreateDealDocumentInput,
   CreateManualLeadInput,
   UpsertContactTypeInput,
   UpsertBookingBrandInput,
@@ -408,6 +409,24 @@ export const api = {
   },
   getLead(id: string) {
     return request<LeadDetail>(`/api/leads/${id}`);
+  },
+  // --- Сделка: закрывающие документы + отметка «без документов» ---
+  addDealDocument(leadId: string, input: CreateDealDocumentInput, file: File) {
+    const form = new FormData();
+    form.append("data", JSON.stringify(input));
+    form.append("file", file);
+    return requestMultipart<LeadDetail>(`/api/leads/${leadId}/documents`, "POST", form);
+  },
+  deleteDealDocument(leadId: string, docId: string) {
+    return request<LeadDetail>(`/api/leads/${leadId}/documents/${docId}`, {
+      method: "DELETE",
+    });
+  },
+  setDealNoDocuments(leadId: string, noDocuments: boolean) {
+    return request<LeadDetail>(`/api/leads/${leadId}/deal`, {
+      method: "PATCH",
+      body: JSON.stringify({ noDocuments }),
+    });
   },
   stats() {
     return request<LeadStats>("/api/leads/stats");

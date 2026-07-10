@@ -36,6 +36,7 @@ import {
   toLeadNoteDto,
   type LeadRow,
 } from "./lead-dto";
+import { dealBookingInclude, dealDocumentInclude } from "./deal-dto";
 
 /** Окно, в пределах которого повторная заявка с того же телефона помечается. */
 const REPEAT_WINDOW_DAYS = 30;
@@ -598,7 +599,7 @@ export async function getLeadDetail(
 
   if (!(await canViewLead(rt, user, lead))) return null;
 
-  const [notes, statusHistory, assignHistory, contactHistory, related, referrer] = await Promise.all([
+  const [notes, statusHistory, assignHistory, contactHistory, related, referrer, bookings, dealDocuments] = await Promise.all([
     rt.prisma.leadNote.findMany({
       where: { leadId: id },
       include: noteAuthorInclude,
@@ -633,6 +634,16 @@ export async function getLeadDetail(
           select: { id: true, fullName: true, kind: true },
         })
       : Promise.resolve(null),
+    rt.prisma.booking.findMany({
+      where: { leadId: id },
+      include: dealBookingInclude,
+      orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
+    }),
+    rt.prisma.dealDocument.findMany({
+      where: { leadId: id },
+      include: dealDocumentInclude,
+      orderBy: [{ type: "asc" }, { createdAt: "asc" }],
+    }),
   ]);
 
   return toLeadDetailDto({
@@ -643,6 +654,9 @@ export async function getLeadDetail(
     contactHistory,
     related,
     referrer,
+    bookings,
+    dealDocuments,
+    cfg: { publicBase: rt.env.FILES_PUBLIC_BASE },
   });
 }
 
@@ -701,7 +715,7 @@ async function canViewLead(
 }
 
 /** Может ли пользователь редактировать заявку (своя/неназначенная/admin). */
-function assertCanEdit(
+export function assertCanEdit(
   user: SessionUser,
   lead: { assigneeId: string | null },
 ): void {

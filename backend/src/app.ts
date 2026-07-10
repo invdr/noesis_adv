@@ -6,6 +6,7 @@ import { onError } from "./http/errors";
 import { authRoutes } from "./auth/auth-routes";
 import { userRoutes } from "./users/user-routes";
 import { leadRoutes } from "./leads/lead-routes";
+import { dealRoutes } from "./leads/deal-routes";
 import { contactRoutes } from "./contacts/contact-routes";
 import { contactTypeRoutes } from "./contact-types/contact-type-routes";
 import { sourceRoutes } from "./sources/source-routes";
@@ -85,6 +86,7 @@ export function createApp(rt: Runtime): Hono<AppEnv> {
   app.route("/api/stages", stageRoutes(rt));
   app.route("/api/funnels", funnelRoutes(rt));
   app.route("/api/leads", leadRoutes(rt));
+  app.route("/api/leads", dealRoutes(rt));
   app.route("/api/contacts", contactRoutes(rt));
   app.route("/api/contact-types", contactTypeRoutes(rt));
   app.route("/api/sources", sourceRoutes(rt));

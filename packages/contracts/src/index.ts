@@ -14,6 +14,7 @@ export * from "./file";
 export * from "./developer";
 export * from "./construction";
 export * from "./booking";
+export * from "./deal";
 export * from "./public-availability";
 export * from "./news";
 export * from "./document";
