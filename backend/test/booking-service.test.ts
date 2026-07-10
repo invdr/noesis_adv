@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { Prisma } from "@prisma/client";
 import type { Runtime } from "../src/runtime";
-import { createBooking, listBookings, updateBooking } from "../src/bookings/booking-service";
+import {
+  cancelBooking,
+  createBooking,
+  listBookings,
+  updateBooking,
+} from "../src/bookings/booking-service";
 
 function runtimeWith(prisma: any): Runtime {
   return { env: {}, prisma } as unknown as Runtime;
@@ -321,6 +326,20 @@ describe("booking-service", () => {
       code: "reminder_delivery_in_progress",
     });
     expect(bookings[0]!.managerId).toBe("u1");
+    expect(bookings[0]!.status).toBe("booked");
+  });
+
+  test("не отменяет бронь, пока Telegram держит активную lease", async () => {
+    const { db, bookings } = makeDb();
+    const rt = runtimeWith(db);
+    await createBooking(rt, user, input);
+    bookings[0]!.reminderSendingToken = "claim";
+    bookings[0]!.reminderSendingAt = new Date();
+
+    await expect(cancelBooking(rt, user, "b1")).rejects.toMatchObject({
+      status: 409,
+      code: "reminder_delivery_in_progress",
+    });
     expect(bookings[0]!.status).toBe("booked");
   });
 

@@ -17,6 +17,10 @@ import { previousDateOnly, toDateOnly } from "./booking-periods";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REMINDER_CLAIM_TTL_MS = 5 * 60 * 1000;
+// Telegram accepts up to 4096 characters. Leave a small margin because this
+// digest uses HTML markup and is assembled from user-entered labels.
+const TELEGRAM_MESSAGE_MAX_LENGTH = 4000;
+const REMINDER_LABEL_MAX_LENGTH = 500;
 
 // На VPS работает один процесс backend. Блокировка по чату не даёт двум
 // перекрывающимся cron/manual вызовам отправить один и тот же дайджест, пока
@@ -163,6 +167,47 @@ function bookingLabel(row: ReminderRow): string {
   return `${head} · ${row.constructionSide.code}${tail}`;
 }
 
+function reminderLine(row: ReminderRow): string {
+  const label = bookingLabel(row);
+  const shortened =
+    label.length > REMINDER_LABEL_MAX_LENGTH
+      ? `${label.slice(0, REMINDER_LABEL_MAX_LENGTH - 1)}…`
+      : label;
+  return `• ${escapeHtml(shortened)} — до ${previousDateOnly(row.endDate)}`;
+}
+
+function reminderMessage(
+  deliveries: ClaimedReminderDelivery[],
+  crmBaseUrl: string | undefined,
+): string {
+  const lines = ["🔔 <b>Подходит срок броней</b>"];
+  for (const { row } of deliveries) lines.push(reminderLine(row));
+  if (crmBaseUrl) lines.push(`Открыть: ${crmBaseUrl}/#/bookings`);
+  return lines.join("\n");
+}
+
+function splitReminderMessages(
+  deliveries: ClaimedReminderDelivery[],
+  crmBaseUrl: string | undefined,
+): ClaimedReminderDelivery[][] {
+  const chunks: ClaimedReminderDelivery[][] = [];
+  let chunk: ClaimedReminderDelivery[] = [];
+  for (const delivery of deliveries) {
+    const candidate = [...chunk, delivery];
+    if (
+      chunk.length > 0 &&
+      reminderMessage(candidate, crmBaseUrl).length > TELEGRAM_MESSAGE_MAX_LENGTH
+    ) {
+      chunks.push(chunk);
+      chunk = [delivery];
+    } else {
+      chunk = candidate;
+    }
+  }
+  if (chunk.length > 0) chunks.push(chunk);
+  return chunks;
+}
+
 /**
  * Telegram-дайджест по броням, у которых подошёл срок напоминания. Дёргается
  * cron-ом на VPS (`POST /api/internal/bookings/reminders/notify`). Идемпотентен:
@@ -228,40 +273,37 @@ export async function sendDueBookingReminders(rt: Runtime): Promise<DueReminders
       sendingReminderChats.delete(chatId);
       continue;
     }
-    const lines = ["🔔 <b>Подходит срок броней</b>"];
     try {
-      for (const { row } of claimedBucket) {
-        lines.push(`• ${escapeHtml(bookingLabel(row))} — до ${previousDateOnly(row.endDate)}`);
-      }
-      if (rt.env.CRM_BASE_URL) lines.push(`Открыть: ${rt.env.CRM_BASE_URL}/#/bookings`);
-      if (await sendTelegramMessage(rt, lines.join("\n"), chatId)) {
-        const marked = await Promise.all(
-          claimedBucket.map(({ row, recipientWhere, claimToken }) =>
-            rt.prisma.booking.updateMany({
-              // The lease prevents recipient/date changes after the claim and
-              // before sendMessage; this is still defensive against stale work.
-              where: {
-                id: row.id,
-                status: { in: ACTIVE_STATUSES },
-                reminderAt: row.reminderAt,
-                reminderNotifiedAt: null,
-                reminderSendingToken: claimToken,
-                AND: [recipientWhere],
-              },
-              data: {
-                reminderNotifiedAt: new Date(),
-                reminderSendingToken: null,
-                reminderSendingAt: null,
-              },
-            }),
-          ),
-        );
-        const markedCount = marked.reduce((total, update) => total + update.count, 0);
-        result.notified += markedCount;
-        result.skipped += claimedBucket.length - markedCount;
-      } else {
-        await releaseReminderClaims(rt, claimedBucket);
-        result.skipped += claimedBucket.length;
+      for (const messageBucket of splitReminderMessages(claimedBucket, rt.env.CRM_BASE_URL)) {
+        if (await sendTelegramMessage(rt, reminderMessage(messageBucket, rt.env.CRM_BASE_URL), chatId)) {
+          const marked = await Promise.all(
+            messageBucket.map(({ row, recipientWhere, claimToken }) =>
+              rt.prisma.booking.updateMany({
+                // The lease prevents recipient/date changes after the claim and
+                // before sendMessage; this is still defensive against stale work.
+                where: {
+                  id: row.id,
+                  status: { in: ACTIVE_STATUSES },
+                  reminderAt: row.reminderAt,
+                  reminderNotifiedAt: null,
+                  reminderSendingToken: claimToken,
+                  AND: [recipientWhere],
+                },
+                data: {
+                  reminderNotifiedAt: new Date(),
+                  reminderSendingToken: null,
+                  reminderSendingAt: null,
+                },
+              }),
+            ),
+          );
+          const markedCount = marked.reduce((total, update) => total + update.count, 0);
+          result.notified += markedCount;
+          result.skipped += messageBucket.length - markedCount;
+        } else {
+          await releaseReminderClaims(rt, messageBucket);
+          result.skipped += messageBucket.length;
+        }
       }
     } catch (err) {
       await releaseReminderClaims(rt, claimedBucket).catch(() => {});

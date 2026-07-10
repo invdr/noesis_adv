@@ -102,29 +102,45 @@ export async function cancelBooking(
   user: SessionUser,
   id: string,
 ): Promise<Booking> {
-  const current = await rt.prisma.booking.findUnique({
-    where: { id },
-    include: bookingInclude,
-  });
-  if (!current) throw new HttpError(404, "not_found", "Бронь не найдена");
-  if (hasActiveReminderClaim(current)) {
-    throw new HttpError(
-      409,
-      "reminder_delivery_in_progress",
-      "Напоминание уже отправляется — повторите отмену через несколько секунд",
+  try {
+    const row = await rt.prisma.$transaction(
+      async (tx) => {
+        const current = await tx.booking.findUnique({
+          where: { id },
+          include: bookingInclude,
+        });
+        if (!current) throw new HttpError(404, "not_found", "Бронь не найдена");
+        if (hasActiveReminderClaim(current)) {
+          throw new HttpError(
+            409,
+            "reminder_delivery_in_progress",
+            "Напоминание уже отправляется — повторите отмену через несколько секунд",
+          );
+        }
+        return tx.booking.update({
+          where: { id },
+          data: {
+            status: "cancelled",
+            managerId: current.managerId ?? user.id,
+            reminderSendingToken: null,
+            reminderSendingAt: null,
+          },
+          include: bookingInclude,
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    return toBookingDto(row as BookingRow);
+  } catch (err) {
+    if (isSerializationFailure(err)) {
+      throw new HttpError(
+        409,
+        "booking_conflict",
+        "Бронь изменилась параллельно, обновите календарь и повторите отмену",
+      );
+    }
+    throw err;
   }
-  const row = await rt.prisma.booking.update({
-    where: { id },
-    data: {
-      status: "cancelled",
-      managerId: current.managerId ?? user.id,
-      reminderSendingToken: null,
-      reminderSendingAt: null,
-    },
-    include: bookingInclude,
-  });
-  return toBookingDto(row);
 }
 
 async function saveBooking(

@@ -167,6 +167,25 @@ describe("sendDueBookingReminders", () => {
     expect(marked.map((where) => where.id).sort()).toEqual(["a", "b"]);
   });
 
+  test("делит большой дайджест на сообщения допустимой длины", async () => {
+    const rows = Array.from({ length: 160 }, (_, index) =>
+      reminderRow(`booking-${index}`, new Date(), {
+        manager: { isActive: true, telegramChatId: "100", name: "M", email: "m@n.ru" },
+        createdBy: null,
+      }),
+    );
+    const { prisma, marked } = prismaWith(rows);
+
+    const res = await sendDueBookingReminders(
+      runtimeWith(prisma, { TELEGRAM_BOT_TOKEN: "T" }),
+    );
+
+    expect(res).toEqual({ candidates: 160, notified: 160, skipped: 0 });
+    expect(calls.length).toBeGreaterThan(1);
+    expect(calls.every((call) => call.text.length <= 4000)).toBe(true);
+    expect(marked).toHaveLength(160);
+  });
+
   test("без Telegram у адресата — пропускаем и не помечаем (уведомим позже)", async () => {
     const rows = [
       reminderRow("a", new Date(), {
