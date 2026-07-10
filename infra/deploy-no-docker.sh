@@ -296,6 +296,7 @@ main() {
 
   "$BUN_BIN" install --frozen-lockfile || "$BUN_BIN" install
   "$BUN_BIN" run --cwd backend prisma:generate
+  "$BUN_BIN" run --cwd backend prisma:deploy
 
   install_systemd_units
   systemctl restart "$NOESIS_BACKEND_SERVICE"
