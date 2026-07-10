@@ -9,10 +9,12 @@ import {
   CONSTRUCTION_LIGHTING_LABEL,
   CONSTRUCTION_SIDE_COUNT_LABEL,
   newsBodyToParagraphs,
+  pricePerMonthLabel,
   resolveSiteSettings,
   SITE_SETTINGS_DEFAULTS,
   type Badge,
   type Construction as ContractConstruction,
+  type ConstructionFormat,
   type PublicSiteStats,
   type ResolvedSiteSettings,
 } from "@noesis/contracts";
@@ -177,6 +179,78 @@ export function toConstructionView(c: Construction): ConstructionView {
       ...b,
       bg: BADGE_PALETTE[b.color].bg,
       fg: BADGE_PALETTE[b.color].fg,
+    })),
+  };
+}
+
+/**
+ * Позиция каталога для страницы `/catalog` (карта + фильтры + список). Богатые
+ * поля для клиентской фильтрации (формат/цена/район) запекаются на сборке;
+ * занятость на выбранный период дотягивается в браузере из публичного API
+ * `/api/public/construction-availability` и мёржится по `id`.
+ */
+export interface CatalogItem {
+  id: string;
+  slug: string;
+  name: string;
+  code: string;
+  address: string;
+  district: string | null;
+  lat: number | null;
+  lng: number | null;
+  format: ConstructionFormat;
+  formatLabel: string;
+  sideCount: number;
+  sideLabel: string;
+  /** Числовая цена/мес для фильтра диапазона; `null` — «по запросу». */
+  pricePerMonth: number | null;
+  priceLabel: string;
+  img: string;
+  imgSrcset?: string;
+  sizeLabel: string;
+  lightingLabel: string;
+  reachLabel: string;
+  href: string;
+  badges: { text: string; color: Badge["color"]; bg: string; fg: string }[];
+  sides: {
+    id: string;
+    code: string;
+    effectivePricePerMonth: number | null;
+    priceLabel: string;
+    description: string | null;
+  }[];
+}
+
+export function toCatalogItem(c: Construction): CatalogItem {
+  const view = toConstructionView(c);
+  return {
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    code: c.code ?? "",
+    address: view.address,
+    district: c.district,
+    lat: c.lat,
+    lng: c.lng,
+    format: c.format,
+    formatLabel: view.formatLabel,
+    sideCount: c.sideCount,
+    sideLabel: view.sideLabel,
+    pricePerMonth: c.pricePerMonth,
+    priceLabel: c.priceLabel,
+    img: view.img,
+    imgSrcset: view.imgSrcset,
+    sizeLabel: view.sizeLabel,
+    lightingLabel: view.lightingLabel,
+    reachLabel: view.reachLabel,
+    href: view.href,
+    badges: view.badges,
+    sides: c.sides.map((s) => ({
+      id: s.id,
+      code: s.code,
+      effectivePricePerMonth: s.effectivePricePerMonth,
+      priceLabel: pricePerMonthLabel(s.effectivePricePerMonth),
+      description: s.description,
     })),
   };
 }

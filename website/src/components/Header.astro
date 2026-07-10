@@ -14,7 +14,8 @@ const navClass = solid ? "nav scrolled" : "nav";
 const homeHref = home ? "#top" : "/";
 const base = home ? "" : "/";
 const link = (hash: string) => `${base}${hash}`;
-const mapHref = link("#map");
+// «Карта» ведёт на полноценную страницу каталога с картой и фильтрами (Этап 3).
+const mapHref = "/catalog";
 ---
 <nav class={navClass} id="nav">
   <a href={homeHref} class="nav-logo">

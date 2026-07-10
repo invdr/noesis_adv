@@ -16,6 +16,7 @@ export const GET: APIRoute = async () => {
   // контент и обновляется); по спецификации sitemap lastmod опционален поурочно.
   const urls: { loc: string; lastmod?: string | null }[] = [
     { loc: "/" },
+    { loc: "/catalog" },
     { loc: "/news" },
     { loc: "/privacy" },
     ...constructions.map((p) => ({ loc: `/constructions/${p.slug}` })),
