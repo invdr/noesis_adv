@@ -98,6 +98,12 @@ server {
     try_files $uri $uri/ $uri.html @noesis_stale;
   }
 
+  # Старый публичный префикс карточек конструкций до переименования домена.
+  # Сохраняем SEO и закладки, в том числе query-параметры.
+  location ^~ /zhk/ {
+    rewrite ^/zhk/(.*)$ /constructions/$1 permanent;
+  }
+
   location @noesis_stale {
     return 301 /#catalog;
   }

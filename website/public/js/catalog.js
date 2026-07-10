@@ -22,6 +22,8 @@
   let availability = null;      // Map id -> { status, sides }
   let availabilityLabel = '';
   let availabilityError = false;
+  let availabilityRequest = 0;
+  let availabilityController = null;
 
   function esc(v) {
     return String(v == null ? '' : v)
@@ -180,6 +182,9 @@
   }
 
   function refreshAvailability() {
+    const request = ++availabilityRequest;
+    if (availabilityController) availabilityController.abort();
+    availabilityController = null;
     const from = String(new FormData(form).get('from') || '');
     const toIncl = String(new FormData(form).get('to') || '');
     const clear = () => {
@@ -205,9 +210,17 @@
       return;
     }
     const toExcl = shiftDate(toIncl, 1);
-    fetch(`${API}/api/public/construction-availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(toExcl)}`)
+    // Пока идёт новый запрос, не показываем занятость от старого периода.
+    clear();
+    annotateCards();
+    apply();
+    const controller = new AbortController();
+    availabilityController = controller;
+    fetch(`${API}/api/public/construction-availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(toExcl)}`, { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data) => {
+        if (request !== availabilityRequest) return;
+        availabilityController = null;
         availability = new Map();
         (data.items || []).forEach((c) => {
           availability.set(c.id, { status: aggregate(c.sides), sides: c.sides || [] });
@@ -218,7 +231,9 @@
         annotateCards();
         apply();
       })
-      .catch(() => {
+      .catch((err) => {
+        if (request !== availabilityRequest || err?.name === 'AbortError') return;
+        availabilityController = null;
         clear();
         availabilityError = true;
         annotateCards();
