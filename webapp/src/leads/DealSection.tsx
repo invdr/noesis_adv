@@ -8,6 +8,7 @@ import {
   type LeadDetail,
 } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
+import { BookingReports } from "../bookings/BookingReports";
 
 const DOC_TYPES = Object.keys(DEAL_DOCUMENT_TYPE_LABEL) as DealDocumentType[];
 
@@ -85,6 +86,7 @@ export function DealSection({
                   {BOOKING_STATUS_LABEL[b.status]}
                 </span>
                 <span className="deal-booking-price tnum">{priceLabel(b.totalPrice)}</span>
+                <BookingReports booking={b} readOnly compact />
               </li>
             ))}
           </ul>

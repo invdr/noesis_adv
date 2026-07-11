@@ -24,8 +24,8 @@ export interface UploadInput {
   originalName: string;
 }
 
-/** Место хранения файла. Закрытые документы сделки не должны попасть под `/files/`. */
-export type AssetStorageScope = "public" | "deal";
+/** Место хранения файла. Закрытые материалы не должны попасть под `/files/`. */
+export type AssetStorageScope = "public" | "deal" | "bookingReport";
 
 /** Результат валидации: распознанный тип по содержимому. */
 export interface ValidatedUpload {
@@ -124,7 +124,12 @@ export async function storeUpload(
 ): Promise<Asset> {
   const validated = await validateUpload(input.bytes);
   const dir = filesDir(rt.env);
-  const prefix = opts.storageScope === "deal" ? "deals" : "";
+  const prefix =
+    opts.storageScope === "deal"
+      ? "deals"
+      : opts.storageScope === "bookingReport"
+        ? "booking-reports"
+        : "";
   const written: string[] = [];
 
   try {

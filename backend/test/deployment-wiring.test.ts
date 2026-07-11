@@ -5,6 +5,19 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dir, "..", "..");
 
 describe("deployment wiring for booking reminders", () => {
+  test("закрывает прямую раздачу фотоотчётов брони и поднимает лимит только для их загрузки", async () => {
+    const [dockerNginx, noDockerNginx] = await Promise.all([
+      readFile(resolve(root, "infra/nginx/default.conf"), "utf8"),
+      readFile(resolve(root, "infra/nginx/no-docker.conf.template"), "utf8"),
+    ]);
+
+    for (const nginx of [dockerNginx, noDockerNginx]) {
+      expect(nginx).toContain("location ^~ /files/booking-reports/ {");
+      expect(nginx).toContain("location ~ ^/api/bookings/[^/]+/reports/[^/]+/photos$");
+      expect(nginx).toContain("client_max_body_size 102m;");
+    }
+  });
+
   test("передаёт секрет cron и токен Telegram в backend для Docker и no-docker", async () => {
     const [noDockerDeploy, dockerCompose] = await Promise.all([
       readFile(resolve(root, "infra/deploy-no-docker.sh"), "utf8"),

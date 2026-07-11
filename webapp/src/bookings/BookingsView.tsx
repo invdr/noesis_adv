@@ -17,6 +17,7 @@ import {
   type UpsertBookingInput,
 } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
+import { BookingReports } from "./BookingReports";
 import {
   DAY_MS,
   dateOnlyMs,
@@ -617,6 +618,14 @@ function BookingForm({
           )}
         </div>
       </div>
+
+      {booking && (
+        <div className="card" style={{ marginTop: "1.25rem" }}>
+          <div className="card-body">
+            <BookingReports booking={booking} />
+          </div>
+        </div>
+      )}
 
       <div className="row" style={{ gap: 10, marginTop: "1.25rem" }}>
         <button className="btn-primary" onClick={() => save.mutate()} disabled={save.isPending}>

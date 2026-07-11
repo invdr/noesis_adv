@@ -124,6 +124,22 @@ describe("storeUpload", () => {
     ]);
   });
 
+  test("фотоотчёт брони хранится в закрытой подпапке", async () => {
+    const db = memoryAsset();
+    const rt = runtimeWith(db);
+    const asset = await storeUpload(
+      rt,
+      { bytes: await makePng(2000), originalName: "placement.png" },
+      { storageScope: "bookingReport" },
+    );
+
+    const stored = db.store.get(asset.id)!;
+    const storageKey = stored.storageKey as string;
+    expect(storageKey).toStartWith("booking-reports/");
+    expect((await listFiles(dir)).map((file) => relative(dir, file).replaceAll("\\", "/")))
+      .toContain(storageKey);
+  });
+
   test("сбой записи в БД не оставляет сирот на диске (решение №1/№4)", async () => {
     const rt = runtimeWith({
       create: async () => {

@@ -21,6 +21,7 @@ import { constructionRoutes } from "./constructions/construction-routes";
 import { publicConstructionAvailabilityRoutes } from "./constructions/construction-availability-routes";
 import { publicConstructionRoutes } from "./constructions/construction-public-routes";
 import { bookingRoutes } from "./bookings/booking-routes";
+import { bookingReportRoutes } from "./bookings/booking-report-routes";
 import { bookingBrandRoutes } from "./bookings/booking-brand-routes";
 import { bookingServiceReasonRoutes } from "./bookings/booking-service-reason-routes";
 import { bookingReminderInternalRoutes } from "./bookings/booking-reminder-internal-routes";
@@ -95,6 +96,7 @@ export function createApp(rt: Runtime): Hono<AppEnv> {
   app.route("/api/partner-analytics", partnerAnalyticsRoutes(rt));
   app.route("/api/files", fileRoutes(rt));
   app.route("/api/developers", developerRoutes(rt));
+  app.route("/api/bookings", bookingReportRoutes(rt));
   app.route("/api/bookings", bookingRoutes(rt));
   app.route("/api/booking-brands", bookingBrandRoutes(rt));
   app.route("/api/booking-service-reasons", bookingServiceReasonRoutes(rt));

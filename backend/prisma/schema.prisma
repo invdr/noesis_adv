@@ -62,6 +62,8 @@ model User {
   authoredDealDocuments  DealDocument[]     @relation("DealDocumentAuthor")
   /// Альбомы фотоотчётов, заведённые пользователем.
   authoredProgress       ProgressAlbum[]    @relation("ProgressAlbumAuthor")
+  /// Отчёты о размещении, заведённые пользователем.
+  authoredBookingReports BookingReport[]    @relation("BookingReportAuthor")
   /// Контакты CRM, заведённые пользователем вручную.
   authoredContacts       Contact[]          @relation("ContactAuthor")
 
@@ -119,6 +121,7 @@ model Asset {
   newsCovers         News[]              @relation("NewsCover")
   documentFiles      Document[]          @relation("DocumentFile")
   progressPhotos     ProgressPhoto[]     @relation("ProgressPhotoAsset")
+  bookingReportPhotos BookingReportPhoto[] @relation("BookingReportPhotoAsset")
   dealDocuments      DealDocument[]      @relation("DealDocumentFile")
 
   @@index([kind])
@@ -619,6 +622,7 @@ model Booking {
   manager           User?                 @relation("BookingManager", fields: [managerId], references: [id], onDelete: SetNull)
   createdById       String?
   createdBy         User?                 @relation("BookingAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  reports           BookingReport[]
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
@@ -635,6 +639,40 @@ model Booking {
   @@index([managerId])
   @@index([reminderAt])
   @@index([reminderSendingAt])
+}
+
+/// Закрытый ежемесячный фотоотчёт о фактическом размещении по конкретной брони.
+/// Один отчёт на календарный месяц брони; фотографии не публикуются на сайт.
+model BookingReport {
+  id          String               @id @default(cuid())
+  bookingId   String
+  booking     Booking              @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  year        Int
+  month       Int
+  reportDate  DateTime
+  note        String?
+  createdById String?
+  createdBy   User?                @relation("BookingReportAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  photos      BookingReportPhoto[]
+
+  @@unique([bookingId, year, month])
+  @@index([bookingId])
+}
+
+/// Фотография закрытого отчёта по брони. Файл хранится вне публичного /files/.
+model BookingReportPhoto {
+  id        String        @id @default(cuid())
+  reportId  String
+  report    BookingReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     Asset         @relation("BookingReportPhotoAsset", fields: [assetId], references: [id], onDelete: Cascade)
+  position  Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  @@unique([reportId, assetId])
+  @@index([reportId])
 }
 
 /// Фото галереи конструкции — упорядоченная связь Construction↔Asset. Обложка задаётся

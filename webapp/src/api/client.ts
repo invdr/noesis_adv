@@ -4,6 +4,7 @@ import type {
   ArchiveStageInput,
   AssignLeadInput,
   Booking,
+  BookingReport,
   BookingBrand,
   BookingRemindersResponse,
   BookingServiceReason,
@@ -27,6 +28,7 @@ import type {
   UpsertContactTypeInput,
   UpsertBookingBrandInput,
   UpsertBookingInput,
+  UpsertBookingReportInput,
   UpsertBookingServiceReasonInput,
   ResetPasswordResponse,
   UpdateUserInput,
@@ -70,6 +72,13 @@ import type {
 } from "@noesis/contracts";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
+/** Абсолютный адрес API-ресурса для `<img>` и обычных ссылок вне `fetch`. */
+export function apiUrl(path: string): string {
+  return path.startsWith("http://") || path.startsWith("https://")
+    ? path
+    : `${API_URL}${path}`;
+}
 
 /** HTTP-ошибка с кодом ответа — чтобы фронт отличал 401 от прочих. */
 export class ApiError extends Error {
@@ -528,6 +537,45 @@ export const api = {
   getBookingReminders(scope?: "mine" | "all") {
     return request<BookingRemindersResponse>(
       `/api/bookings/reminders${scope ? `?scope=${scope}` : ""}`,
+    );
+  },
+  listBookingReports(bookingId: string) {
+    return request<BookingReport[]>(`/api/bookings/${bookingId}/reports`);
+  },
+  createBookingReport(bookingId: string, input: UpsertBookingReportInput) {
+    return request<BookingReport>(`/api/bookings/${bookingId}/reports`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateBookingReport(
+    bookingId: string,
+    reportId: string,
+    input: UpsertBookingReportInput,
+  ) {
+    return request<BookingReport>(`/api/bookings/${bookingId}/reports/${reportId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  deleteBookingReport(bookingId: string, reportId: string) {
+    return request<void>(`/api/bookings/${bookingId}/reports/${reportId}`, {
+      method: "DELETE",
+    });
+  },
+  addBookingReportPhotos(bookingId: string, reportId: string, files: File[]) {
+    const form = new FormData();
+    files.forEach((file, i) => form.append(`photo_${i}`, file));
+    return requestMultipart<BookingReport>(
+      `/api/bookings/${bookingId}/reports/${reportId}/photos`,
+      "POST",
+      form,
+    );
+  },
+  deleteBookingReportPhoto(bookingId: string, reportId: string, photoId: string) {
+    return request<void>(
+      `/api/bookings/${bookingId}/reports/${reportId}/photos/${photoId}`,
+      { method: "DELETE" },
     );
   },
 
