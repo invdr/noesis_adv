@@ -100,15 +100,15 @@ export function LeadCard({
     retry: false,
   });
 
-  // Партнёры-рефереры (риелторы/агентства) для выбора в карточке.
-  const realtors = useQuery({
-    queryKey: ["contacts", "realtor", ""],
-    queryFn: () => api.listContacts({ kind: "realtor" }),
+  // Партнёры и компании для выбора реферера в карточке.
+  const partners = useQuery({
+    queryKey: ["contacts", "partner", ""],
+    queryFn: () => api.listContacts({ role: "partner", type: "individual" }),
     retry: false,
   });
-  const agencies = useQuery({
-    queryKey: ["contacts", "agency", ""],
-    queryFn: () => api.listContacts({ kind: "agency" }),
+  const companies = useQuery({
+    queryKey: ["contacts", "company", ""],
+    queryFn: () => api.listContacts({ role: "partner", type: "company" }),
     retry: false,
   });
 
@@ -610,7 +610,7 @@ export function LeadCard({
               </div>
 
               <div className="field field-wide" style={{ marginBottom: 0 }}>
-                <div className="field-label">Реферер (риелтор/агентство)</div>
+                <div className="field-label">Партнёр, который привёл клиента</div>
                 {editable ? (
                   <>
                     <select
@@ -621,25 +621,25 @@ export function LeadCard({
                       <option value="">— без реферера —</option>
                       {d.referrerId &&
                         d.referrer &&
-                        realtors.data &&
-                        agencies.data &&
-                        !realtors.data.some((r) => r.id === d.referrerId) &&
-                        !agencies.data.some((a) => a.id === d.referrerId) && (
+                        partners.data &&
+                        companies.data &&
+                        !partners.data.some((r) => r.id === d.referrerId) &&
+                        !companies.data.some((a) => a.id === d.referrerId) && (
                           <option value={d.referrerId}>{d.referrer.fullName} (архив)</option>
                         )}
-                      {(realtors.data ?? []).length > 0 && (
-                        <optgroup label="Риелторы">
-                          {(realtors.data ?? []).map((r) => (
+                      {(partners.data ?? []).length > 0 && (
+                        <optgroup label="Партнёры">
+                          {(partners.data ?? []).map((r) => (
                             <option key={r.id} value={r.id}>
                               {r.fullName}
-                              {r.agencyName ? ` (${r.agencyName})` : ""}
+                              {r.organizationName ? ` (${r.organizationName})` : ""}
                             </option>
                           ))}
                         </optgroup>
                       )}
-                      {(agencies.data ?? []).length > 0 && (
-                        <optgroup label="Агентства">
-                          {(agencies.data ?? []).map((a) => (
+                      {(companies.data ?? []).length > 0 && (
+                        <optgroup label="Компании">
+                          {(companies.data ?? []).map((a) => (
                             <option key={a.id} value={a.id}>
                               {a.fullName}
                             </option>
@@ -660,7 +660,7 @@ export function LeadCard({
                         {d.referrer.fullName}
                         <span className="subtle">
                           {" "}
-                          · {d.referrer.kind === "agency" ? "агентство" : "риелтор"}
+                          · {d.referrer.type === "company" ? "компания" : "партнёр"}
                         </span>
                       </>
                     ) : (

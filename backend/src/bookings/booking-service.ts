@@ -363,7 +363,7 @@ async function validateLinks(
 ): Promise<void> {
   if (input.kind === "commercial") {
     const client = await tx.contact.findFirst({
-      where: { id: input.clientId ?? "", kind: "client", archivedAt: null },
+      where: { id: input.clientId ?? "", isClient: true, archivedAt: null },
     });
     if (!client) throw new HttpError(422, "invalid_client", "Клиент не найден");
   }

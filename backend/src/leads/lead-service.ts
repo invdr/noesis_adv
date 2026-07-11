@@ -131,7 +131,7 @@ export async function createLead(
 }
 
 /**
- * Ручной приём заявки в CRM (оффлайн: пришёл в офис / привёл риелтор). В отличие
+ * Ручной приём заявки в CRM (оффлайн: пришёл в офис / привёл партнёр). В отличие
  * от публичного `createLead`: без honeypot и анти-спам-троттла (оператор
  * доверенный), с опциональным реферером и явным ответственным. Согласие ПДн
  * подтверждает оператор (схема требует `consent: true`) — пишем `consentAt=now`,
@@ -167,11 +167,11 @@ export async function createManualLead(
   // Реферер (если задан) — действующий партнёр (та же проверка, что setLeadReferrer).
   if (input.referrerId) {
     const partner = await rt.prisma.contact.findUnique({ where: { id: input.referrerId } });
-    if (!partner || partner.archivedAt || partner.kind === "client") {
+    if (!partner || partner.archivedAt || !partner.isPartner) {
       throw new HttpError(
         422,
         "invalid_referrer",
-        "Реферером может быть только действующий риелтор или агентство",
+        "Реферером может быть только действующий партнёр",
       );
     }
   }
@@ -215,7 +215,9 @@ export async function createManualLead(
       ? (
           await tx.contact.create({
             data: {
-              kind: "realtor",
+              type: "individual",
+              isClient: false,
+              isPartner: true,
               fullName: input.newReferrer.fullName,
               phone: input.newReferrer.phone ?? null,
               createdById: user.id,
@@ -303,14 +305,14 @@ async function requireManualClient(
     where: { id: contactId },
     select: {
       id: true,
-      kind: true,
+      isClient: true,
       fullName: true,
       phone: true,
       archivedAt: true,
       createdById: true,
     },
   });
-  if (!contact || contact.archivedAt || contact.kind !== "client") {
+  if (!contact || contact.archivedAt || !contact.isClient) {
     throw new HttpError(422, "invalid_client_contact", "Выберите действующего клиента");
   }
   if (!contact.phone) {
@@ -632,7 +634,7 @@ export async function getLeadDetail(
     lead.referrerId
       ? rt.prisma.contact.findUnique({
           where: { id: lead.referrerId },
-          select: { id: true, fullName: true, kind: true },
+          select: { id: true, fullName: true, type: true },
         })
       : Promise.resolve(null),
     rt.prisma.booking.findMany({
@@ -664,7 +666,7 @@ export async function getLeadDetail(
 }
 
 /**
- * Назначить/снять реферера заявки (контакт-партнёр риелтор/агентство). Требует
+ * Назначить/снять реферера заявки (контрагент с ролью партнёра). Требует
  * прав на редактирование. `referrerId = null` — снять привязку.
  */
 export async function setLeadReferrer(
@@ -681,11 +683,11 @@ export async function setLeadReferrer(
     const partner = await rt.prisma.contact.findUnique({
       where: { id: input.referrerId },
     });
-    if (!partner || partner.archivedAt || partner.kind === "client") {
+    if (!partner || partner.archivedAt || !partner.isPartner) {
       throw new HttpError(
         422,
         "invalid_referrer",
-        "Реферером может быть только действующий риелтор или агентство",
+        "Реферером может быть только действующий партнёр",
       );
     }
   }

@@ -53,7 +53,7 @@ export function leadRoutes(rt: Runtime): Hono<AppEnv> {
     return c.json(lead, 201);
   });
 
-  // CRM: ручной приём заявки (оффлайн — пришёл в офис / привёл риелтор).
+  // CRM: ручной приём заявки (оффлайн — пришёл в офис / привёл партнёр).
   app.post("/manual", auth, async (c) => {
     const input = createManualLeadSchema.parse(await c.req.json().catch(() => ({})));
     const lead = await createManualLead(rt, c.get("user"), input);
@@ -140,7 +140,7 @@ export function leadRoutes(rt: Runtime): Hono<AppEnv> {
     return c.json(lead);
   });
 
-  // CRM: назначить/снять реферера (риелтор/агентство).
+  // CRM: назначить/снять реферера-партнёра.
   app.patch("/:id/referrer", auth, async (c) => {
     const input = setLeadReferrerSchema.parse(await c.req.json().catch(() => ({})));
     const lead = await setLeadReferrer(rt, c.get("user"), c.req.param("id"), input);

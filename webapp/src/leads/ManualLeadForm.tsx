@@ -10,7 +10,7 @@ import {
 import { listProjectOptions } from "../projects/project-options";
 
 /**
- * Форма ручного приёма заявки (оффлайн: пришёл в офис / привёл риелтор). Клиент
+ * Форма ручного приёма заявки (оффлайн: пришёл в офис / привёл партнёр). Клиент
  * заводится/дедупится по телефону на бэке, как при веб-приёме; согласие ПДн
  * подтверждает оператор чекбоксом. Реферер и ответственный — необязательны
  * (менеджер может взять заявку себе; адресно на другого назначает только admin).
@@ -46,9 +46,9 @@ export function ManualLeadForm({
   const [takeSelf, setTakeSelf] = useState(false);
   const [message, setMessage] = useState("");
   const [consent, setConsent] = useState(false);
-  const [newRealtorName, setNewRealtorName] = useState("");
-  const [newRealtorPhone, setNewRealtorPhone] = useState("");
-  const [newRealtorPhoneError, setNewRealtorPhoneError] = useState("");
+  const [newPartnerName, setNewPartnerName] = useState("");
+  const [newPartnerPhone, setNewPartnerPhone] = useState("");
+  const [newPartnerPhoneError, setNewPartnerPhoneError] = useState("");
 
   const projects = useQuery({
     queryKey: ["projects", "picker", "all"],
@@ -67,20 +67,20 @@ export function ManualLeadForm({
     queryKey: ["contacts", "client", clientSearchTerm],
     queryFn: () =>
       api.listContacts({
-        kind: "client",
+        role: "client",
         search: clientSearchTerm,
       }),
     enabled: clientSearchTerm.length >= 2,
     retry: false,
   });
-  const realtors = useQuery({
-    queryKey: ["contacts", "realtor", ""],
-    queryFn: () => api.listContacts({ kind: "realtor" }),
+  const partners = useQuery({
+    queryKey: ["contacts", "partner", ""],
+    queryFn: () => api.listContacts({ role: "partner", type: "individual" }),
     retry: false,
   });
-  const agencies = useQuery({
-    queryKey: ["contacts", "agency", ""],
-    queryFn: () => api.listContacts({ kind: "agency" }),
+  const companies = useQuery({
+    queryKey: ["contacts", "company", ""],
+    queryFn: () => api.listContacts({ role: "partner", type: "company" }),
     retry: false,
   });
 
@@ -99,10 +99,10 @@ export function ManualLeadForm({
         contactId: selectedClientId || undefined,
         referrerId: referrerId || undefined,
         newReferrer:
-          !referrerId && newRealtorName.trim()
+          !referrerId && newPartnerName.trim()
             ? {
-                fullName: newRealtorName.trim(),
-                phone: newRealtorPhone.trim() || null,
+                fullName: newPartnerName.trim(),
+                phone: newPartnerPhone.trim() || null,
               }
             : undefined,
         assigneeId:
@@ -119,13 +119,13 @@ export function ManualLeadForm({
   });
 
   const phoneErrorText = phoneInputError(phone, true);
-  const realtorPhoneErrorText = phoneInputError(newRealtorPhone);
-  const realtorDraftValid = !newRealtorPhone.trim() || newRealtorName.trim().length >= 2;
+  const partnerPhoneErrorText = phoneInputError(newPartnerPhone);
+  const partnerDraftValid = !newPartnerPhone.trim() || newPartnerName.trim().length >= 2;
   const canSubmit =
     name.trim().length >= 2 &&
     phoneErrorText === "" &&
-    realtorPhoneErrorText === "" &&
-    realtorDraftValid &&
+    partnerPhoneErrorText === "" &&
+    partnerDraftValid &&
     consent;
 
   return (
@@ -141,10 +141,10 @@ export function ManualLeadForm({
         <div className="card-title">Приём заявки (оффлайн)</div>
       </div>
       <div className="card-body">
-        {(projects.error || clients.error || realtors.error || agencies.error) && (
+        {(projects.error || clients.error || partners.error || companies.error) && (
           <p className="alert alert-error" role="alert">
             Не удалось загрузить справочники (конструкции/контакты):{" "}
-            {((projects.error || clients.error || realtors.error || agencies.error) as Error).message}
+            {((projects.error || clients.error || partners.error || companies.error) as Error).message}
           </p>
         )}
 
@@ -264,32 +264,32 @@ export function ManualLeadForm({
           </select>
         </Field>
 
-        <Field label="Реферер — риелтор/агентство (необязательно)">
+        <Field label="Партнёр, который привёл клиента (необязательно)">
           <select
             value={referrerId}
             onChange={(e) => {
               setReferrerId(e.target.value);
               if (e.target.value) {
-                setNewRealtorName("");
-                setNewRealtorPhone("");
-                setNewRealtorPhoneError("");
+                setNewPartnerName("");
+                setNewPartnerPhone("");
+                setNewPartnerPhoneError("");
               }
             }}
           >
             <option value="">— без реферера —</option>
-            {(realtors.data ?? []).length > 0 && (
-              <optgroup label="Риелторы">
-                {(realtors.data ?? []).map((r) => (
+            {(partners.data ?? []).length > 0 && (
+              <optgroup label="Партнёры">
+                {(partners.data ?? []).map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.fullName}
-                    {r.agencyName ? ` (${r.agencyName})` : ""}
+                    {r.organizationName ? ` (${r.organizationName})` : ""}
                   </option>
                 ))}
               </optgroup>
             )}
-            {(agencies.data ?? []).length > 0 && (
-              <optgroup label="Агентства">
-                {(agencies.data ?? []).map((a) => (
+            {(companies.data ?? []).length > 0 && (
+              <optgroup label="Компании">
+                {(companies.data ?? []).map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.fullName}
                   </option>
@@ -299,31 +299,31 @@ export function ManualLeadForm({
           </select>
           <div className="settings-grid" style={{ marginTop: 10 }}>
             <input
-              value={newRealtorName}
+              value={newPartnerName}
               onChange={(e) => {
-                setNewRealtorName(e.target.value);
+                setNewPartnerName(e.target.value);
                 if (e.target.value.trim()) setReferrerId("");
               }}
-              placeholder="Новый риелтор, если его нет в списке"
+              placeholder="Новый партнёр, если его нет в списке"
             />
             <div>
               <input
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel"
-                value={newRealtorPhone}
+                value={newPartnerPhone}
                 onChange={(e) => {
-                  setNewRealtorPhone(e.target.value);
-                  if (newRealtorPhoneError) setNewRealtorPhoneError("");
+                  setNewPartnerPhone(e.target.value);
+                  if (newPartnerPhoneError) setNewPartnerPhoneError("");
                   if (e.target.value.trim()) setReferrerId("");
                 }}
-                onBlur={() => setNewRealtorPhoneError(phoneInputError(newRealtorPhone))}
-                aria-invalid={newRealtorPhoneError ? true : undefined}
+                onBlur={() => setNewPartnerPhoneError(phoneInputError(newPartnerPhone))}
+                aria-invalid={newPartnerPhoneError ? true : undefined}
                 placeholder={PHONE_PLACEHOLDER}
               />
-              {newRealtorPhoneError && (
+              {newPartnerPhoneError && (
                 <span className="field-error" role="alert">
-                  {newRealtorPhoneError}
+                  {newPartnerPhoneError}
                 </span>
               )}
             </div>

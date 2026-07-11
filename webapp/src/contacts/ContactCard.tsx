@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CONTACT_KIND_LABEL, type ContactLeadRef } from "@noesis/contracts";
+import { COUNTERPARTY_TYPE_LABEL, type ContactLeadRef } from "@noesis/contracts";
 import { api } from "../api/client";
 import { copyToClipboard } from "../ui/clipboard";
 import { navigate } from "../router";
@@ -9,7 +9,7 @@ import "./ContactCard.css";
 
 /**
  * Карточка контакта (`#/contacts/<id>`): данные + заявки. Клиенту показываем
- * его заявки-покупателя, партнёру (риелтор/агентство) — приведённые. Списки
+ * его заявки-покупателя, партнёру — приведённые. Списки
  * уже отфильтрованы видимостью на бэке. Read-only: партнёров редактируют в
  * списке, клиент — агрегат по заявкам.
  */
@@ -36,9 +36,13 @@ export function ContactCard({ contactId, onBack }: { contactId: string; onBack: 
   }
 
   const c = contact.data;
-  const isClient = c.kind === "client";
-  const leads = isClient ? c.leads : c.referredLeads;
-  const passportRows = isClient
+  const leads = c.isClient && c.isPartner ? [...c.leads, ...c.referredLeads] : c.isClient ? c.leads : c.referredLeads;
+  const leadsTitle = c.isClient && c.isPartner
+    ? `Заявки клиента и приведённые (${leads.length})`
+    : c.isClient
+      ? `Заявки клиента (${leads.length})`
+      : `Приведённые заявки (${leads.length})`;
+  const passportRows = c.type === "individual"
     ? [
         ["Дата рождения", c.birthDate],
         ["Место рождения", c.birthPlace],
@@ -67,7 +71,9 @@ export function ContactCard({ contactId, onBack }: { contactId: string; onBack: 
       <div className="contact-card__header">
         <h2 className="contact-card__title">
           {c.fullName}
-          <span className="badge badge-neutral">{CONTACT_KIND_LABEL[c.kind]}</span>
+          <span className="badge badge-neutral">{COUNTERPARTY_TYPE_LABEL[c.type]}</span>
+          {c.isClient && <span className="badge badge-info">клиент</span>}
+          {c.isPartner && <span className="badge badge-neutral">партнёр</span>}
           {c.isArchived && <span className="badge badge-warn">в архиве</span>}
         </h2>
         <div className="contact-card__meta">
@@ -86,8 +92,8 @@ export function ContactCard({ contactId, onBack }: { contactId: string; onBack: 
               </button>
             </span>
           )}
-          {c.agencyName && <span>агентство: {c.agencyName}</span>}
-          {c.companyName && <span>{c.companyName}</span>}
+          {c.organizationName && <span>компания: {c.organizationName}</span>}
+          {c.legalName && c.legalName !== c.fullName && <span>{c.legalName}</span>}
           {c.lastInteractionAt && (
             <span className="subtle">
               последнее взаимодействие: {formatDateTime(c.lastInteractionAt)}
@@ -124,10 +130,12 @@ export function ContactCard({ contactId, onBack }: { contactId: string; onBack: 
         </details>
       )}
 
+      <Requisites contact={c} />
+
       <section className="card">
         <div className="card-body">
           <h3 className="section-title">
-            {isClient ? `Заявки клиента (${leads.length})` : `Приведённые заявки (${leads.length})`}
+            {leadsTitle}
           </h3>
           {leads.length === 0 ? (
             <p className="empty">Заявок нет.</p>
@@ -162,5 +170,37 @@ export function ContactCard({ contactId, onBack }: { contactId: string; onBack: 
         </div>
       </section>
     </div>
+  );
+}
+
+function Requisites({ contact }: { contact: import("@noesis/contracts").Contact }) {
+  const rows = [
+    ["Юридическое название", contact.legalName],
+    ["ИНН", contact.inn],
+    ["КПП", contact.kpp],
+    ["ОГРН / ОГРНИП", contact.ogrn],
+    ["Юридический адрес", contact.legalAddress],
+    ["Почтовый адрес", contact.postalAddress],
+    ["Должность руководителя", contact.directorTitle],
+    ["ФИО руководителя", contact.directorFullName],
+    ["Основание полномочий", contact.directorBasis],
+    ["Банк", contact.bankName],
+    ["БИК", contact.bankBik],
+    ["Расчётный счёт", contact.bankAccount],
+    ["Корреспондентский счёт", contact.correspondentAccount],
+  ].filter((row): row is [string, string] => Boolean(row[1]));
+  if (rows.length === 0) return null;
+  return (
+    <details className="card lead-collapse contact-card__passport">
+      <summary className="lead-collapse-summary">
+        <span className="lead-collapse-chevron" aria-hidden="true">›</span>
+        <h3 className="section-title" style={{ margin: 0 }}>Реквизиты</h3>
+      </summary>
+      <div className="card-body">
+        <dl className="contact-card__details">
+          {rows.map(([label, value]) => <div key={label} className="contact-card__details-row"><dt>{label}</dt><dd>{value}</dd></div>)}
+        </dl>
+      </div>
+    </details>
   );
 }

@@ -114,7 +114,7 @@ export function BookingsView({ user }: { user: SessionUser }) {
   });
   const clients = useQuery({
     queryKey: ["booking-clients"],
-    queryFn: () => api.listContacts({ kind: "client" }),
+    queryFn: () => api.listContacts({ role: "client" }),
   });
   const leads = useQuery({
     queryKey: ["booking-leads"],

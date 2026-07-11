@@ -388,7 +388,7 @@ describe("setLeadReferrer", () => {
         },
       },
       contact: {
-        findUnique: async () => ({ id: "r1", kind: "realtor", archivedAt: null }),
+        findUnique: async () => ({ id: "r1", isPartner: true, archivedAt: null }),
       },
     };
     const res = await setLeadReferrer(runtimeWith(prisma), admin, "lead1", { referrerId: "r1" });
@@ -399,7 +399,7 @@ describe("setLeadReferrer", () => {
   test("клиента в рефереры не берём (422)", async () => {
     const prisma = {
       lead: { findUnique: async () => leadRow() },
-      contact: { findUnique: async () => ({ id: "c1", kind: "client", archivedAt: null }) },
+      contact: { findUnique: async () => ({ id: "c1", isPartner: false, archivedAt: null }) },
     };
     await expect(
       setLeadReferrer(runtimeWith(prisma), admin, "lead1", { referrerId: "c1" }),
@@ -496,7 +496,7 @@ describe("createManualLead", () => {
       contact: {
         findUnique: async () => ({
           id: "c_selected",
-          kind: "client",
+          isClient: true,
           fullName: "Мария",
           phone: "+79991112233",
           archivedAt: null,
@@ -544,7 +544,7 @@ describe("createManualLead", () => {
       contact: {
         findUnique: async () => ({
           id: "c_hidden",
-          kind: "client",
+          isClient: true,
           fullName: "Мария",
           phone: "+79991112233",
           archivedAt: null,
@@ -569,7 +569,7 @@ describe("createManualLead", () => {
   test("реферер-клиент/архивный отклоняется (422 invalid_referrer)", async () => {
     const prisma = {
       leadSource: { findUnique: async () => ({ id: "offline", isWeb: false, archivedAt: null }) },
-      contact: { findUnique: async () => ({ id: "c1", kind: "client", archivedAt: null }) },
+      contact: { findUnique: async () => ({ id: "c1", isPartner: false, archivedAt: null }) },
     };
     await expect(
       createManualLead(runtimeWith(prisma), admin, {
@@ -617,7 +617,9 @@ describe("createManualLead", () => {
       newReferrer: { fullName: "Пётр Риелтор", phone: "+79991112233" },
     });
     expect(contactData).toMatchObject({
-      kind: "realtor",
+      type: "individual",
+      isClient: false,
+      isPartner: true,
       fullName: "Пётр Риелтор",
       phone: "+79991112233",
       createdById: "m1",

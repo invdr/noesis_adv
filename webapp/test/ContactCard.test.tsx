@@ -29,7 +29,8 @@ describe("ContactCard", () => {
   test("клиент: шапка с tel-ссылкой и таблица его заявок", async () => {
     renderCard();
     expect(await screen.findByRole("heading", { name: /Иван Петров/ })).toBeTruthy();
-    expect(screen.getByText("Клиент")).toBeTruthy();
+    expect(screen.getByText("Человек")).toBeTruthy();
+    expect(screen.getByText("клиент")).toBeTruthy();
     const phone = screen.getByRole("link", { name: "+79280000000" });
     expect(phone.getAttribute("href")).toBe("tel:+79280000000");
     expect(screen.getByText(/Заявки клиента \(1\)/)).toBeTruthy();
@@ -61,17 +62,19 @@ describe("ContactCard", () => {
   test("партнёр: заголовок «Приведённые заявки» и агентство в шапке", async () => {
     spyOn(api, "getContact").mockResolvedValue(
       contactDetail({
-        kind: "realtor",
-        fullName: "Пётр Риелтор",
-        agencyName: "АН «Дом»",
+        type: "individual",
+        isClient: false,
+        isPartner: true,
+        fullName: "Пётр Партнёр",
+        organizationName: "ООО «Дом»",
         leads: [],
         referredLeads: contactDetail().leads,
       }),
     );
     renderCard();
-    expect(await screen.findByRole("heading", { name: /Пётр Риелтор/ })).toBeTruthy();
-    expect(screen.getByText("Риелтор")).toBeTruthy();
-    expect(screen.getByText(/агентство: АН «Дом»/)).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /Пётр Партнёр/ })).toBeTruthy();
+    expect(screen.getByText("партнёр")).toBeTruthy();
+    expect(screen.getByText(/компания: ООО «Дом»/)).toBeTruthy();
     expect(screen.getByText(/Приведённые заявки \(1\)/)).toBeTruthy();
   });
 

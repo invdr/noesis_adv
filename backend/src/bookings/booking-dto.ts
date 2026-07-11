@@ -76,7 +76,7 @@ function contactSummary(contact: PrismaContact | null) {
         id: contact.id,
         fullName: contact.fullName,
         phone: contact.phone,
-        companyName: contact.companyName,
+        companyName: contact.legalName,
       }
     : null;
 }

@@ -7,9 +7,9 @@ import type { Contact, LeadStageRef } from "@noesis/contracts";
 
 /** Минимум полей этапа для DTO контакта (последняя заявка клиента). */
 type StageRefRow = Pick<PrismaStage, "id" | "name" | "kind" | "funnelId">;
-/** Строка контакта с агентством (для agencyName). */
+/** Строка контрагента с представляющей компанией. */
 export type ContactRow = PrismaContact & {
-  agency: Pick<PrismaContact, "fullName"> | null;
+  organization: Pick<PrismaContact, "fullName"> | null;
 };
 /** Свежайшая видимая заявка-покупатель контакта (для lastStage/lastSource). */
 export type LatestLeadRow =
@@ -35,12 +35,13 @@ export function toContactDto(row: ContactRow, agg: ContactAggregates): Contact {
   const last = agg.latestLead;
   return {
     id: row.id,
-    kind: row.kind,
+    type: row.type,
+    isClient: row.isClient,
+    isPartner: row.isPartner,
     fullName: row.fullName,
     phone: row.phone,
-    companyName: row.companyName,
-    agencyId: row.agencyId,
-    agencyName: row.agency?.fullName ?? null,
+    organizationId: row.organizationId,
+    organizationName: row.organization?.fullName ?? null,
     createdById: row.createdById,
     note: row.note,
     birthDate: row.birthDate ?? null,
@@ -52,6 +53,19 @@ export function toContactDto(row: ContactRow, agg: ContactAggregates): Contact {
     passportDepartmentCode: row.passportDepartmentCode ?? null,
     registrationAddress: row.registrationAddress ?? null,
     actualAddress: row.actualAddress ?? null,
+    legalName: row.legalName ?? null,
+    inn: row.inn ?? null,
+    kpp: row.kpp ?? null,
+    ogrn: row.ogrn ?? null,
+    legalAddress: row.legalAddress ?? null,
+    postalAddress: row.postalAddress ?? null,
+    bankName: row.bankName ?? null,
+    bankBik: row.bankBik ?? null,
+    bankAccount: row.bankAccount ?? null,
+    correspondentAccount: row.correspondentAccount ?? null,
+    directorTitle: row.directorTitle ?? null,
+    directorFullName: row.directorFullName ?? null,
+    directorBasis: row.directorBasis ?? null,
     lastInteractionAt: row.lastInteractionAt ? row.lastInteractionAt.toISOString() : null,
     leadsCount: agg.leadsCount,
     referredCount: agg.referredCount,

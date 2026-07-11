@@ -14,7 +14,7 @@ import {
 } from "./contact-service";
 
 /**
- * Роуты контактов (клиенты/риелторы/агентства). Чтение/создание/правка/архив/
+ * Роуты контрагентов и реквизитов. Чтение/создание/правка/архив/
  * восстановление доступны всем сотрудникам CRM (per продуктовое решение):
  * видимость клиентов наследуется от заявок в сервисе, партнёры видны всем.
  * Безвозвратное удаление — только admin. Логика — в contact-service.
@@ -28,7 +28,8 @@ export function contactRoutes(rt: Runtime): Hono<AppEnv> {
 
   app.get("/", auth, async (c) => {
     const query = listContactsQuerySchema.parse({
-      kind: c.req.query("kind"),
+      type: c.req.query("type"),
+      role: c.req.query("role"),
       search: c.req.query("search"),
       includeArchived: c.req.query("includeArchived") === "true",
     });

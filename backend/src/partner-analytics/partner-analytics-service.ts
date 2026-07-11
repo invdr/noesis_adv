@@ -40,13 +40,13 @@ function mergeAgg(a: PartnerAgg, b: PartnerAgg): PartnerAgg {
 }
 
 /**
- * Аналитика работы с партнёрами (риелторы/агентства). Приведённые лиды и сделки
+ * Аналитика работы с партнёрами и компаниями. Приведённые лиды и сделки
  * — когорта по дате поступления заявки в периоде `[from, to)`. «Последнее
  * взаимодействие» — либо ручное переопределение контакта, либо максимальная
  * активность по всем его приведённым заявкам за всё время (создание заявки,
  * последняя смена этапа, последняя заметка). Видимость: менеджер считает по
- * своим/неназначенным заявкам, admin — по всем. Строка агентства сводит его
- * прямые рефералы и рефералы его риелторов.
+ * своим/неназначенным заявкам, admin — по всем. Строка компании сводит её
+ * прямые рефералы и рефералы представителей.
  */
 export async function getPartnerAnalytics(
   rt: Runtime,
@@ -87,36 +87,35 @@ export async function getPartnerAnalytics(
     byReferrer.set(rid, agg);
   }
 
-  // 2. Партнёры + их агентская привязка (для свода агентств). Берём ВСЕХ, вкл.
-  //    архивных: архивный риелтор не должен уносить свои прошлые реферралы из
-  //    свода агентства (сами архивные строки к показу не пойдут — см. ниже).
+  // 2. Партнёры + их связь с компанией (для свода компаний). Берём всех, в т.ч.
+  //    архивных: вклад архивного представителя остаётся в своде компании.
   const partners = await rt.prisma.contact.findMany({
-    where: { kind: { in: ["realtor", "agency"] } },
-    include: { agency: { select: { fullName: true } } },
+    where: { isPartner: true },
+    include: { organization: { select: { fullName: true } } },
   });
-  // Риелторы по агентству — для роллапа (включая архивных).
-  const realtorsByAgency = new Map<string, typeof partners>();
+  // Партнёры-человеки по компании — для роллапа (включая архивных).
+  const representativesByOrganization = new Map<string, typeof partners>();
   for (const p of partners) {
-    if (p.kind === "realtor" && p.agencyId) {
-      const arr = realtorsByAgency.get(p.agencyId) ?? [];
+    if (p.type === "individual" && p.organizationId) {
+      const arr = representativesByOrganization.get(p.organizationId) ?? [];
       arr.push(p);
-      realtorsByAgency.set(p.agencyId, arr);
+      representativesByOrganization.set(p.organizationId, arr);
     }
   }
 
   // 3. Строки к показу: только живые партнёры, фильтр по типу и поиску.
-  const displayKinds = query.kind ? [query.kind] : ["realtor", "agency"];
+  const displayTypes = query.type ? [query.type] : ["individual", "company"];
   const term = query.search?.toLowerCase();
   const rows: PartnerRow[] = [];
   for (const p of partners) {
     if (p.archivedAt) continue; // архивных не показываем, но их вклад в свод учтён
-    if (!displayKinds.includes(p.kind)) continue;
+    if (!displayTypes.includes(p.type)) continue;
     if (term && !p.fullName.toLowerCase().includes(term)) continue;
 
     let agg = byReferrer.get(p.id) ?? emptyAgg();
-    if (p.kind === "agency") {
-      // Свод: прямые рефералы агентства + рефералы его риелторов.
-      for (const r of realtorsByAgency.get(p.id) ?? []) {
+    if (p.type === "company") {
+      // Свод: прямые рефералы компании + рефералы её представителей.
+      for (const r of representativesByOrganization.get(p.id) ?? []) {
         agg = mergeAgg(agg, byReferrer.get(r.id) ?? emptyAgg());
       }
     }
@@ -125,9 +124,9 @@ export async function getPartnerAnalytics(
     rows.push({
       contactId: p.id,
       fullName: p.fullName,
-      kind: p.kind,
-      agencyId: p.agencyId,
-      agencyName: p.agency?.fullName ?? null,
+      type: p.type,
+      organizationId: p.organizationId,
+      organizationName: p.organization?.fullName ?? null,
       lastInteractionAt: effectiveLast ? effectiveLast.toISOString() : null,
       referredLeads: agg.referred,
       deals: agg.deals,

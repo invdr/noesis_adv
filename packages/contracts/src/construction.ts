@@ -11,7 +11,7 @@ export type ConstructionStatus = z.infer<typeof constructionStatusSchema>;
 
 /**
  * Формат рекламной конструкции. Структурно ради фильтров каталога/карты.
- * Основной продукт агентства — сити-форматы; остальное на вырост.
+ * Основной продукт компании — сити-форматы; остальное на вырост.
  */
 export const constructionFormatSchema = z.enum([
   "cityFormat", // сити-формат (осн. продукт, ~1,2 × 1,8 м)

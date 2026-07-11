@@ -103,7 +103,7 @@ describe("toLeadDetailDto", () => {
       assignHistory: [assign],
       contactHistory: [contact],
       related: [{ ...baseLead, id: "rel1" }],
-      referrer: { id: "c_realtor", fullName: "Пётр Риелтор", kind: "realtor" },
+      referrer: { id: "c_partner", fullName: "Пётр", type: "individual" },
       bookings: [],
       dealDocuments: [],
       canAccessDealDocuments: true,
@@ -116,6 +116,7 @@ describe("toLeadDetailDto", () => {
     expect(dto.contactHistory[0]?.typeName).toBe("Звонок");
     expect(dto.contactHistory[0]?.at).toBe("2026-06-25T10:00:00.000Z");
     expect(dto.related[0]?.id).toBe("rel1");
-    expect(dto.referrer?.fullName).toBe("Пётр Риелтор");
+    expect(dto.referrer?.fullName).toBe("Пётр");
+    expect(dto.referrer?.type).toBe("individual");
   });
 });

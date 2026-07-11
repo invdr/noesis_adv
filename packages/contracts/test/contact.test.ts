@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { upsertContactSchema } from "../src/contact";
 
-const base = { kind: "realtor" as const, fullName: "Иван Петров" };
+const base = {
+  type: "individual" as const,
+  isClient: false,
+  isPartner: true,
+  fullName: "Иван Петров",
+};
 
 describe("upsertContactSchema: телефон", () => {
   test("нормализует ввод к +7XXXXXXXXXX (ключ дедупа с заявками)", () => {
@@ -58,5 +63,29 @@ describe("upsertContactSchema: паспортные данные", () => {
     });
     expect(parsed.passportSeries).toBe("8212");
     expect(parsed.registrationAddress).toBe("");
+  });
+});
+
+describe("upsertContactSchema: роли и компания", () => {
+  test("требует хотя бы одну роль", () => {
+    expect(
+      upsertContactSchema.safeParse({
+        ...base,
+        isPartner: false,
+        isClient: false,
+      }).success,
+    ).toBe(false);
+  });
+
+  test("не позволяет компании быть представителем другой компании", () => {
+    expect(
+      upsertContactSchema.safeParse({
+        type: "company",
+        isClient: false,
+        isPartner: true,
+        fullName: "ООО Строймедиа",
+        organizationId: "another-company",
+      }).success,
+    ).toBe(false);
   });
 });

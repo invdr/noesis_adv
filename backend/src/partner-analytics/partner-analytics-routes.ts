@@ -16,7 +16,7 @@ export function partnerAnalyticsRoutes(rt: Runtime): Hono<AppEnv> {
     const query = partnerAnalyticsQuerySchema.parse({
       from: c.req.query("from"),
       to: c.req.query("to"),
-      kind: c.req.query("kind"),
+      type: c.req.query("type"),
       search: c.req.query("search"),
     });
     return c.json(await getPartnerAnalytics(rt, c.get("user"), query));

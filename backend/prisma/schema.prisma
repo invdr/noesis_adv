@@ -151,12 +151,11 @@ model LeadSource {
   @@index([archivedAt])
 }
 
-/// Тип контакта CRM. `client` — покупатель (к нему привязаны заявки),
-/// `realtor`/`agency` — партнёр, приводящий покупателей (реферер заявок).
-enum ContactKind {
-  client
-  realtor
-  agency
+/// Вид контрагента: человек или компания. Его роли клиента и партнёра хранятся
+/// отдельно, поэтому одна карточка может совмещать их.
+enum CounterpartyType {
+  individual
+  company
 }
 
 /// Тип (исход) этапа воронки. Определяет поведение заявки: in_progress —
@@ -237,21 +236,23 @@ model ContactType {
   @@index([order])
 }
 
-/// Контакт CRM: покупатель (client) или партнёр (realtor/agency). Заменяет
-/// прежний эфемерный «клиент»-агрегат. Клиенты заводятся автоматически при
-/// приёме заявки (дедуп по телефону в сервисе); партнёры — вручную.
+/// Контрагент CRM: человек или компания с ролями клиента и/или партнёра.
+/// Клиенты появляются при приёме заявок (дедуп по телефону в сервисе),
+/// партнёры и компании можно вести вручную. Одна карточка может быть и
+/// плательщиком, и источником сделки.
 model Contact {
-  id                     String      @id @default(cuid())
-  kind                   ContactKind @default(client)
+  id                     String           @id @default(cuid())
+  type                   CounterpartyType @default(individual)
+  isClient               Boolean          @default(true)
+  isPartner              Boolean          @default(false)
   fullName               String
   /// Нормализованный телефон; у клиента — ключ дедупликации.
   phone                  String?
-  /// Название агентства (для kind=agency).
-  companyName            String?
-  /// Агентство риелтора (kind=realtor → Contact kind=agency).
-  agencyId               String?
-  agency                 Contact?    @relation("ContactAgency", fields: [agencyId], references: [id], onDelete: SetNull)
-  realtors               Contact[]   @relation("ContactAgency")
+  /// Компания, которую представляет человек-партнёр. У компании и у самой
+  /// компании-ссылки быть не может; это поддерживает сервис.
+  organizationId         String?
+  organization           Contact?    @relation("ContactOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
+  representatives        Contact[]   @relation("ContactOrganization")
   /// Пользователь, вручную заведший контакт. Для свободных клиентов задаёт видимость менеджеру.
   createdById            String?
   createdBy              User?       @relation("ContactAuthor", fields: [createdById], references: [id], onDelete: SetNull)
@@ -267,6 +268,21 @@ model Contact {
   passportDepartmentCode String?
   registrationAddress    String?
   actualAddress          String?
+  /// Реквизиты компании (для человека обычно пустые). Банковские поля также
+  /// могут заполняться у физлица для расчётов.
+  legalName              String?
+  inn                    String?
+  kpp                    String?
+  ogrn                   String?
+  legalAddress           String?
+  postalAddress          String?
+  bankName               String?
+  bankBik                String?
+  bankAccount            String?
+  correspondentAccount   String?
+  directorTitle          String?
+  directorFullName       String?
+  directorBasis          String?
   /// Ручное переопределение «последнего взаимодействия»; иначе считается по заявкам.
   lastInteractionAt      DateTime?
   /// Архивация вместо удаления: скрыт из выбора, ссылки заявок целы.
@@ -280,9 +296,11 @@ model Contact {
   /// Коммерческие брони, где контакт — плательщик.
   paidBookings           Booking[]   @relation("BookingClient")
 
-  @@index([kind])
+  @@index([type])
+  @@index([isClient])
+  @@index([isPartner])
   @@index([phone])
-  @@index([agencyId])
+  @@index([organizationId])
   @@index([createdById])
   @@index([archivedAt])
 }
@@ -302,10 +320,10 @@ model Lead {
   constructionId    String?
   construction      Construction?      @relation(fields: [constructionId], references: [id], onDelete: SetNull)
   message           String?
-  /// Контакт-покупатель (Contact kind=client); ставится при приёме по телефону.
+  /// Контрагент с ролью клиента; ставится при приёме по телефону.
   contactId         String?
   contact           Contact?           @relation("LeadContact", fields: [contactId], references: [id], onDelete: SetNull)
-  /// Реферер — контакт-партнёр (realtor/agency), приведший заявку; ставится в CRM.
+  /// Реферер — контрагент с ролью партнёра, приведший заявку; ставится в CRM.
   referrerId        String?
   referrer          Contact?           @relation("LeadReferrer", fields: [referrerId], references: [id], onDelete: SetNull)
   /// Ответственный менеджер; null — заявка в общей очереди.
@@ -549,7 +567,7 @@ model ConstructionSide {
 }
 
 /// Бренд/кампания, которую размещают на конструкции. Не обязательно совпадает с
-/// плательщиком-клиентом: агентство может платить за бренд рекламодателя.
+/// плательщиком-клиентом: компания может платить за бренд рекламодателя.
 model BookingBrand {
   id         String    @id @default(cuid())
   name       String
@@ -588,7 +606,7 @@ model Booking {
   /// Конкретная продаваемая сторона конструкции.
   constructionSideId String
   constructionSide   ConstructionSide      @relation(fields: [constructionSideId, constructionId], references: [id, constructionId], onDelete: Restrict)
-  /// Плательщик для commercial-брони (Contact kind=client). Для service — null.
+  /// Плательщик для commercial-брони (контрагент с ролью клиента). Для service — null.
   clientId          String?
   client            Contact?              @relation("BookingClient", fields: [clientId], references: [id], onDelete: SetNull)
   /// Причина служебной брони. Для commercial — null.

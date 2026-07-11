@@ -2,7 +2,7 @@ import type {
   Contact,
   ContactDetail,
   ContactLeadRef,
-  ContactKind,
+  CounterpartyType,
   ListContactsQuery,
   SessionUser,
   UpsertContactInput,
@@ -20,8 +20,7 @@ import {
   type LatestLeadRow,
 } from "./contact-dto";
 
-const PARTNER_KINDS: ContactKind[] = ["realtor", "agency"];
-const agencyInclude = { agency: { select: { fullName: true } } } as const;
+const organizationInclude = { organization: { select: { fullName: true } } } as const;
 const stageSelect = {
   select: { id: true, name: true, kind: true, funnelId: true },
 } as const;
@@ -30,8 +29,8 @@ function nullableText(value: string | null | undefined): string | null | undefin
   return value === undefined ? undefined : value || null;
 }
 
-function passportData(kind: ContactKind, input: UpsertContactInput) {
-  if (kind !== "client") {
+function passportData(type: CounterpartyType, input: UpsertContactInput) {
+  if (type !== "individual") {
     return {
       birthDate: null,
       birthPlace: null,
@@ -57,9 +56,44 @@ function passportData(kind: ContactKind, input: UpsertContactInput) {
   };
 }
 
+function requisitesData(type: CounterpartyType, input: UpsertContactInput) {
+  const bank = {
+    bankName: nullableText(input.bankName),
+    bankBik: nullableText(input.bankBik),
+    bankAccount: nullableText(input.bankAccount),
+    correspondentAccount: nullableText(input.correspondentAccount),
+  };
+  if (type !== "company") {
+    return {
+      legalName: null,
+      inn: null,
+      kpp: null,
+      ogrn: null,
+      legalAddress: null,
+      postalAddress: null,
+      directorTitle: null,
+      directorFullName: null,
+      directorBasis: null,
+      ...bank,
+    };
+  }
+  return {
+    legalName: nullableText(input.legalName),
+    inn: nullableText(input.inn),
+    kpp: nullableText(input.kpp),
+    ogrn: nullableText(input.ogrn),
+    legalAddress: nullableText(input.legalAddress),
+    postalAddress: nullableText(input.postalAddress),
+    directorTitle: nullableText(input.directorTitle),
+    directorFullName: nullableText(input.directorFullName),
+    directorBasis: nullableText(input.directorBasis),
+    ...bank,
+  };
+}
+
 /**
  * Список контактов: фильтр по типу/поиску/архиву + видимость. Партнёры
- * (realtor/agency) видны всем сотрудникам; клиенты — менеджеру только если у
+ * с ролью партнёра видны всем сотрудникам; клиенты — менеджеру только если у
  * него есть видимая заявка этого клиента (свои/неназначенные), admin — все.
  *
  * Агрегаты заявок-покупателей (счётчик, свежайшая заявка) считаем по видимым
@@ -73,7 +107,9 @@ export async function listContacts(
   query: ListContactsQuery = {},
 ): Promise<Contact[]> {
   const filters: Prisma.ContactWhereInput[] = [];
-  if (query.kind) filters.push({ kind: query.kind });
+  if (query.type) filters.push({ type: query.type });
+  if (query.role === "client") filters.push({ isClient: true });
+  if (query.role === "partner") filters.push({ isPartner: true });
   if (!(query.includeArchived && user.role === "admin")) {
     filters.push({ archivedAt: null });
   }
@@ -82,7 +118,7 @@ export async function listContacts(
     const digits = normalizePhoneSearch(term);
     const or: Prisma.ContactWhereInput[] = [
       { fullName: { contains: term, mode: "insensitive" } },
-      { companyName: { contains: term, mode: "insensitive" } },
+      { legalName: { contains: term, mode: "insensitive" } },
       { phone: { contains: term } },
     ];
     if (digits) or.push({ phone: { contains: digits } });
@@ -95,20 +131,20 @@ export async function listContacts(
   if (user.role !== "admin") {
     filters.push({
       OR: [
-        { kind: { in: PARTNER_KINDS } },
-        { kind: "client", ...clientContactAccessWhere(user) },
+        { isPartner: true },
+        { isClient: true, ...clientContactAccessWhere(user) },
       ],
     });
   }
 
   const rows = (await rt.prisma.contact.findMany({
     where: { AND: filters },
-    include: { ...agencyInclude, _count: { select: { referredLeads: true } } },
+    include: { ...organizationInclude, _count: { select: { referredLeads: true } } },
     orderBy: [{ createdAt: "desc" }],
   })) as (ContactRow & { _count: { referredLeads: number } })[];
 
   // Агрегаты по заявкам-покупателям одним запросом (с учётом видимости).
-  const clientIds = rows.filter((r) => r.kind === "client").map((r) => r.id);
+  const clientIds = rows.filter((r) => r.isClient).map((r) => r.id);
   const leadAgg = await aggregateBuyerLeads(rt, user, clientIds);
 
   return rows.map((row) =>
@@ -204,7 +240,7 @@ export async function getContactDetail(
   });
 
   const [buyerLeads, referredLeads] = await Promise.all([
-    row.kind === "client"
+    row.isClient
       ? rt.prisma.lead.findMany({
           where: { AND: [{ contactId: id }, visibilityWhere(user)] },
           select: contactLeadSelect,
@@ -212,7 +248,7 @@ export async function getContactDetail(
           take: CONTACT_LEADS_LIMIT,
         })
       : Promise.resolve([]),
-    row.kind !== "client"
+    row.isPartner
       ? rt.prisma.lead.findMany({
           where: { AND: [{ referrerId: id }, visibilityWhere(user)] },
           select: contactLeadSelect,
@@ -229,11 +265,11 @@ export async function getContactDetail(
   };
 }
 
-/** Загрузить контакт с агентством или бросить 404. */
+/** Загрузить контрагента с представляющей компанией или бросить 404. */
 async function requireContact(rt: Runtime, id: string): Promise<ContactRow> {
   const row = await rt.prisma.contact.findUnique({
     where: { id },
-    include: agencyInclude,
+    include: organizationInclude,
   });
   if (!row) throw new HttpError(404, "not_found", "Контакт не найден");
   return row;
@@ -241,7 +277,7 @@ async function requireContact(rt: Runtime, id: string): Promise<ContactRow> {
 
 /**
  * Guard видимости для операций записи над контактом-клиентом: та же граница,
- * что в `listContacts`. Партнёры (realtor/agency) видны всем сотрудникам; клиент
+ * что в `listContacts`. Партнёры видны всем сотрудникам; клиент
  * доступен менеджеру только через видимую ему заявку (свою/неназначенную), admin
  * — всегда. Невидимый клиент → 404 (как будто его нет), чтобы правка/архив по id
  * не читали/меняли ПДн чужого клиента и не палили его существование.
@@ -251,7 +287,7 @@ async function assertContactVisible(
   user: SessionUser,
   contact: ContactRow,
 ): Promise<void> {
-  if (user.role === "admin" || contact.kind !== "client") return;
+  if (user.role === "admin" || contact.isPartner || !contact.isClient) return;
   if (await canAccessClientContact(rt, user, contact)) return;
   throw new HttpError(404, "not_found", "Контакт не найден");
 }
@@ -263,13 +299,13 @@ async function contactDto(
   row: ContactRow,
 ): Promise<Contact> {
   const [leadsCount, referredCount, latestLead] = await Promise.all([
-    row.kind === "client"
+    row.isClient
       ? rt.prisma.lead.count({
           where: { AND: [{ contactId: row.id }, visibilityWhere(user)] },
         })
       : Promise.resolve(0),
     rt.prisma.lead.count({ where: { referrerId: row.id } }),
-    row.kind === "client"
+    row.isClient
       ? rt.prisma.lead.findFirst({
           where: { AND: [{ contactId: row.id }, visibilityWhere(user)] },
           select: {
@@ -292,117 +328,109 @@ async function contactDto(
   return toContactDto(row, agg);
 }
 
-/**
- * Инварианты типа: у риелтора `agencyId` (если задан) ссылается на живое
- * агентство; у агентства/клиента agencyId быть не может; запрет самоссылки.
- * Нормализует agencyId к значению для записи (undefined = не трогать в апдейте).
- *
- * Уже привязанное агентство (возможно, ставшее архивным) сохранять можно —
- * иначе нельзя было бы отредактировать риелтора после архивации его агентства.
- * Запрещаем лишь НАЗНАЧЕНИЕ нового архивного/несуществующего агентства
- * (тот же приём, что и с типом контакта в `updateNextContact`).
- */
-async function resolveAgencyId(
+/** Проверяет связь представителя с живой компанией, запрещая самоссылки. */
+async function resolveOrganizationId(
   rt: Runtime,
-  kind: ContactKind,
-  agencyId: string | null | undefined,
+  type: CounterpartyType,
+  isPartner: boolean,
+  organizationId: string | null | undefined,
   selfId: string | null,
-  currentAgencyId: string | null = null,
+  currentOrganizationId: string | null = null,
 ): Promise<string | null | undefined> {
-  if (agencyId === undefined) return kind === "realtor" ? undefined : null;
-  if (agencyId === null) return null;
-  if (kind !== "realtor") {
-    throw new HttpError(422, "agency_not_allowed", "Агентство можно указать только у риелтора");
+  if (organizationId === undefined) {
+    return type === "individual" && isPartner ? undefined : null;
   }
-  if (selfId && agencyId === selfId) {
-    throw new HttpError(422, "agency_self", "Контакт не может быть своим агентством");
+  if (organizationId === null) return null;
+  if (type !== "individual" || !isPartner) {
+    throw new HttpError(
+      422,
+      "organization_not_allowed",
+      "Компанию можно указать только у партнёра-человека",
+    );
   }
-  const agency = await rt.prisma.contact.findUnique({ where: { id: agencyId } });
-  const unchanged = agencyId === currentAgencyId;
-  if (!agency || agency.kind !== "agency" || (agency.archivedAt && !unchanged)) {
-    throw new HttpError(422, "invalid_agency", "Агентство не найдено");
+  if (selfId && organizationId === selfId) {
+    throw new HttpError(422, "organization_self", "Контрагент не может представлять сам себя");
   }
-  return agencyId;
+  const organization = await rt.prisma.contact.findUnique({ where: { id: organizationId } });
+  const unchanged = organizationId === currentOrganizationId;
+  if (!organization || organization.type !== "company" || (organization.archivedAt && !unchanged)) {
+    throw new HttpError(422, "invalid_organization", "Компания не найдена");
+  }
+  return organizationId;
 }
 
-/**
- * Смена типа контакта не должна осиротить связи и обойти инварианты:
- * - агентство с привязанными риелторами не может перестать быть агентством
- *   (иначе их `agencyId` укажет на не-агентство и роллап аналитики рассыплется);
- * - клиент с заявками-покупателя не может стать партнёром (иначе `Lead.contactId`
- *   укажет на не-клиента — buyer-агрегаты его потеряют, а дедуп заведёт дубль);
- * - клиента вообще нельзя ПОЛУЧИТЬ сменой типа: клиенты заводятся только
- *   автоматически при приёме заявки (дедуп по телефону), поэтому конверсия
- *   партнёр→клиент запрещена безусловно — зеркало `createContact`
- *   (`client_not_creatable`); иначе можно завести второго клиента на тот же
- *   телефон в обход дедупа и оставить сироту.
- * Иначе — 409/422, как в `deleteContact`/`createContact`; сначала перепривязать связи.
- */
-async function assertKindChangeAllowed(
+/** Не даёт снять используемую роль или сменить вид компании с представителями. */
+async function assertRoleChangeAllowed(
   rt: Runtime,
   id: string,
-  from: ContactKind,
-  to: ContactKind,
+  current: ContactRow,
+  input: UpsertContactInput,
 ): Promise<void> {
-  if (from === to) return;
-  if (from === "agency") {
-    const realtors = await rt.prisma.contact.count({ where: { agencyId: id } });
-    if (realtors > 0) {
-      throw new HttpError(
-        409,
-        "agency_in_use",
-        `К агентству привязаны риелторы (${realtors}). Сначала перепривяжите их.`,
-      );
-    }
-  }
-  if (from === "client") {
-    // from!==to (короткое замыкание выше) ⇒ уходим из client в партнёра.
+  if (current.isClient && !input.isClient) {
     const asBuyer = await rt.prisma.lead.count({ where: { contactId: id } });
     if (asBuyer > 0) {
       throw new HttpError(
         409,
-        "contact_in_use",
-        `На контакт ссылаются заявки-покупателя (${asBuyer}). Сначала перепривяжите их.`,
+        "client_role_in_use",
+        `К контрагенту привязаны заявки клиента (${asBuyer}). Сначала перепривяжите их.`,
       );
     }
   }
-  if (to === "client") {
-    // from!==to (короткое замыкание выше) ⇒ конверсия партнёр→клиент. Запрещена
-    // безусловно: клиента заводят только при приёме заявки (иначе дубль в обход
-    // дедупа + сирота). Это строже прежней проверки `referrerId` и поглощает её.
-    throw new HttpError(
-      422,
-      "client_not_creatable",
-      "Клиента нельзя получить сменой типа — клиенты заводятся при приёме заявки",
-    );
+  if (current.isPartner && !input.isPartner) {
+    const asReferrer = await rt.prisma.lead.count({ where: { referrerId: id } });
+    if (asReferrer > 0) {
+      throw new HttpError(
+        409,
+        "partner_role_in_use",
+        `Контрагент указан партнёром в заявках (${asReferrer}). Сначала перепривяжите их.`,
+      );
+    }
+  }
+  if (current.type === "company" && input.type !== "company") {
+    const representatives = await rt.prisma.contact.count({ where: { organizationId: id } });
+    if (representatives > 0) {
+      throw new HttpError(
+        409,
+        "company_in_use",
+        `Компанию представляют контрагенты (${representatives}). Сначала перепривяжите их.`,
+      );
+    }
   }
 }
 
-/** Создать контакт. Для клиентов телефон обязателен и проверяется на дубли. */
+/** Создать контрагента. У клиента обязателен телефон и нет дублей. */
 export async function createContact(
   rt: Runtime,
   user: SessionUser,
   input: UpsertContactInput,
 ): Promise<Contact> {
   const phone = normalizePhone(input.phone);
-  const clientPhone = requireClientPhone(input.kind, phone);
+  const clientPhone = requireClientPhone(input.isClient, phone);
   const restored = await restoreDuplicateArchivedClient(rt, user, input, clientPhone);
   if (restored) return restored;
   await assertNoDuplicateClientPhone(rt, user, clientPhone);
-  const agencyId = await resolveAgencyId(rt, input.kind, input.agencyId, null);
+  const organizationId = await resolveOrganizationId(
+    rt,
+    input.type,
+    input.isPartner,
+    input.organizationId,
+    null,
+  );
   const row = await rt.prisma.contact.create({
     data: {
-      kind: input.kind,
+      type: input.type,
+      isClient: input.isClient,
+      isPartner: input.isPartner,
       fullName: input.fullName,
       phone,
-      companyName: input.kind === "agency" ? input.companyName ?? null : null,
-      agencyId: agencyId ?? null,
+      organizationId: organizationId ?? null,
       createdById: user.id,
       note: input.note ?? null,
-      ...passportData(input.kind, input),
+      ...passportData(input.type, input),
+      ...requisitesData(input.type, input),
       lastInteractionAt: input.lastInteractionAt ? new Date(input.lastInteractionAt) : null,
     },
-    include: agencyInclude,
+    include: organizationInclude,
   });
   return contactDto(rt, user, row);
 }
@@ -417,22 +445,31 @@ export async function updateContact(
   const current = await requireContact(rt, id);
   await assertContactVisible(rt, user, current);
   assertFresh(current.updatedAt, input.expectedUpdatedAt);
-  await assertKindChangeAllowed(rt, id, current.kind, input.kind);
-  const agencyId = await resolveAgencyId(rt, input.kind, input.agencyId, id, current.agencyId);
+  await assertRoleChangeAllowed(rt, id, current, input);
+  const organizationId = await resolveOrganizationId(
+    rt,
+    input.type,
+    input.isPartner,
+    input.organizationId,
+    id,
+    current.organizationId,
+  );
   const phone = normalizePhone(input.phone);
-  const clientPhone = requireClientPhone(input.kind, phone);
-  await assertClientPhoneChangeAllowed(rt, id, current.kind, current.phone, phone);
+  const clientPhone = requireClientPhone(input.isClient, phone);
+  await assertClientPhoneChangeAllowed(rt, id, current.isClient, current.phone, phone);
   await assertNoDuplicateClientPhone(rt, user, clientPhone, id);
   const row = await rt.prisma.contact.update({
     where: { id },
     data: {
-      kind: input.kind,
+      type: input.type,
+      isClient: input.isClient,
+      isPartner: input.isPartner,
       fullName: input.fullName,
       phone,
-      companyName: input.kind === "agency" ? input.companyName ?? null : null,
-      agencyId,
+      organizationId,
       note: input.note ?? null,
-      ...passportData(input.kind, input),
+      ...passportData(input.type, input),
+      ...requisitesData(input.type, input),
       lastInteractionAt:
         input.lastInteractionAt === undefined
           ? undefined
@@ -440,7 +477,7 @@ export async function updateContact(
             ? new Date(input.lastInteractionAt)
             : null,
     },
-    include: agencyInclude,
+    include: organizationInclude,
   });
   return contactDto(rt, user, row);
 }
@@ -457,7 +494,7 @@ export async function archiveContact(
   const row = await rt.prisma.contact.update({
     where: { id },
     data: { archivedAt: new Date() },
-    include: agencyInclude,
+    include: organizationInclude,
   });
   return contactDto(rt, user, row);
 }
@@ -474,7 +511,7 @@ export async function restoreContact(
   const row = await rt.prisma.contact.update({
     where: { id },
     data: { archivedAt: null },
-    include: agencyInclude,
+    include: organizationInclude,
   });
   return contactDto(rt, user, row);
 }
@@ -482,15 +519,15 @@ export async function restoreContact(
 /**
  * Удалить контакт навсегда. Запрещено, если на него ссылается хотя бы одна
  * заявка (как покупатель или реферер) — иначе осиротим/потеряем связи; для
- * таких используем архив. Также нельзя удалить агентство с привязанными
- * риелторами.
+ * таких используем архив. Также нельзя удалить компанию с привязанными
+ * представителями.
  */
 export async function deleteContact(rt: Runtime, id: string): Promise<void> {
   await requireContact(rt, id);
-  const [asBuyer, asReferrer, realtors] = await Promise.all([
+  const [asBuyer, asReferrer, representatives] = await Promise.all([
     rt.prisma.lead.count({ where: { contactId: id } }),
     rt.prisma.lead.count({ where: { referrerId: id } }),
-    rt.prisma.contact.count({ where: { agencyId: id } }),
+    rt.prisma.contact.count({ where: { organizationId: id } }),
   ]);
   if (asBuyer + asReferrer > 0) {
     throw new HttpError(
@@ -499,11 +536,11 @@ export async function deleteContact(rt: Runtime, id: string): Promise<void> {
       `На контакт ссылаются заявки (${asBuyer + asReferrer}). Используйте архив.`,
     );
   }
-  if (realtors > 0) {
+  if (representatives > 0) {
     throw new HttpError(
       409,
-      "agency_in_use",
-      `К агентству привязаны риелторы (${realtors}). Сначала перепривяжите их.`,
+      "company_in_use",
+      `Компанию представляют контрагенты (${representatives}). Сначала перепривяжите их.`,
     );
   }
   await rt.prisma.contact.delete({ where: { id } });
@@ -519,7 +556,7 @@ export async function deleteContact(rt: Runtime, id: string): Promise<void> {
  * списков (для non-admin), имея свежую заявку.
  *
  * Дедуп держится на прикладном коде (findFirst→create), без уникального индекса
- * на `(kind, phone)`: осознанно для single-instance VPS (там же живут in-memory
+ * на `(isClient, phone)`: осознанно для single-instance VPS (там же живут in-memory
  * анти-спам и троттлинг из CLAUDE.md), где гонка двух заявок с одного нового
  * телефона в один момент пренебрежимо мала. При масштабировании на несколько
  * инстансов сюда понадобится частичный уникальный индекс.
@@ -531,7 +568,7 @@ export async function findOrCreateClientByPhone(
   createdById: string | null = null,
 ): Promise<string> {
   const existing = await tx.contact.findFirst({
-    where: { kind: "client", phone },
+    where: { isClient: true, phone },
     orderBy: { createdAt: "asc" },
     select: { id: true, archivedAt: true },
   });
@@ -542,14 +579,14 @@ export async function findOrCreateClientByPhone(
     return existing.id;
   }
   const created = await tx.contact.create({
-    data: { kind: "client", fullName: name, phone, createdById },
+    data: { type: "individual", isClient: true, isPartner: false, fullName: name, phone, createdById },
     select: { id: true },
   });
   return created.id;
 }
 
-function requireClientPhone(kind: ContactKind, phone: string | null): string | null {
-  if (kind !== "client") return null;
+function requireClientPhone(isClient: boolean, phone: string | null): string | null {
+  if (!isClient) return null;
   if (!phone || normalizeRuPhone(phone) === null) {
     throw new HttpError(422, "client_phone_required", "Укажите телефон клиента", {
       phone: "Укажите телефон клиента",
@@ -561,11 +598,11 @@ function requireClientPhone(kind: ContactKind, phone: string | null): string | n
 async function assertClientPhoneChangeAllowed(
   rt: Runtime,
   id: string,
-  kind: ContactKind,
+  isClient: boolean,
   currentPhone: string | null,
   nextPhone: string | null,
 ): Promise<void> {
-  if (kind !== "client" || nextPhone === currentPhone) return;
+  if (!isClient || nextPhone === currentPhone) return;
   const linked = await rt.prisma.lead.count({ where: { contactId: id } });
   if (linked === 0) return;
   throw new HttpError(
@@ -585,7 +622,7 @@ async function assertNoDuplicateClientPhone(
   if (!phone) return;
   const existing = await rt.prisma.contact.findFirst({
     where: {
-      kind: "client",
+      isClient: true,
       phone,
       ...(exceptId ? { id: { not: exceptId } } : {}),
     },
@@ -609,11 +646,11 @@ async function restoreDuplicateArchivedClient(
   input: UpsertContactInput,
   phone: string | null,
 ): Promise<Contact | null> {
-  if (input.kind !== "client" || !phone) return null;
+  if (!input.isClient || !phone) return null;
   const existing = await rt.prisma.contact.findFirst({
-    where: { kind: "client", phone, archivedAt: { not: null } },
+    where: { isClient: true, phone, archivedAt: { not: null } },
     orderBy: { createdAt: "asc" },
-    include: agencyInclude,
+    include: organizationInclude,
   });
   if (!existing?.archivedAt) return null;
   await assertContactVisible(rt, user, existing);
@@ -623,11 +660,11 @@ async function restoreDuplicateArchivedClient(
     data: {
       fullName: input.fullName,
       note: input.note ?? null,
-      ...passportData(input.kind, input),
+      ...passportData(existing.type, input),
       lastInteractionAt: input.lastInteractionAt ? new Date(input.lastInteractionAt) : null,
       archivedAt: null,
     },
-    include: agencyInclude,
+    include: organizationInclude,
   });
   return contactDto(rt, user, row);
 }

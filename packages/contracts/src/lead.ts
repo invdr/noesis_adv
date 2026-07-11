@@ -84,7 +84,7 @@ export const createLeadSchema = z.object({
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 
 /**
- * Ручной приём заявки в CRM (оффлайн: пришёл в офис / привёл риелтор). В отличие
+ * Ручной приём заявки в CRM (оффлайн: пришёл в офис / привёл партнёр). В отличие
  * от публичной формы: без honeypot/анти-спама, с опциональным реферером-партнёром
  * и ответственным (адресно на другого менеджера — только admin, проверяет сервис).
  * Согласие ПДн подтверждает оператор (`consent: true`); клиент-контакт заводится/
@@ -92,7 +92,7 @@ export type CreateLeadInput = z.infer<typeof createLeadSchema>;
  * `offline`, но оператор может уточнить канал.
  */
 const manualLeadNewReferrerSchema = z.object({
-  fullName: z.string().trim().min(2, "Укажите имя риелтора").max(160),
+  fullName: z.string().trim().min(2, "Укажите имя партнёра").max(160),
   phone: crmContactPhoneSchema.nullable().optional(),
 });
 
@@ -116,9 +116,9 @@ export const createManualLeadSchema = z.object({
    * умолчанию (как у публичных заявок с лендинга).
    */
   funnelId: z.string().min(1).optional(),
-  /** Реферер-партнёр (риелтор/агентство), приведший заявку; необязателен. */
+  /** Партнёр, приведший заявку; необязателен. */
   referrerId: z.string().min(1).optional(),
-  /** Новый риелтор, которого нужно создать атомарно вместе с оффлайн-заявкой. */
+  /** Новый партнёр, которого нужно создать атомарно вместе с оффлайн-заявкой. */
   newReferrer: manualLeadNewReferrerSchema.optional(),
   /** Ответственный менеджер; не задан — общая очередь/авто по повторной. */
   assigneeId: z.string().min(1).optional(),
@@ -154,11 +154,11 @@ export const leadSchema = z.object({
   /** Название конструкции (развёрнуто из `constructionId`) — для показа без догрузки справочника. */
   constructionName: z.string().nullable(),
   message: z.string().nullable(),
-  /** Контакт-покупатель (FK на Contact kind=client); ставится при приёме. */
+  /** Контрагент с ролью клиента; ставится при приёме заявки. */
   contactId: z.string().nullable(),
   /** Имя контакта-покупателя для ссылки из карточки сделки. */
   contactName: z.string().nullable(),
-  /** Реферер — контакт-партнёр (kind=realtor|agency), который привёл заявку. */
+  /** Партнёр, который привёл заявку. */
   referrerId: z.string().nullable(),
   /** Ответственный менеджер; `null` — заявка в общей очереди. */
   assigneeId: z.string().nullable(),
@@ -242,7 +242,7 @@ export type LeadContactEvent = z.infer<typeof leadContactEventSchema>;
 export const leadReferrerRefSchema = z.object({
   id: z.string(),
   fullName: z.string(),
-  kind: z.enum(["client", "realtor", "agency"]),
+  type: z.enum(["individual", "company"]),
 });
 export type LeadReferrerRef = z.infer<typeof leadReferrerRefSchema>;
 
@@ -323,7 +323,7 @@ export type UpdateLeadConstructionInput = z.infer<
 >;
 
 /**
- * Назначить/снять реферера заявки (контакт-партнёр риелтор/агентство).
+ * Назначить/снять реферера заявки (контрагент с ролью партнёра).
  * `referrerId = null` — снять привязку.
  */
 export const setLeadReferrerSchema = z.object({

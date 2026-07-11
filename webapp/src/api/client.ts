@@ -454,13 +454,14 @@ export const api = {
     return request<LeadStats>("/api/leads/stats");
   },
 
-  // --- Контакты (клиенты/риелторы/агентства) ---
+  // --- Контрагенты и реквизиты ---
   getContact(id: string) {
     return request<ContactDetail>(`/api/contacts/${id}`);
   },
   listContacts(params: ListContactsQuery = {}) {
     const q = new URLSearchParams();
-    if (params.kind) q.set("kind", params.kind);
+    if (params.type) q.set("type", params.type);
+    if (params.role) q.set("role", params.role);
     if (params.search) q.set("search", params.search);
     if (params.includeArchived) q.set("includeArchived", "true");
     const qs = q.toString();
@@ -590,7 +591,7 @@ export const api = {
     const q = new URLSearchParams();
     if (params.from) q.set("from", params.from);
     if (params.to) q.set("to", params.to);
-    if (params.kind) q.set("kind", params.kind);
+    if (params.type) q.set("type", params.type);
     if (params.search) q.set("search", params.search);
     const qs = q.toString();
     return request<PartnerAnalyticsResponse>(`/api/partner-analytics${qs ? `?${qs}` : ""}`);

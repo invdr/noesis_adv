@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import { formatDateTime } from "../leads/shared";
 
 type Preset = "7d" | "30d" | "month" | "custom";
-type KindFilter = "all" | "realtor" | "agency";
+type TypeFilter = "all" | "individual" | "company";
 
 const DAY_MS = 86400000;
 
@@ -34,7 +34,7 @@ function rangeForPreset(preset: Preset, from: string, to: string): { from?: stri
 const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
 
 /**
- * Аналитика работы с риелторами/агентствами. Приведённые лиды и сделки —
+ * Аналитика работы с партнёрами и компаниями. Приведённые лиды и сделки —
  * когорта по дате поступления заявки за период; «последнее взаимодействие» —
  * по всем приведённым заявкам (или ручное). Менеджер видит цифры по своим
  * заявкам, admin — по всем.
@@ -43,7 +43,7 @@ export function PartnerAnalyticsView({ user }: { user: SessionUser }) {
   const [preset, setPreset] = useState<Preset>("30d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
-  const [kind, setKind] = useState<KindFilter>("all");
+  const [type, setType] = useState<TypeFilter>("all");
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
 
@@ -53,11 +53,11 @@ export function PartnerAnalyticsView({ user }: { user: SessionUser }) {
   );
 
   const analytics = useQuery({
-    queryKey: ["partner-analytics", range.from ?? "", range.to ?? "", kind, search],
+    queryKey: ["partner-analytics", range.from ?? "", range.to ?? "", type, search],
     queryFn: () =>
       api.partnerAnalytics({
         ...range,
-        kind: kind === "all" ? undefined : kind,
+        type: type === "all" ? undefined : type,
         search: search || undefined,
       }),
     retry: false,
@@ -88,14 +88,14 @@ export function PartnerAnalyticsView({ user }: { user: SessionUser }) {
       </div>
 
       <div className="toolbar" style={{ marginTop: 8 }}>
-        <PresetButton active={kind === "all"} onClick={() => setKind("all")}>
+        <PresetButton active={type === "all"} onClick={() => setType("all")}>
           Все
         </PresetButton>
-        <PresetButton active={kind === "realtor"} onClick={() => setKind("realtor")}>
-          Риелторы
+        <PresetButton active={type === "individual"} onClick={() => setType("individual")}>
+          Партнёры
         </PresetButton>
-        <PresetButton active={kind === "agency"} onClick={() => setKind("agency")}>
-          Агентства
+        <PresetButton active={type === "company"} onClick={() => setType("company")}>
+          Компании
         </PresetButton>
       </div>
 
@@ -133,7 +133,7 @@ export function PartnerAnalyticsView({ user }: { user: SessionUser }) {
       <p className="hint">
         Приведённые лиды и сделки — за выбранный период
         {user.role === "admin" ? "." : " (по вашим заявкам)."} «Последнее
-        взаимодействие» и свод по агентству учитывают всю историю. Партнёров заводите в разделе «Контакты».
+        взаимодействие» и свод по компании учитывают всю историю. Партнёров заводите в разделе «Контрагенты и реквизиты».
       </p>
 
       {analytics.isLoading && <p className="hint">Загрузка…</p>}
@@ -156,7 +156,7 @@ function PartnerTable({ data }: { data: PartnerAnalyticsResponse }) {
             <th style={{ width: 44 }}>№</th>
             <th>ФИО</th>
             <th>Тип</th>
-            <th>Агентство</th>
+            <th>Компания</th>
             <th style={{ width: 170 }}>Последнее взаимодействие</th>
             <th style={{ width: 130 }}>Приведено лидов</th>
             <th style={{ width: 100 }}>Сделки</th>
@@ -168,8 +168,8 @@ function PartnerTable({ data }: { data: PartnerAnalyticsResponse }) {
             <tr key={r.contactId}>
               <td className="tnum muted">{i + 1}</td>
               <td>{r.fullName}</td>
-              <td>{r.kind === "agency" ? "Агентство" : "Риелтор"}</td>
-              <td>{r.agencyName ?? <span className="subtle">—</span>}</td>
+              <td>{r.type === "company" ? "Компания" : "Партнёр"}</td>
+              <td>{r.organizationName ?? <span className="subtle">—</span>}</td>
               <td className="muted tnum">{formatDateTime(r.lastInteractionAt)}</td>
               <td className="tnum">{r.referredLeads}</td>
               <td className="tnum">{r.deals}</td>

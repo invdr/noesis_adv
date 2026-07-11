@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { contactKindSchema } from "./contact";
+import { counterpartyTypeSchema } from "./contact";
 
 /**
- * Аналитика работы с партнёрами (риелторы/агентства). Отдельный модуль от
+ * Аналитика работы с партнёрами и компаниями. Отдельный модуль от
  * дашборда заявок (`analytics.ts`): грейн здесь — партнёр, а не когорта заявок.
  * Период когортный по дате поступления приведённой заявки (`createdAt`), как в
  * основном дашборде. Видимость (менеджер — по своим заявкам) — в сервисе.
@@ -13,8 +13,8 @@ export const partnerAnalyticsQuerySchema = z
   .object({
     from: z.string().datetime().optional(),
     to: z.string().datetime().optional(),
-    /** Только риелторы или только агентства; иначе — оба типа. */
-    kind: z.enum(["realtor", "agency"]).optional(),
+    /** Только люди или только компании; иначе — оба типа. */
+    type: counterpartyTypeSchema.optional(),
     search: z.string().trim().max(120).optional(),
   })
   .refine((q) => !q.from || !q.to || q.from <= q.to, {
@@ -27,10 +27,10 @@ export type PartnerAnalyticsQuery = z.infer<typeof partnerAnalyticsQuerySchema>;
 export const partnerRowSchema = z.object({
   contactId: z.string(),
   fullName: z.string(),
-  kind: contactKindSchema,
-  /** Агентство риелтора (для kind=realtor); иначе null. */
-  agencyId: z.string().nullable(),
-  agencyName: z.string().nullable(),
+  type: counterpartyTypeSchema,
+  /** Компания, которую представляет партнёр-человек; иначе null. */
+  organizationId: z.string().nullable(),
+  organizationName: z.string().nullable(),
   /** Эффективная дата последнего взаимодействия (ручная либо по заявкам); ISO. */
   lastInteractionAt: z.string().nullable(),
   /** Приведённые лиды за период. */

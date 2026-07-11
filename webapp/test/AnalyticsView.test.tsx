@@ -74,7 +74,7 @@ describe("AnalyticsView (вкладки)", () => {
     renderAnalytics("admin");
     expect(screen.getByRole("tab", { name: "Инвентарь" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Заявки" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Риелторы" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Партнёры" })).toBeTruthy();
     expect(await screen.findByText("Плановая выручка")).toBeTruthy();
     expect(screen.queryByText("Всего заявок")).toBeNull();
     expect(screen.queryByText(/Приведённые лиды и сделки/)).toBeNull();
@@ -84,11 +84,11 @@ describe("AnalyticsView (вкладки)", () => {
     renderAnalytics("admin");
     await screen.findByText("Плановая выручка");
 
-    fireEvent.click(screen.getByRole("tab", { name: "Риелторы" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Партнёры" }));
 
     expect(await screen.findByText(/Приведённые лиды и сделки/)).toBeTruthy();
     expect(screen.queryByText("Всего заявок")).toBeNull();
-    expect(screen.getByRole("tab", { name: "Риелторы" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tab", { name: "Партнёры" }).getAttribute("aria-selected")).toBe("true");
   });
 
   test("admin: клик по «Заявки» переключает на лидовую аналитику", async () => {
@@ -105,7 +105,7 @@ describe("AnalyticsView (вкладки)", () => {
     renderAnalytics("manager");
     expect(screen.queryByRole("tab", { name: "Заявки" })).toBeNull();
     expect(screen.getByRole("tab", { name: "Инвентарь" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Риелторы" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Партнёры" })).toBeTruthy();
     expect(await screen.findByText("Плановая выручка")).toBeTruthy();
     expect(screen.queryByText("Всего заявок")).toBeNull();
   });

@@ -44,7 +44,7 @@ export type LeadStatusEventRow = PrismaLeadStatusEvent & {
   author: Pick<PrismaUser, "email"> | null;
 };
 /** Минимум полей реферера-партнёра для карточки. */
-export type ReferrerRefRow = Pick<PrismaContact, "id" | "fullName" | "kind">;
+export type ReferrerRefRow = Pick<PrismaContact, "id" | "fullName" | "type">;
 /** Событие назначения вместе с адресатом и автором (для подписей). */
 export type LeadAssignEventRow = PrismaLeadAssignEvent & {
   assignee: Pick<PrismaUser, "name" | "email"> | null;
@@ -56,7 +56,7 @@ export type LeadContactEventRow = PrismaLeadContactEvent & {
 };
 
 function toReferrerRef(row: ReferrerRefRow): LeadReferrerRef {
-  return { id: row.id, fullName: row.fullName, kind: row.kind };
+  return { id: row.id, fullName: row.fullName, type: row.type };
 }
 
 function toStageRef(stage: StageRefRow): LeadStageRef {
