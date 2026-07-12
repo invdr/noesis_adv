@@ -18,10 +18,10 @@ const { items } = Astro.props;
 )}
 
 <style>
-  .news { padding: clamp(80px, 10vw, 140px) 0; }
+  .news { padding: clamp(60px, 8vw, 108px) 0; }
   .news__heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; }
   .news__heading > a { flex: 0 0 auto; padding-bottom: 8px; color: var(--accent); font-size: 12px; font-weight: 750; }
-  .news__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 50px; }
+  .news__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 32px; }
   @media (max-width: 900px) { .news__grid { grid-template-columns: repeat(2, 1fr); } .news__grid > :last-child { display: none; } }
   @media (max-width: 620px) { .news__heading { align-items: start; flex-direction: column; } .news__grid { grid-template-columns: 1fr; } .news__grid > :last-child { display: block; } }
 </style>

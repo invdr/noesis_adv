@@ -10,7 +10,7 @@ const benefits = [
 <section class="benefits" id="about">
   <div class="container">
     <div class="benefits__heading">
-      <SectionHeading eyebrow="NOESIS |ad" title="Инвентарь как цифровой городской слой" description="Не витрина агентства, а рабочий инструмент для медиапланирования: точка, сторона, период, условия." />
+      <SectionHeading eyebrow="NOESIS |ad" title="Инвентарь как цифровой городской слой" description="Рабочий инструмент для медиапланирования: точка, сторона, период и условия размещения собраны в одном месте." />
       <p>Мы сопровождаем подбор и размещение наружной рекламы в Грозном — от первичного списка до подтверждения свободных поверхностей.</p>
     </div>
     <div class="benefits__grid">
@@ -26,13 +26,13 @@ const benefits = [
 </section>
 
 <style>
-  .benefits { padding: clamp(80px, 10vw, 150px) 0; background: var(--paper); }
-  .benefits__heading { display: grid; grid-template-columns: 1.4fr 0.6fr; align-items: end; gap: 40px; }
+  .benefits { padding: clamp(60px, 8vw, 110px) 0; background: var(--paper); }
+  .benefits__heading { display: grid; grid-template-columns: 1.4fr 0.6fr; align-items: end; gap: 28px; }
   .benefits__heading > p { margin: 0; color: var(--muted); font-size: 15px; }
-  .benefits__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 60px; background: var(--line); border: 1px solid var(--line); }
-  .benefits article { min-height: 300px; padding: 24px; background: var(--paper); }
+  .benefits__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 38px; background: var(--line); border: 1px solid var(--line); }
+  .benefits article { min-height: 220px; padding: 18px; background: var(--paper); }
   .benefits article > span { color: var(--accent); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; }
-  .benefits h3 { margin: 100px 0 14px; font-size: clamp(20px, 2vw, 28px); letter-spacing: -0.04em; }
+  .benefits h3 { margin: 70px 0 10px; font-size: clamp(18px, 1.7vw, 24px); letter-spacing: -0.04em; }
   .benefits article p { margin: 0; color: var(--muted); font-size: 13px; }
   @media (max-width: 980px) { .benefits__grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 700px) { .benefits__heading { grid-template-columns: 1fr; } }

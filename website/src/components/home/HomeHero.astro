@@ -1,15 +1,13 @@
 ---
-import type { CatalogItem } from "../../lib/api";
-
 interface Props {
-  featured?: CatalogItem;
   constructionCount: number;
   developerCount: number;
   formats: { value: string; label: string }[];
   districts: string[];
 }
 
-const { featured, constructionCount, developerCount, formats, districts } = Astro.props;
+const { constructionCount, developerCount, formats, districts } = Astro.props;
+const heroImage = "/assets/city-format-noesis-v2.png";
 ---
 <section class="hero">
   <div class="hero__grid container">
@@ -32,22 +30,16 @@ const { featured, constructionCount, developerCount, formats, districts } = Astr
     </div>
 
     <div class="hero__visual">
-      {featured?.img ? (
-        <img
-          src={featured.img}
-          srcset={featured.imgSrcset || undefined}
-          sizes={featured.imgSrcset ? "(max-width: 900px) 100vw, 54vw" : undefined}
-          alt={`Конструкция ${featured.name} в Грозном`}
-          fetchpriority="high"
-          decoding="async"
-        />
-      ) : (
-        <div class="hero__visual-fallback" aria-label="Фотография конструкции появится позже">NOESIS |ad</div>
-      )}
+      <img
+        src={heroImage}
+        alt="Сити-формат NOESIS на городской улице"
+        fetchpriority="high"
+        decoding="async"
+      />
       <div class="hero__visual-meta">
-        <span>{featured?.code || "Инвентарь"}</span>
-        <p>{featured?.address || "Грозный, Чеченская Республика"}</p>
-        {featured && <a href={featured.href}>Открыть локацию ↗</a>}
+        <span>СИТИ-ФОРМАТ</span>
+        <p>Грозный · наружная реклама</p>
+        <a href="/catalog">Открыть каталог ↗</a>
       </div>
       <span class="hero__coordinates">43.318° N<br />45.698° E</span>
     </div>
@@ -89,7 +81,7 @@ const { featured, constructionCount, developerCount, formats, districts } = Astr
 <style>
   .hero {
     position: relative;
-    padding: clamp(34px, 5vw, 78px) 0 0;
+    padding: clamp(20px, 3vw, 46px) 0 0;
     background: var(--paper);
     border-bottom: 1px solid var(--line);
   }
@@ -97,11 +89,11 @@ const { featured, constructionCount, developerCount, formats, districts } = Astr
     display: grid;
     grid-template-columns: minmax(340px, 0.82fr) minmax(460px, 1.18fr);
     align-items: stretch;
-    gap: clamp(30px, 5vw, 76px);
+    gap: clamp(22px, 3.5vw, 48px);
   }
-  .hero__content { display: flex; min-width: 0; flex-direction: column; padding: clamp(28px, 4vw, 62px) 0; }
+  .hero__content { display: flex; min-width: 0; flex-direction: column; padding: clamp(22px, 3vw, 42px) 0; }
   .hero__eyebrow {
-    margin: 0 0 24px;
+    margin: 0 0 18px;
     color: var(--accent);
     font-family: var(--font-mono);
     font-size: 10px;
@@ -112,21 +104,21 @@ const { featured, constructionCount, developerCount, formats, districts } = Astr
   .hero h1 {
     max-width: 760px;
     margin: 0;
-    font-size: clamp(54px, 7.3vw, 112px);
+    font-size: clamp(44px, 5.4vw, 78px);
     font-weight: 720;
     letter-spacing: -0.075em;
     line-height: 0.88;
   }
   .hero h1 em { display: block; color: var(--accent); font-style: normal; }
-  .hero__lead { max-width: 650px; margin: 30px 0 0; color: var(--muted); font-size: clamp(15px, 1.4vw, 18px); }
-  .hero__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 34px; }
+  .hero__lead { max-width: 600px; margin: 20px 0 0; color: var(--muted); font-size: clamp(14px, 1.1vw, 16px); }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
   .hero__actions a {
     display: inline-flex;
-    min-height: 52px;
+    min-height: 44px;
     align-items: center;
     justify-content: space-between;
-    gap: 28px;
-    padding: 0 18px;
+    gap: 20px;
+    padding: 0 14px;
     border: 1px solid var(--ink);
     border-radius: 10px;
     font-size: 13px;
@@ -138,15 +130,15 @@ const { featured, constructionCount, developerCount, formats, districts } = Astr
   .hero__stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 22px 40px;
+    gap: 18px 28px;
     margin: auto 0 0;
-    padding-top: 48px;
+    padding-top: 32px;
   }
   .hero__stats div { display: grid; grid-template-columns: auto minmax(100px, 150px); align-items: center; gap: 12px; }
   .hero__stats dt { color: var(--accent); font-family: var(--font-mono); font-size: 28px; font-weight: 600; }
   .hero__stats dd { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
 
-  .hero__visual { position: relative; min-height: 660px; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
+  .hero__visual { position: relative; min-height: 500px; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
   .hero__visual > img { width: 100%; height: 100%; object-fit: cover; }
   .hero__visual::after { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(15, 15, 14, 0.68)); content: ""; pointer-events: none; }
   .hero__visual-fallback { display: grid; width: 100%; height: 100%; place-items: center; color: var(--muted); font-family: var(--font-mono); }
@@ -225,7 +217,7 @@ const { featured, constructionCount, developerCount, formats, districts } = Astr
 
   @media (max-width: 1180px) {
     .hero__grid { grid-template-columns: 1fr 1fr; }
-    .hero__visual { min-height: 580px; }
+    .hero__visual { min-height: 460px; }
     .hero__search { grid-template-columns: repeat(3, 1fr); }
     .hero__search-heading { grid-column: span 1; }
   }
@@ -241,9 +233,9 @@ const { featured, constructionCount, developerCount, formats, districts } = Astr
     .hero__search button { grid-column: 1 / -1; }
   }
   @media (max-width: 520px) {
-    .hero h1 { font-size: clamp(50px, 17vw, 74px); }
+    .hero h1 { font-size: clamp(40px, 13vw, 58px); }
     .hero__actions { display: grid; }
-    .hero__visual { min-height: 480px; border-radius: 20px; }
+    .hero__visual { min-height: 420px; border-radius: 16px; }
     .hero__visual-meta { grid-template-columns: 1fr auto; }
     .hero__visual-meta p { grid-column: 1 / -1; grid-row: 2; }
     .hero__search { grid-template-columns: 1fr; }
