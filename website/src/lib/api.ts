@@ -257,7 +257,7 @@ export function toCatalogItem(c: Construction): CatalogItem {
       description: s.description,
       trafficPerDay: s.trafficPerDay,
       grp: s.grp,
-      photo: s.photo,
+      photo: { url: CITY_FORMAT_IMAGE },
     })),
   };
 }
