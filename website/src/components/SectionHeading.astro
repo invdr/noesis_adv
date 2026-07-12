@@ -1,0 +1,56 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  tone?: "dark" | "light";
+  size?: "default" | "large";
+}
+
+const { eyebrow, title, description = "", tone = "dark", size = "default" } = Astro.props;
+---
+<header class:list={["heading", `heading--${tone}`, `heading--${size}`]}>
+  <p>{eyebrow}</p>
+  <h2>{title}</h2>
+  {description && <span>{description}</span>}
+</header>
+
+<style>
+  .heading { max-width: 880px; }
+  .heading > p {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 18px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .heading > p::before {
+    width: 30px;
+    height: 1px;
+    background: currentColor;
+    content: "";
+  }
+  .heading h2 {
+    margin: 0;
+    font-size: clamp(36px, 5vw, 68px);
+    font-weight: 710;
+    letter-spacing: -0.06em;
+    line-height: 0.98;
+  }
+  .heading--large h2 { font-size: clamp(42px, 6.2vw, 88px); }
+  .heading > span {
+    display: block;
+    max-width: 680px;
+    margin-top: 22px;
+    color: var(--muted);
+    font-size: clamp(15px, 1.6vw, 18px);
+    line-height: 1.65;
+  }
+  .heading--light h2 { color: #fff; }
+  .heading--light > span { color: rgba(255, 255, 255, 0.62); }
+</style>

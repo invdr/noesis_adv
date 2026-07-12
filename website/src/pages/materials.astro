@@ -1,0 +1,46 @@
+---
+import MaterialsLibrary from "../components/materials/MaterialsLibrary.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+  fetchConstructionDocuments,
+  fetchConstructions,
+  fetchSiteSettings,
+  type Document,
+} from "../lib/api";
+import { buildChrome } from "../lib/chrome";
+import { BRAND_NAME } from "../lib/site";
+
+const [constructions, settings] = await Promise.all([fetchConstructions(), fetchSiteSettings()]);
+const chrome = buildChrome(settings);
+const rows = await Promise.all(constructions.map(async (construction) => ({
+  construction,
+  groups: await fetchConstructionDocuments(construction.slug),
+})));
+const categoryMap = new Map<string, {
+  category: { id: string; name: string; slug: string };
+  constructions: { id: string; slug: string; name: string; code: string; address: string; image: string; documents: Document[] }[];
+}>();
+for (const row of rows) {
+  for (const group of row.groups) {
+    const current = categoryMap.get(group.category.id) ?? { category: group.category, constructions: [] };
+    if (group.documents.length > 0) {
+      current.constructions.push({
+        id: row.construction.id,
+        slug: row.construction.slug,
+        name: row.construction.name,
+        code: row.construction.code || "",
+        address: row.construction.address || "Грозный",
+        image: row.construction.cover?.renditions?.thumbnailUrl || row.construction.cover?.url || "",
+        documents: group.documents,
+      });
+    }
+    categoryMap.set(group.category.id, current);
+  }
+}
+const categories = Array.from(categoryMap.values()).filter((category) => category.constructions.length > 0);
+const title = `Материалы и документы | ${BRAND_NAME}`;
+const description = "Презентации, технические требования, файлы и ссылки по рекламным конструкциям NOESIS |ad в Грозном.";
+---
+<BaseLayout chrome={chrome} title={title} description={description} path="/materials" current="materials">
+  <MaterialsLibrary categories={categories} />
+</BaseLayout>

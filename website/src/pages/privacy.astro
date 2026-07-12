@@ -2,35 +2,20 @@
 // Политика обработки персональных данных (152-ФЗ). Текст 1:1 из
 // docs/privacy-policy-source.md. Оператор — «Noesis», контакт info@noesis-grozny.ru,
 // домен в тексте noesis-grozny.ru (так в исходнике, оставляем).
-import SiteHead from "../components/SiteHead.astro";
-import Footer from "../components/Footer.astro";
-import CookieBanner from "../components/CookieBanner.astro";
+import LegalDocument from "../components/legal/LegalDocument.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 import { fetchSiteSettings } from "../lib/api";
 import { buildChrome } from "../lib/chrome";
+import { BRAND_NAME } from "../lib/site";
 
 const chrome = buildChrome(await fetchSiteSettings());
-const s = chrome.s;
 
-const title = "Политика обработки персональных данных — Noesis";
+const title = `Политика обработки персональных данных | ${BRAND_NAME}`;
 const description =
   "Политика «Noesis» в отношении обработки персональных данных в соответствии с Федеральным законом № 152-ФЗ «О персональных данных».";
 ---
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<SiteHead title={title} description={description} path="/privacy" siteName={s.siteName} metrikaId={chrome.metrikaId} />
-</head>
-<body>
-<div class="project-page-bar">
-  <div class="wrap-narrow project-bar-inner">
-    <a class="bar-icon-btn bar-icon-back" href="/" aria-label="На главную"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg></a>
-    <a href="/"><span class="brand-word brand-word--ink">{s.siteName}</span></a>
-    <a href={chrome.phoneHref} class="bar-icon-btn bar-icon-call" aria-label="Позвонить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></a>
-  </div>
-</div>
-
-<main class="wrap legal-page">
-  <article class="legal">
+<BaseLayout chrome={chrome} title={title} description={description} path="/privacy" current="other">
+  <LegalDocument>
     <h1>Политика в отношении обработки персональных данных</h1>
 
     <h2>1. Общие положения</h2>
@@ -145,12 +130,5 @@ const description =
     <h2>12. Заключительные положения</h2>
     <p>12.1. Пользователь может получить любые разъяснения по интересующим вопросам, касающимся обработки его персональных данных, обратившись к Оператору с помощью электронной почты <a href="mailto:info@noesis-grozny.ru">info@noesis-grozny.ru</a>.</p>
     <p>12.2. В данном документе будут отражены любые изменения политики обработки персональных данных Оператором. Политика действует бессрочно до замены ее новой версией.</p>
-  </article>
-</main>
-
-<Footer chrome={chrome} />
-<CookieBanner />
-
-<script is:inline src="/js/page.js"></script>
-</body>
-</html>
+  </LegalDocument>
+</BaseLayout>

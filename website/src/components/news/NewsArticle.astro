@@ -1,0 +1,62 @@
+---
+import type { NewsView } from "../../lib/api";
+interface Props { item: NewsView; }
+const { item } = Astro.props;
+---
+<article class="article">
+  <div class="article__breadcrumbs container"><a href="/news">Кейсы и новости</a><span>/</span><span>{item.title}</span></div>
+  <header class="article__header container">
+    <div>
+      {item.tag && <p>{item.tag}</p>}
+      <h1>{item.title}</h1>
+    </div>
+    <div><time>{item.date}</time><span>NOESIS |ad · Грозный</span></div>
+  </header>
+  {item.img && (
+    <figure class="article__cover container">
+      <img src={item.img} srcset={item.imgSrcset || undefined} sizes={item.imgSrcset ? "100vw" : undefined} alt={item.title} fetchpriority="high" decoding="async" />
+      <figcaption>Материал NOESIS |ad</figcaption>
+    </figure>
+  )}
+  <div class="article__layout container-narrow">
+    <aside><span>Материал</span><a href="/news">← Все публикации</a></aside>
+    <div class="article__body">
+      {item.excerpt && <p class="article__lead">{item.excerpt}</p>}
+      {item.body.map((paragraph) => <p>{paragraph}</p>)}
+    </div>
+  </div>
+  <section class="article__next container-narrow">
+    <div><span>Следующий шаг</span><h2>Подберите локации для своей кампании</h2></div>
+    <a href="/catalog">Открыть каталог <span aria-hidden="true">→</span></a>
+  </section>
+</article>
+
+<style>
+  .article { padding: 18px 0 clamp(90px, 11vw, 160px); }
+  .article__breadcrumbs { display: flex; min-height: 50px; align-items: center; gap: 9px; overflow: hidden; color: var(--muted); font-family: var(--font-mono); font-size: 9px; white-space: nowrap; }
+  .article__breadcrumbs a:hover { color: var(--accent); }
+  .article__breadcrumbs span:last-child { overflow: hidden; text-overflow: ellipsis; }
+  .article__header { display: grid; grid-template-columns: 1.35fr 0.65fr; align-items: end; gap: 40px; padding-block: clamp(40px, 6vw, 82px); }
+  .article__header p { margin: 0 0 18px; color: var(--accent); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .article h1 { max-width: 1050px; margin: 0; font-size: clamp(48px, 7vw, 100px); font-weight: 720; letter-spacing: -0.07em; line-height: 0.95; }
+  .article__header > div:last-child { display: grid; gap: 7px; padding-bottom: 6px; color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+  .article__cover { position: relative; height: min(70vh, 820px); margin-top: 0; margin-bottom: 0; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
+  .article__cover img { width: 100%; height: 100%; object-fit: cover; }
+  .article__cover figcaption { position: absolute; right: 16px; bottom: 16px; padding: 7px 10px; color: #fff; background: rgba(25, 25, 24, 0.78); border-radius: 999px; font-family: var(--font-mono); font-size: 8px; }
+  .article__layout { display: grid; grid-template-columns: 160px 1fr; gap: 50px; padding-top: clamp(56px, 8vw, 100px); }
+  .article__layout aside { display: grid; align-content: start; gap: 16px; color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+  .article__layout aside a { color: var(--accent); }
+  .article__body { min-width: 0; }
+  .article__body > p { margin: 0 0 1.4em; color: var(--ink-soft); font-size: clamp(16px, 1.7vw, 20px); line-height: 1.8; }
+  .article__body .article__lead { margin-bottom: 1.8em; color: var(--ink); font-size: clamp(22px, 3vw, 36px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.35; }
+  .article__next { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 40px; margin-top: clamp(60px, 8vw, 110px); padding: clamp(28px, 4vw, 48px); color: #fff; background: #242421; border-radius: var(--radius-lg); }
+  .article__next span { color: #d78e8e; font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; }
+  .article__next h2 { max-width: 620px; margin: 12px 0 0; font-size: clamp(28px, 4vw, 48px); letter-spacing: -0.05em; line-height: 1.05; }
+  .article__next > a { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 28px; padding: 0 16px; color: #fff; background: var(--accent); border-radius: 9px; font-size: 11px; font-weight: 750; }
+  @media (max-width: 760px) {
+    .article__header { grid-template-columns: 1fr; }
+    .article__cover { width: 100%; height: 56vh; border-radius: 0; }
+    .article__layout { grid-template-columns: 1fr; gap: 26px; }
+    .article__next { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,48 @@
+---
+interface Props {
+  id: string;
+  label?: string;
+  compact?: boolean;
+}
+const { id, label = "Карта рекламных конструкций в Грозном", compact = false } = Astro.props;
+---
+<div class:list={["map-canvas", { "map-canvas--compact": compact }]} id={id} aria-label={label} role="region">
+  <div class="map-canvas__loading" data-map-message>
+    <span aria-hidden="true">43.318° N · 45.698° E</span>
+    <strong>Загружаем карту Грозного</strong>
+    <p>Если карта недоступна, все конструкции останутся в списке.</p>
+  </div>
+</div>
+
+<style>
+  .map-canvas {
+    position: relative;
+    min-height: 620px;
+    overflow: hidden;
+    background:
+      linear-gradient(rgba(25, 25, 24, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(25, 25, 24, 0.045) 1px, transparent 1px),
+      #ddd9d1;
+    background-size: 38px 38px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .map-canvas--compact { min-height: 440px; }
+  .map-canvas__loading {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    padding: 30px;
+    text-align: center;
+  }
+  .map-canvas__loading span { color: var(--accent); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; }
+  .map-canvas__loading strong { margin-top: 12px; font-size: clamp(20px, 2vw, 28px); }
+  .map-canvas__loading p { max-width: 360px; margin: 8px auto 0; color: var(--muted); font-size: 13px; }
+  :global(.ymaps-2-1-79-map) { font-family: var(--font-sans) !important; }
+  @media (max-width: 760px) {
+    .map-canvas,
+    .map-canvas--compact { min-height: min(66vh, 560px); border-radius: 18px; }
+  }
+</style>

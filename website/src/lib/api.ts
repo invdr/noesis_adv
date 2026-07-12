@@ -4,7 +4,6 @@
 // сборки сайта; см. infra/deploy.sh). Сбой запроса роняет сборку сознательно —
 // наружу уходит только успешно собранный сайт (решение №8 плана Вехи 4).
 import {
-  BADGE_PALETTE,
   CONSTRUCTION_FORMAT_LABEL,
   CONSTRUCTION_LIGHTING_LABEL,
   CONSTRUCTION_SIDE_COUNT_LABEL,
@@ -148,7 +147,7 @@ export interface ConstructionView {
   href: string;
   lat: number | null;
   lng: number | null;
-  badges: { text: string; color: Badge["color"]; bg: string; fg: string }[];
+  badges: { text: string; color: Badge["color"] }[];
 }
 
 export function toConstructionView(c: Construction): ConstructionView {
@@ -175,11 +174,7 @@ export function toConstructionView(c: Construction): ConstructionView {
     href: `/constructions/${c.slug}`,
     lat: c.lat,
     lng: c.lng,
-    badges: c.badges.map((b) => ({
-      ...b,
-      bg: BADGE_PALETTE[b.color].bg,
-      fg: BADGE_PALETTE[b.color].fg,
-    })),
+    badges: c.badges.map(({ text, color }) => ({ text, color })),
   };
 }
 
@@ -200,6 +195,7 @@ export interface CatalogItem {
   lng: number | null;
   format: ConstructionFormat;
   formatLabel: string;
+  lighting: Construction["lighting"];
   sideCount: number;
   sideLabel: string;
   /** Числовая цена/мес для фильтра диапазона; `null` — «по запросу». */
@@ -211,13 +207,17 @@ export interface CatalogItem {
   lightingLabel: string;
   reachLabel: string;
   href: string;
-  badges: { text: string; color: Badge["color"]; bg: string; fg: string }[];
+  isSoon: boolean;
+  badges: { text: string; color: Badge["color"] }[];
   sides: {
     id: string;
     code: string;
     effectivePricePerMonth: number | null;
     priceLabel: string;
     description: string | null;
+    trafficPerDay: number | null;
+    grp: number | null;
+    photo?: Asset;
   }[];
 }
 
@@ -234,6 +234,7 @@ export function toCatalogItem(c: Construction): CatalogItem {
     lng: c.lng,
     format: c.format,
     formatLabel: view.formatLabel,
+    lighting: c.lighting,
     sideCount: c.sideCount,
     sideLabel: view.sideLabel,
     pricePerMonth: c.pricePerMonth,
@@ -244,6 +245,7 @@ export function toCatalogItem(c: Construction): CatalogItem {
     lightingLabel: view.lightingLabel,
     reachLabel: view.reachLabel,
     href: view.href,
+    isSoon: c.badges.some((badge) => /скоро/i.test(badge.text)),
     badges: view.badges,
     sides: c.sides.map((s) => ({
       id: s.id,
@@ -251,6 +253,9 @@ export function toCatalogItem(c: Construction): CatalogItem {
       effectivePricePerMonth: s.effectivePricePerMonth,
       priceLabel: pricePerMonthLabel(s.effectivePricePerMonth),
       description: s.description,
+      trafficPerDay: s.trafficPerDay,
+      grp: s.grp,
+      photo: s.photo,
     })),
   };
 }

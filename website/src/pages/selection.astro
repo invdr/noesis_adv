@@ -1,0 +1,17 @@
+---
+import SelectionPage from "../components/selection/SelectionPage.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { fetchSiteSettings } from "../lib/api";
+import { buildChrome } from "../lib/chrome";
+import { BRAND_NAME } from "../lib/site";
+
+const chrome = buildChrome(await fetchSiteSettings());
+const title = `Подборка размещений | ${BRAND_NAME}`;
+const description = "Подборка выбранных рекламных конструкций, сторон и периодов для единой заявки менеджеру NOESIS |ad.";
+---
+<BaseLayout chrome={chrome} title={title} description={description} path="/selection" current="selection" noindex>
+  <SelectionPage />
+  <script>
+    import "../scripts/selection";
+  </script>
+</BaseLayout>

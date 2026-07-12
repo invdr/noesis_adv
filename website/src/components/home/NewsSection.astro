@@ -1,0 +1,27 @@
+---
+import type { NewsView } from "../../lib/api";
+import NewsCard from "../NewsCard.astro";
+import SectionHeading from "../SectionHeading.astro";
+interface Props { items: NewsView[]; }
+const { items } = Astro.props;
+---
+{items.length > 0 && (
+  <section class="news" id="cases">
+    <div class="container">
+      <div class="news__heading">
+        <SectionHeading eyebrow="Кейсы и новости" title="Город, кампании и практика размещения" description="Публикации из NOESIS |ad: новые позиции, примеры кампаний и полезные материалы для рекламодателей." />
+        <a href="/news">Все материалы →</a>
+      </div>
+      <div class="news__grid">{items.slice(0, 3).map((item) => <NewsCard item={item} />)}</div>
+    </div>
+  </section>
+)}
+
+<style>
+  .news { padding: clamp(80px, 10vw, 140px) 0; }
+  .news__heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; }
+  .news__heading > a { flex: 0 0 auto; padding-bottom: 8px; color: var(--accent); font-size: 12px; font-weight: 750; }
+  .news__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 50px; }
+  @media (max-width: 900px) { .news__grid { grid-template-columns: repeat(2, 1fr); } .news__grid > :last-child { display: none; } }
+  @media (max-width: 620px) { .news__heading { align-items: start; flex-direction: column; } .news__grid { grid-template-columns: 1fr; } .news__grid > :last-child { display: block; } }
+</style>

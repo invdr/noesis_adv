@@ -1,207 +1,62 @@
 ---
-// Реальная страница конструкции /constructions/<slug>: SEO-meta, прямой доступ
-// и индексация. В getStaticPaths попадают только опубликованные неархивные
-// конструкции из публичного API.
-import SiteHead from "../../components/SiteHead.astro";
-import Footer from "../../components/Footer.astro";
-import CookieBanner from "../../components/CookieBanner.astro";
-import Header from "../../components/Header.astro";
+import ConstructionDetail from "../../components/construction/ConstructionDetail.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
 import {
-  fetchConstructions,
-  fetchDocumentCategories,
   fetchConstructionDocuments,
+  fetchConstructions,
   fetchSiteSettings,
-  toConstructionView,
-  documentHref,
-  documentMeta,
   type Construction,
 } from "../../lib/api";
 import { buildChrome } from "../../lib/chrome";
+import { absUrl, BRAND_NAME } from "../../lib/site";
 
 export async function getStaticPaths() {
   const constructions = await fetchConstructions();
-  return constructions.map((c) => ({
-    params: { slug: c.slug },
-    props: { construction: c },
-  }));
+  return constructions.map((construction) => ({ params: { slug: construction.slug }, props: { construction } }));
 }
 
-interface Props {
-  construction: Construction;
-}
+interface Props { construction: Construction; }
 const { construction } = Astro.props;
-const view = toConstructionView(construction);
-const [groups, docCategories, settings] = await Promise.all([
+const [documents, settings] = await Promise.all([
   fetchConstructionDocuments(construction.slug),
-  fetchDocumentCategories(),
   fetchSiteSettings(),
 ]);
 const chrome = buildChrome(settings);
-const s = chrome.s;
-const hasDocs = groups.length > 0;
-const homeDocsHiddenSet = new Set(s.homepageHidden);
-const hasHomeDocs = docCategories.some((c) =>
-  c.constructions.some((p) => !homeDocsHiddenSet.has(p.id)),
-);
-
-// URL API в браузере (для формы заявки) — как на главной, через PUBLIC_API_URL.
-const apiUrl = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3000";
-
-const about =
-  construction.description ||
-  "Рекламная конструкция Noesis в Грозном. Уточните период размещения, сторону и условия кампании — менеджер свяжется с вами и предложит подходящий сценарий.";
-
-const displayName = view.name;
-const title = `${displayName} — рекламная конструкция в Грозном | Noesis`;
-const description = construction.description
-  ? construction.description.slice(0, 200)
-  : `${displayName} — рекламная конструкция в Грозном. ${view.formatLabel}, ${view.priceLabel}. Оставьте заявку на размещение.`;
+const mapApiKey = import.meta.env.PUBLIC_YANDEX_MAPS_API_KEY ?? "";
+const title = `${construction.name}${construction.code ? ` (${construction.code})` : ""} | ${BRAND_NAME}`;
+const description = (construction.description || `${construction.address || "Грозный"}. Формат, стороны, фотографии, стоимость и календарь доступности рекламной конструкции.`).slice(0, 220);
+const image = construction.cover?.url || construction.images[0]?.url;
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: construction.name,
+  sku: construction.code || construction.id,
+  description,
+  url: absUrl(`/constructions/${construction.slug}`),
+  ...(image ? { image: absUrl(image) } : {}),
+  ...(construction.address ? { areaServed: { "@type": "City", name: "Грозный" } } : {}),
+  ...(construction.pricePerMonth != null ? {
+    offers: {
+      "@type": "Offer",
+      price: construction.pricePerMonth,
+      priceCurrency: "RUB",
+      availability: "https://schema.org/LimitedAvailability",
+      url: absUrl(`/constructions/${construction.slug}`),
+    },
+  } : {}),
+};
 ---
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<SiteHead
+<BaseLayout
+  chrome={chrome}
   title={title}
   description={description}
   path={`/constructions/${construction.slug}`}
-  image={view.img || "/assets/og-default.jpg"}
-  siteName={s.siteName}
-  metrikaId={chrome.metrikaId}
-/>
-</head>
-<body>
-<Header chrome={chrome} showDocs={hasHomeDocs} solid />
-
-<div class="project-hero">
-  <img src={view.img} srcset={view.imgSrcset || undefined} sizes={view.imgSrcset ? "100vw" : undefined} alt={view.name}>
-  <div class="project-hero-gradient"></div>
-  <div class="project-hero-content">
-    <div class="wrap-narrow">
-      {view.badges.length > 0 && (
-        <div class="project-hero-badges">
-          {view.badges.map((b) => (
-            <span class="project-badge" style={`background:${b.bg};color:${b.fg}`}>{b.text}</span>
-          ))}
-        </div>
-      )}
-      <h1 id="projectName">{displayName}</h1>
-      <p id="projectAddress">{view.address}</p>
-    </div>
-  </div>
-</div>
-
-<div class="wrap-narrow project-body">
-  <div class="project-about-grid">
-    <div>
-      <h2 class="h2 h2-md">О конструкции</h2>
-      <p>{about}</p>
-      <div class="project-about-actions">
-        <button type="button" class="btn btn-primary" data-lead-open>{s.contactsLeaveCta}</button>
-        <a href={chrome.phoneHref} class="btn btn-outline-dark">{s.ctaOrderCall}</a>
-      </div>
-    </div>
-    <div class="project-specs">
-      <div class="project-spec project-spec-wide">
-        <span class="mono">Адрес</span>
-        <span>{view.address}</span>
-      </div>
-      <div class="project-spec">
-        <span class="mono">Формат</span>
-        <span>{view.formatLabel}</span>
-      </div>
-      <div class="project-spec">
-        <span class="mono">Стороны</span>
-        <span>{view.sideLabel}</span>
-      </div>
-      <div class="project-spec">
-        <span class="mono">Размер</span>
-        <span>{view.sizeLabel}</span>
-      </div>
-      <div class="project-spec">
-        <span class="mono">Подсветка</span>
-        <span>{view.lightingLabel}</span>
-      </div>
-      <div class="project-spec project-spec-wide">
-        <span class="mono">Охват</span>
-        <span>{view.reachLabel}</span>
-      </div>
-      <div class="project-spec project-spec-wide">
-        <span class="mono">Стоимость</span>
-        <span class="project-spec-price">{view.priceLabel}</span>
-      </div>
-    </div>
-  </div>
-
-  {hasDocs && (
-  <div>
-    <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Документы</span></div>
-    {groups.map((g) => (
-      <div class="docs-category">
-        <h2 class="h2 docs-category-title">{g.category.name}</h2>
-        <div class="docs-grid">
-          {g.documents.map((d) => (
-            <a class="doc-card" href={documentHref(d)} target="_blank" rel="noopener">
-              <span class="doc-card-icon"><svg width="20" height="24" viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H5a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9z"></path><path d="M14 2v7h7"></path></svg></span>
-              <span class="doc-card-text"><span class="doc-card-name">{d.name}</span><span class="doc-card-meta mono">{documentMeta(d)}</span></span>
-              <span class="doc-card-dl">↓</span>
-            </a>
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-  )}
-
-  <div class="project-cta">
-    <div class="pattern-overlay pattern-overlay-cta"></div>
-    <div class="project-cta-text">
-      <h3>Заинтересовал {view.name}?</h3>
-      <p>Оставьте заявку — уточним период, сторону и условия размещения.</p>
-    </div>
-    <div class="project-cta-actions">
-      <button type="button" class="btn btn-white" data-lead-open>{s.contactsLeaveCta}</button>
-      <a href="/#catalog" class="btn btn-outline-white">К другим конструкциям</a>
-    </div>
-  </div>
-</div>
-
-<div class="lead-modal" id="leadModal" role="dialog" aria-modal="true" aria-labelledby="leadModalTitle" hidden>
-  <div class="lead-modal-overlay" data-lead-close></div>
-  <div class="lead-modal-card hero-card" role="document">
-    <button type="button" class="lead-modal-close" aria-label="Закрыть" data-lead-close>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-    </button>
-    <span class="mono hero-card-label">{view.name}</span>
-    <p class="hero-card-title" id="leadModalTitle">Оставьте номер — перезвоним за 15 минут и обсудим размещение на «{view.name}»</p>
-    <form class="hero-card-form" id="modalLeadForm" novalidate>
-      <label class="visually-hidden" for="modalLeadName">Как к вам обращаться</label>
-      <input id="modalLeadName" type="text" placeholder="Как к вам обращаться" name="name" autocomplete="name" minlength="2" maxlength="120" required>
-      <label class="visually-hidden" for="modalLeadPhone">Номер телефона</label>
-      <input id="modalLeadPhone" type="tel" placeholder="+7 (___) ___-__-__" name="phone" autocomplete="tel" inputmode="tel" maxlength="18" required>
-      <input class="lead-hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <label class="hero-card-consent">
-        <input type="checkbox" id="modalLeadConsent" name="consent" required>
-        <span class="hero-card-consent-box" aria-hidden="true">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"></path></svg>
-        </span>
-        <span class="hero-card-consent-text">Нажимая кнопку, вы соглашаетесь с <a href="/privacy" target="_blank" rel="noopener">обработкой персональных данных</a></span>
-      </label>
-      <button type="submit" class="btn btn-primary">{s.ctaOrderCall}</button>
-      <p class="hero-card-success" id="modalLeadSuccess" role="status" aria-live="polite" hidden>Спасибо! Перезвоним в течение 15 минут.</p>
-    </form>
-  </div>
-</div>
-
-<Footer chrome={chrome} showDocs={hasHomeDocs} />
-<CookieBanner />
-
-<script is:inline define:vars={{ apiUrl, constructionSlug: construction.slug, constructionId: construction.id, constructionName: view.name }}>
-  window.NOESIS_API_URL = apiUrl;
-  // Контекст для формы заявки: привязка лида к этой конструкции.
-  window.NOESIS_CONSTRUCTION = { id: constructionId, name: constructionName, slug: constructionSlug };
-  // Цель Метрики «просмотр конструкции»; no-op, если счётчик не задан.
-  if (window.ymGoal) window.ymGoal('construction_view', { slug: constructionSlug });
-</script>
-<script is:inline src="/js/page.js"></script>
-</body>
-</html>
+  image={image}
+  jsonLd={jsonLd}
+  current="other"
+>
+  <ConstructionDetail construction={construction} documents={documents} mapApiKey={mapApiKey} />
+  <script>
+    import "../../scripts/construction";
+  </script>
+</BaseLayout>

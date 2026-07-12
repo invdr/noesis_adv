@@ -1,0 +1,39 @@
+---
+interface Props {
+  tone?: "dark" | "light";
+}
+
+const { tone = "dark" } = Astro.props;
+---
+<span class:list={["brand", `brand--${tone}`]} aria-label="NOESIS |ad">
+  <span class="brand__name">NOESIS</span><span class="brand__divider">|</span><span class="brand__suffix">ad</span>
+</span>
+
+<style>
+  .brand {
+    display: inline-flex;
+    align-items: baseline;
+    white-space: nowrap;
+    font-family: var(--font-sans);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .brand--dark { color: var(--ink); }
+  .brand--light { color: #fff; }
+
+  .brand__name { font-size: 22px; }
+  .brand__divider {
+    margin-inline: 7px 5px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .brand__suffix {
+    color: currentColor;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+</style>

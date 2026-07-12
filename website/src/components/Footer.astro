@@ -1,44 +1,111 @@
 ---
-// Подвал лендинга. Якорные ссылки разделов работают на главной как `#id`, а на
-// отдельных страницах (конструкция/новость) — как `/#id` (через `home`). Пункт
-// «Документы» скрывается, если документов нет (`showDocs`). Тексты/контакты —
-// из настроек сайта (Веха 4.3), дизайн 1:1.
 import type { Chrome } from "../lib/chrome";
-interface Props {
-  chrome: Chrome;
-  home?: boolean;
-  showDocs?: boolean;
-}
-const { chrome, home = false, showDocs = false } = Astro.props;
+import BrandMark from "./BrandMark.astro";
+
+interface Props { chrome: Chrome; }
+const { chrome } = Astro.props;
 const { s } = chrome;
-const base = home ? "" : "/";
 ---
 <footer class="footer" id="contacts">
-  <div class="wrap footer-top">
-    <div class="footer-brand">
-      <span class="brand-word">{s.siteName}</span>
+  <div class="footer__inner container">
+    <div class="footer__lead">
+      <BrandMark tone="light" />
       <p>{s.footerBrand}</p>
     </div>
-    <div class="footer-cols">
-      <div class="footer-col">
-        <span class="mono footer-col-title">Разделы</span>
-        <a href={`${base}#catalog`}>{s.navCatalog}</a>
-        <a href={`${base}#map`}>{s.navFlats}</a>
-        <a href={`${base}#about`}>{s.navAbout}</a>
-        {showDocs && <a href={`${base}#docs`}>{s.navDocs}</a>}
+
+    <div class="footer__links">
+      <div>
+        <span>Навигация</span>
+        <a href="/catalog">Каталог</a>
+        <a href="/catalog#map">Карта</a>
+        <a href="/news">Кейсы</a>
+        <a href="/materials">Материалы</a>
       </div>
-      <div class="footer-col">
-        <span class="mono footer-col-title">{s.navContacts}</span>
+      <div>
+        <span>Связь</span>
         <a href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
+        <a href={chrome.secondary.href}>{chrome.secondary.label}</a>
         <a href={`mailto:${s.email}`}>{s.email}</a>
-        <span>{s.address}</span>
-        <span>{s.workHoursWeekday}<br>{s.workHoursSaturday}</span>
-        <a href="/privacy">Политика обработки персональных данных</a>
+      </div>
+      <div>
+        <span>Офис</span>
+        <p>{s.address}</p>
+        <p>{s.workHoursWeekday}<br />{s.workHoursSaturday}</p>
       </div>
     </div>
-  </div>
-  <div class="wrap footer-bottom">
-    <span>{s.copyright}</span>
-    <span>{s.slogan}</span>
+
+    <div class="footer__bottom">
+      <span>{s.copyright}</span>
+      <a href="/privacy">Политика конфиденциальности</a>
+      <span>Грозный · Чеченская Республика</span>
+    </div>
   </div>
 </footer>
+
+<style>
+  .footer {
+    padding: clamp(58px, 7vw, 96px) 0 24px;
+    color: rgba(255, 255, 255, 0.84);
+    background: #1d1d1b;
+  }
+
+  .footer__inner { display: grid; gap: clamp(52px, 7vw, 90px); }
+
+  .footer__lead {
+    display: grid;
+    grid-template-columns: minmax(200px, 0.7fr) minmax(280px, 1fr);
+    align-items: start;
+    gap: 32px;
+  }
+
+  .footer__lead p {
+    max-width: 680px;
+    margin: 0;
+    color: #fff;
+    font-size: clamp(22px, 3vw, 42px);
+    font-weight: 650;
+    letter-spacing: -0.045em;
+    line-height: 1.18;
+  }
+
+  .footer__links {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .footer__links > div { display: grid; align-content: start; gap: 9px; }
+  .footer__links span {
+    margin-bottom: 10px;
+    color: rgba(255, 255, 255, 0.48);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .footer__links a,
+  .footer__links p { margin: 0; font-size: 14px; }
+  .footer__links a { width: fit-content; }
+  .footer__links a:hover { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+
+  .footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px 28px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 12px;
+  }
+
+  .footer__bottom a:hover { color: #fff; }
+
+  @media (max-width: 760px) {
+    .footer__lead { grid-template-columns: 1fr; }
+    .footer__links { grid-template-columns: 1fr; gap: 38px; }
+    .footer__bottom { flex-direction: column; }
+  }
+</style>

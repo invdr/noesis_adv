@@ -1,0 +1,67 @@
+---
+import type { NewsView } from "../lib/api";
+interface Props { item: NewsView; }
+const { item } = Astro.props;
+---
+<article class="news-card">
+  <a href={item.href}>
+    <div class="news-card__media">
+      {item.img ? (
+        <img src={item.img} srcset={item.imgSrcset || undefined} sizes={item.imgSrcset ? "(max-width: 720px) 100vw, 440px" : undefined} alt={item.title} loading="lazy" decoding="async" />
+      ) : (
+        <div class="news-card__fallback" aria-label="Обложка не загружена">NOESIS |ad</div>
+      )}
+      {item.tag && <span>{item.tag}</span>}
+    </div>
+    <div class="news-card__body">
+      <time>{item.date}</time>
+      <h3>{item.title}</h3>
+      {item.excerpt && <p>{item.excerpt}</p>}
+      <b>Открыть материал <span aria-hidden="true">↗</span></b>
+    </div>
+  </a>
+</article>
+
+<style>
+  .news-card { min-width: 0; }
+  .news-card > a { display: grid; gap: 20px; }
+  .news-card__media {
+    position: relative;
+    min-height: 280px;
+    overflow: hidden;
+    background: var(--surface);
+    border-radius: var(--radius-md);
+  }
+  .news-card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform 400ms ease; }
+  .news-card a:hover .news-card__media img { transform: scale(1.025); }
+  .news-card__fallback {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+    place-items: center;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .news-card__media > span {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 7px 10px;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .news-card__body { display: grid; gap: 10px; }
+  .news-card time { color: var(--muted); font-family: var(--font-mono); font-size: 10px; }
+  .news-card h3 { margin: 0; font-size: clamp(22px, 2.4vw, 32px); letter-spacing: -0.045em; line-height: 1.12; }
+  .news-card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .news-card b { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; }
+  .news-card a:hover b { color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) { .news-card a:hover .news-card__media img { transform: none; } }
+</style>

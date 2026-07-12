@@ -1,6 +1,5 @@
 ---
-// Единый <head> для всех страниц лендинга: метаданные, canonical, Open Graph /
-// Twitter Card, шрифты и стили. Дизайн не меняем — это только SEO-обвязка.
+// Единый <head> для публичного сайта: SEO, соцсети, шрифты и Метрика.
 import { SITE_SETTINGS_DEFAULTS } from "@noesis/contracts";
 import { absUrl } from "../lib/site";
 
@@ -19,18 +18,21 @@ interface Props {
   siteName?: string;
   /** ID счётчика Яндекс.Метрики (пусто = не грузим). */
   metrikaId?: string;
+  /** Служебные страницы (например, подборка) не индексируются. */
+  noindex?: boolean;
 }
 
 const {
   title,
   description,
   path,
-  // JPG-обложка по умолчанию (WebP некоторые соцскрейперы не разворачивают в OG).
-  image = "/assets/og-default.jpg",
+  // Новая нейтральная OG-обложка дизайн-системы.
+  image = "/assets/og-noesis.svg",
   type = "website",
   jsonLd,
   siteName = SITE_SETTINGS_DEFAULTS.siteName,
   metrikaId = "",
+  noindex = false,
 } = Astro.props;
 
 const canonical = absUrl(path);
@@ -49,14 +51,12 @@ const metrikaScript = metrikaId
     `window.ymGoal=function(n,p){try{if(window.ym)ym(${counter},"reachGoal",n,p||{});}catch(e){}};` +
     `document.addEventListener("click",function(ev){var a=ev.target&&ev.target.closest&&ev.target.closest('a[href^="tel:"]');if(a)window.ymGoal("phone_click");});`
   : "";
-const metrikaNoscript = metrikaId
-  ? `<div><img src="https://mc.yandex.ru/watch/${counter}" style="position:absolute; left:-9999px;" alt="" /></div>`
-  : "";
 ---
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{title}</title>
 <meta name="description" content={description} />
+{noindex && <meta name="robots" content="noindex,follow" />}
 <link rel="canonical" href={canonical} />
 
 <meta property="og:type" content={type} />
@@ -74,12 +74,10 @@ const metrikaNoscript = metrikaId
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/styles.css" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
 {jsonLd && (
   <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 )}
 
 {metrikaScript && <script is:inline set:html={metrikaScript} />}
-{metrikaNoscript && <noscript set:html={metrikaNoscript} />}

@@ -18,6 +18,7 @@ export const GET: APIRoute = async () => {
     { loc: "/" },
     { loc: "/catalog" },
     { loc: "/news" },
+    { loc: "/materials" },
     { loc: "/privacy" },
     ...constructions.map((p) => ({ loc: `/constructions/${p.slug}` })),
     ...news.map((n) => ({ loc: `/news/${n.slug}`, lastmod: lastmod(n.date) })),

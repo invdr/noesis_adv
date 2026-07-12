@@ -1,0 +1,251 @@
+---
+import type { CatalogItem } from "../lib/api";
+
+interface Props {
+  item: CatalogItem;
+  variant?: "catalog" | "featured";
+  mapAction?: boolean;
+}
+
+const { item, variant = "catalog", mapAction = false } = Astro.props;
+const sideCodes = item.sides.map((side) => side.code).join(" / ");
+---
+<article
+  class:list={["card", `card--${variant}`, { "card--soon": item.isSoon }]}
+  data-construction-card={item.id}
+  data-id={item.id}
+>
+  <div class="card__media">
+    {item.img ? (
+      <img
+        src={item.img}
+        srcset={item.imgSrcset || undefined}
+        sizes={item.imgSrcset ? "(max-width: 720px) 100vw, (max-width: 1200px) 50vw, 420px" : undefined}
+        alt={`Рекламная конструкция ${item.name}`}
+        loading="lazy"
+        decoding="async"
+      />
+    ) : (
+      <div class="card__fallback" aria-label="Фотография пока не загружена">
+        <span>{item.code || "NOESIS"}</span>
+      </div>
+    )}
+    <div class="card__topline">
+      <span>{item.code || "Код уточняется"}</span>
+      {item.isSoon && <strong>Скоро</strong>}
+    </div>
+    <p class="card__availability" data-card-availability>Уточните период</p>
+  </div>
+
+  <div class="card__body">
+    <div class="card__location">
+      <span>{item.district || "Грозный"}</span>
+      <span>{item.formatLabel}</span>
+    </div>
+    <h3>{item.name}</h3>
+    <p class="card__address">{item.address}</p>
+
+    <dl class="card__facts">
+      <div><dt>Размер</dt><dd>{item.sizeLabel}</dd></div>
+      <div><dt>Стороны</dt><dd>{sideCodes || item.sideLabel}</dd></div>
+      <div><dt>Контакт</dt><dd>{item.reachLabel}</dd></div>
+      <div><dt>Подсветка</dt><dd>{item.lightingLabel}</dd></div>
+    </dl>
+
+    <div class="card__price">
+      <span>Стоимость</span>
+      <strong>{item.priceLabel}</strong>
+    </div>
+
+    <div class="card__actions">
+      {item.isSoon ? (
+        <span class="card__soon-note">Карточка появится после публикации</span>
+      ) : (
+        <a href={item.href}>Подробнее <span aria-hidden="true">↗</span></a>
+      )}
+      <button type="button" data-card-add={item.id} disabled={item.isSoon}>
+        <span data-card-add-label>{item.isSoon ? "Недоступно" : "В подборку"}</span>
+        <span aria-hidden="true">+</span>
+      </button>
+    </div>
+    {mapAction && item.lat != null && item.lng != null && (
+      <button class="card__map" type="button" data-map-focus={item.id}>Показать на карте</button>
+    )}
+    {mapAction && (item.lat == null || item.lng == null) && (
+      <p class="card__no-coordinates">Координаты уточняются</p>
+    )}
+  </div>
+</article>
+
+<style>
+  .card {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+  .card:hover,
+  .card.is-map-active {
+    transform: translateY(-3px);
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow);
+  }
+  .card.is-map-active { box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.18), var(--shadow); }
+
+  .card__media {
+    position: relative;
+    min-height: 250px;
+    overflow: hidden;
+    background: #d8d4cc;
+  }
+  .card--featured .card__media { min-height: 320px; }
+  .card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform 500ms ease; }
+  .card:hover .card__media img { transform: scale(1.025); }
+  .card__media::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(18, 18, 17, 0.42), transparent 38%, rgba(18, 18, 17, 0.25));
+    content: "";
+    pointer-events: none;
+  }
+  .card__fallback {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    place-items: center;
+    color: var(--muted);
+    background: repeating-linear-gradient(-45deg, #dedad2, #dedad2 12px, #e8e4dc 12px, #e8e4dc 24px);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+  .card__topline {
+    position: absolute;
+    z-index: 2;
+    top: 14px;
+    right: 14px;
+    left: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .card__topline span,
+  .card__topline strong,
+  .card__availability {
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    padding: 0 10px;
+    color: #fff;
+    background: rgba(25, 25, 24, 0.86);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .card__topline strong { background: var(--accent); }
+  .card__availability {
+    position: absolute;
+    z-index: 2;
+    right: 14px;
+    bottom: 14px;
+    margin: 0;
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.92);
+    letter-spacing: 0;
+  }
+  .card__availability[data-state="free"]::before,
+  .card__availability[data-state="partial"]::before,
+  .card__availability[data-state="occupied"]::before {
+    margin-right: 6px;
+    content: "●";
+  }
+  .card__availability[data-state="free"]::before { color: var(--positive); }
+  .card__availability[data-state="partial"]::before { color: var(--warning); }
+  .card__availability[data-state="occupied"]::before { color: var(--accent); }
+
+  .card__body { display: grid; gap: 16px; padding: 20px; }
+  .card__location { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; }
+  .card__location span {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .card h3 {
+    margin: 0;
+    font-size: clamp(21px, 2vw, 28px);
+    font-weight: 720;
+    letter-spacing: -0.045em;
+    line-height: 1.13;
+  }
+  .card__address { min-height: 44px; margin: 0; color: var(--muted); font-size: 13px; }
+
+  .card__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding-block: 16px;
+    border-block: 1px solid var(--line);
+  }
+  .card__facts div { min-width: 0; }
+  .card__facts dt { color: var(--muted); font-size: 10px; }
+  .card__facts dd { margin: 3px 0 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 650; }
+  .card__price { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .card__price span { color: var(--muted); font-size: 11px; }
+  .card__price strong { text-align: right; font-size: 16px; }
+
+  .card__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card__actions a,
+  .card__actions button,
+  .card__soon-note {
+    display: flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 750;
+  }
+  .card__actions a { color: var(--ink); background: var(--surface); }
+  .card__actions a:hover { background: var(--line); }
+  .card__actions button { color: #fff; background: var(--accent); }
+  .card__actions button:hover:not(:disabled) { background: var(--accent-hover); }
+  .card__actions button.is-added { color: var(--accent); background: var(--accent-soft); }
+  .card__actions button:disabled { opacity: 0.55; }
+  .card__soon-note { grid-column: 1 / -1; color: var(--muted); background: var(--surface); }
+
+  .card__map {
+    min-height: 44px;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .card__map:hover { border-color: var(--accent); }
+  .card__no-coordinates { margin: 0; color: var(--muted); font-size: 11px; }
+
+  @media (max-width: 420px) {
+    .card__actions { grid-template-columns: 1fr; }
+    .card__media { min-height: 230px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card:hover,
+    .card.is-map-active { transform: none; }
+    .card:hover .card__media img { transform: none; }
+  }
+</style>

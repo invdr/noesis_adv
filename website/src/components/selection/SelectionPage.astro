@@ -1,0 +1,155 @@
+---
+import LeadForm from "../LeadForm.astro";
+---
+<section class="selection">
+  <div class="selection__intro container">
+    <p>Shortlist размещений</p>
+    <h1>Ваша <em>подборка</em></h1>
+    <span>Здесь собраны интересующие стороны и периоды. Это не корзина и не автоматическая бронь — список уйдёт менеджеру на проверку.</span>
+  </div>
+
+  <div class="selection__empty container" data-selection-empty hidden>
+    <span aria-hidden="true">+</span>
+    <h2>Подборка пока пуста</h2>
+    <p>Откройте каталог, выберите конструкцию и добавьте нужную сторону. Позиции сохранятся при переходах и после обновления страницы.</p>
+    <a href="/catalog">Перейти в каталог <span aria-hidden="true">→</span></a>
+  </div>
+
+  <div class="selection__content container" data-selection-content hidden>
+    <div class="selection__workspace">
+      <div class="selection__toolbar">
+        <p><strong data-selection-count>0</strong> <span data-selection-count-label>позиций</span></p>
+        <button type="button" data-selection-clear>Очистить подборку</button>
+      </div>
+      <div class="selection__list" data-selection-list></div>
+      <a class="selection__back" href="/catalog">← Вернуться в каталог и добавить ещё</a>
+    </div>
+
+    <aside class="selection__summary">
+      <p>Перед отправкой</p>
+      <h2>Что получит менеджер</h2>
+      <ul>
+        <li><span>01</span> Конструкции и инвентарные коды</li>
+        <li><span>02</span> Выбранные стороны A/B/C</li>
+        <li><span>03</span> Периоды по каждой позиции</li>
+        <li><span>04</span> Ваши контакты и комментарий</li>
+      </ul>
+      <div class="selection__check" data-selection-check role="status" aria-live="polite">Проверяем доступность выбранных сторон…</div>
+      <p class="selection__summary-note">Итоговую стоимость, остатки и условия размещения подтвердит менеджер.</p>
+    </aside>
+  </div>
+
+  <div class="selection__request container" data-selection-request hidden>
+    <LeadForm
+      title="Отправить подборку менеджеру"
+      description="Заполните контакты один раз — все выбранные стороны и периоды приложатся к заявке автоматически."
+      source="project"
+      variant="light"
+      includeShortlist
+    />
+  </div>
+</section>
+
+<style>
+  .selection { padding: clamp(48px, 7vw, 94px) 0 clamp(80px, 10vw, 150px); }
+  .selection__intro { display: grid; grid-template-columns: 0.35fr 1fr 0.65fr; align-items: end; gap: 30px; }
+  .selection__intro > p { margin: 0; color: var(--accent); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .selection__intro h1 { margin: 0; font-size: clamp(54px, 8vw, 116px); font-weight: 720; letter-spacing: -0.075em; line-height: 0.86; }
+  .selection__intro h1 em { display: block; color: var(--accent); font-style: normal; }
+  .selection__intro > span { color: var(--muted); font-size: 14px; }
+
+  .selection__empty {
+    display: grid;
+    min-height: 500px;
+    place-content: center;
+    margin-top: 54px;
+    padding: 50px;
+    text-align: center;
+    background: var(--paper);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-lg);
+  }
+  .selection__empty > span { color: var(--accent); font-family: var(--font-mono); font-size: 48px; }
+  .selection__empty h2 { margin: 18px 0 0; font-size: clamp(30px, 4vw, 52px); letter-spacing: -0.05em; }
+  .selection__empty p { max-width: 600px; margin: 14px auto 0; color: var(--muted); }
+  .selection__empty a { display: inline-flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 32px; margin: 28px auto 0; padding: 0 18px; color: #fff; background: var(--accent); border-radius: 10px; font-size: 12px; font-weight: 750; }
+
+  .selection__content { display: grid; grid-template-columns: minmax(540px, 1.35fr) minmax(300px, 0.65fr); align-items: start; gap: 22px; margin-top: 54px; }
+  .selection__workspace { min-width: 0; }
+  .selection__toolbar { display: flex; min-height: 50px; align-items: center; justify-content: space-between; gap: 20px; }
+  .selection__toolbar p { margin: 0; color: var(--muted); font-size: 12px; }
+  .selection__toolbar strong { color: var(--ink); font-family: var(--font-mono); font-size: 20px; }
+  .selection__toolbar button { min-height: 40px; padding: 0 10px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 700; }
+  .selection__toolbar button:hover { color: var(--accent); }
+  .selection__list { display: grid; gap: 12px; }
+
+  :global(.selection-item) {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr) 170px;
+    gap: 18px;
+    padding: 14px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+  }
+  :global(.selection-item__media) { min-height: 190px; overflow: hidden; background: var(--surface); border-radius: 12px; }
+  :global(.selection-item__media img) { width: 100%; height: 100%; object-fit: cover; }
+  :global(.selection-item__media span) { display: grid; width: 100%; height: 100%; place-items: center; color: var(--muted); font-family: var(--font-mono); font-size: 10px; }
+  :global(.selection-item__body) { display: grid; min-width: 0; align-content: start; gap: 9px; padding: 6px 0; }
+  :global(.selection-item__code) { color: var(--accent); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+  :global(.selection-item h3) { margin: 0; font-size: 22px; letter-spacing: -0.04em; line-height: 1.15; }
+  :global(.selection-item__address) { margin: 0; color: var(--muted); font-size: 11px; }
+  :global(.selection-item__edit) { display: grid; grid-template-columns: 0.8fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+  :global(.selection-item label) { display: grid; min-width: 0; gap: 5px; }
+  :global(.selection-item label span) { color: var(--muted); font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; }
+  :global(.selection-item select),
+  :global(.selection-item input) { width: 100%; min-width: 0; min-height: 42px; padding: 0 8px; background: #fff; border: 1px solid var(--line); border-radius: 8px; font-size: 10px; }
+  :global(.selection-item__aside) { display: flex; flex-direction: column; align-items: stretch; padding: 6px 0; text-align: right; }
+  :global(.selection-item__aside > span) { color: var(--muted); font-size: 9px; }
+  :global(.selection-item__aside strong) { margin-top: 4px; font-size: 14px; }
+  :global(.selection-item__status) { margin: 18px 0 0; padding: 9px 10px; color: var(--muted); background: var(--canvas); border-radius: 8px; font-size: 9px; text-align: left; }
+  :global(.selection-item__status[data-state="free"]) { color: var(--positive); background: var(--positive-soft); }
+  :global(.selection-item__status[data-state="partial"]) { color: var(--warning); background: var(--warning-soft); }
+  :global(.selection-item__status[data-state="occupied"]) { color: var(--accent); background: var(--danger-soft); }
+  :global(.selection-item__actions) { display: grid; gap: 6px; margin-top: auto; }
+  :global(.selection-item__actions a),
+  :global(.selection-item__actions button) { display: flex; min-height: 40px; align-items: center; justify-content: center; padding: 0 8px; background: transparent; border: 1px solid var(--line); border-radius: 8px; font-size: 9px; font-weight: 700; }
+  :global(.selection-item__actions button) { color: var(--accent); }
+  :global(.selection-item__actions a:hover),
+  :global(.selection-item__actions button:hover) { border-color: var(--accent); }
+
+  .selection__back { display: inline-flex; min-height: 48px; align-items: center; margin-top: 12px; color: var(--accent); font-size: 11px; font-weight: 700; }
+  .selection__summary { position: sticky; top: calc(var(--header-height) + 18px); padding: 26px; color: #fff; background: #242421; border-radius: var(--radius-md); }
+  .selection__summary > p:first-child { margin: 0; color: #d78e8e; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .selection__summary h2 { margin: 14px 0 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.05em; line-height: 1.05; }
+  .selection__summary ul { display: grid; gap: 0; margin: 26px 0 0; padding: 0; list-style: none; }
+  .selection__summary li { display: grid; min-height: 50px; grid-template-columns: 32px 1fr; align-items: center; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.14); font-size: 11px; }
+  .selection__summary li:last-child { border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+  .selection__summary li span { color: #d78e8e; font-family: var(--font-mono); font-size: 8px; }
+  .selection__check { margin-top: 22px; padding: 12px; color: rgba(255, 255, 255, 0.68); background: rgba(255, 255, 255, 0.07); border-radius: 8px; font-size: 10px; }
+  .selection__summary-note { margin: 14px 0 0; color: rgba(255, 255, 255, 0.5); font-size: 9px; }
+  .selection__request { margin-top: clamp(70px, 9vw, 120px); }
+
+  @media (max-width: 1050px) {
+    .selection__intro { grid-template-columns: 0.35fr 1fr; }
+    .selection__intro > span { grid-column: 2; }
+    .selection__content { grid-template-columns: 1fr; }
+    .selection__summary { position: static; grid-row: 1; }
+  }
+  @media (max-width: 760px) {
+    .selection__intro { grid-template-columns: 1fr; }
+    .selection__intro > span { grid-column: 1; }
+    :global(.selection-item) { grid-template-columns: 110px 1fr; }
+    :global(.selection-item__media) { min-height: 150px; }
+    :global(.selection-item__aside) { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; text-align: left; }
+    :global(.selection-item__status) { margin: 0; }
+    :global(.selection-item__actions) { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    .selection__empty { min-height: 420px; padding: 24px; }
+    :global(.selection-item) { grid-template-columns: 1fr; padding: 12px; }
+    :global(.selection-item__media) { min-height: 220px; }
+    :global(.selection-item__edit) { grid-template-columns: 1fr; }
+    :global(.selection-item__aside) { grid-column: 1; grid-template-columns: 1fr; }
+  }
+</style>

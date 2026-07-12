@@ -1,0 +1,41 @@
+---
+import type { NewsView } from "../../lib/api";
+import NewsCard from "../NewsCard.astro";
+interface Props { items: NewsView[]; }
+const { items } = Astro.props;
+---
+<section class="news-index">
+  <div class="news-index__intro container">
+    <div><p>Практика наружной рекламы</p><h1>Кейсы <em>и новости</em></h1></div>
+    <p>Новые конструкции, примеры кампаний и материалы о размещении в городском пространстве Грозного.</p>
+  </div>
+  {items.length ? (
+    <div class="news-index__grid container">{items.map((item) => <NewsCard item={item} />)}</div>
+  ) : (
+    <div class="news-index__empty container"><span>NEWS</span><h2>Публикации готовятся</h2><p>Новости появятся после следующей публикации из CRM.</p><a href="/catalog">Открыть каталог →</a></div>
+  )}
+</section>
+
+<style>
+  .news-index { padding: clamp(48px, 7vw, 94px) 0 clamp(90px, 11vw, 160px); }
+  .news-index__intro { display: grid; grid-template-columns: 1.3fr 0.7fr; align-items: end; gap: 50px; }
+  .news-index__intro > div > p { margin: 0 0 18px; color: var(--accent); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .news-index h1 { margin: 0; font-size: clamp(54px, 8vw, 116px); font-weight: 720; letter-spacing: -0.075em; line-height: 0.86; }
+  .news-index h1 em { display: block; color: var(--accent); font-style: normal; }
+  .news-index__intro > p { margin: 0; color: var(--muted); font-size: 15px; }
+  .news-index__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px 24px; margin-top: 70px; }
+  .news-index__grid > :first-child { grid-column: span 2; }
+  .news-index__grid > :first-child :global(.news-card__media) { min-height: 440px; }
+  .news-index__empty { display: grid; min-height: 480px; place-content: center; margin-top: 60px; text-align: center; background: var(--paper); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); }
+  .news-index__empty span { color: var(--accent); font-family: var(--font-mono); }
+  .news-index__empty h2 { margin: 14px 0 0; font-size: 42px; }
+  .news-index__empty p { margin: 8px 0 0; color: var(--muted); }
+  .news-index__empty a { margin-top: 18px; color: var(--accent); font-weight: 700; }
+  @media (max-width: 900px) { .news-index__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) {
+    .news-index__intro { grid-template-columns: 1fr; }
+    .news-index__grid { grid-template-columns: 1fr; }
+    .news-index__grid > :first-child { grid-column: 1; }
+    .news-index__grid > :first-child :global(.news-card__media) { min-height: 300px; }
+  }
+</style>

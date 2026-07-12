@@ -1,0 +1,302 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  source?: "hero_form" | "project" | "contacts";
+  variant?: "light" | "dark" | "plain";
+  constructionId?: string;
+  includeShortlist?: boolean;
+  clearShortlistOnSuccess?: boolean;
+}
+
+const {
+  title = "Обсудить размещение",
+  description = "Расскажите о задаче — менеджер проверит инвентарь и предложит подходящие стороны.",
+  source = "contacts",
+  variant = "light",
+  constructionId = "",
+  includeShortlist = true,
+  clearShortlistOnSuccess = false,
+} = Astro.props;
+---
+<form
+  class:list={["lead-form", `lead-form--${variant}`]}
+  data-lead-form
+  data-source={source}
+  data-include-shortlist={includeShortlist ? "true" : "false"}
+  data-clear-shortlist={clearShortlistOnSuccess ? "true" : "false"}
+  novalidate
+>
+  <div class="lead-form__intro">
+    <p class="lead-form__eyebrow">Заявка менеджеру</p>
+    <h2>{title}</h2>
+    <p>{description}</p>
+    {includeShortlist && <span data-form-selection-count>Подборка пока пуста</span>}
+  </div>
+
+  <div class="lead-form__fields">
+    <div class="lead-form__grid">
+      <label>
+        <span>Имя *</span>
+        <input name="name" type="text" autocomplete="name" minlength="2" maxlength="120" required placeholder="Как к вам обращаться" />
+      </label>
+      <label>
+        <span>Телефон *</span>
+        <input name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="18" required placeholder="+7 (___) ___-__-__" />
+      </label>
+      <label>
+        <span>Компания</span>
+        <input name="organization" type="text" autocomplete="organization" maxlength="160" placeholder="Название компании" />
+      </label>
+      <label>
+        <span>Как связаться</span>
+        <select name="contactMethod">
+          <option value="phone">Позвонить</option>
+          <option value="whatsapp">Написать в WhatsApp</option>
+          <option value="telegram">Написать в Telegram</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="lead-form__comment">
+      <span>Комментарий</span>
+      <textarea name="comment" maxlength="1000" rows="4" placeholder="Цель кампании, район, формат или любые пожелания"></textarea>
+    </label>
+
+    <input name="constructionId" type="hidden" value={constructionId} />
+    <input name="selectionSummary" type="hidden" value="" />
+    <label class="lead-form__honeypot" aria-hidden="true">
+      <span>Компания</span>
+      <input name="company" type="text" tabindex="-1" autocomplete="off" />
+    </label>
+
+    <label class="lead-form__consent">
+      <input name="consent" type="checkbox" required />
+      <span>Согласен на обработку персональных данных в соответствии с <a href="/privacy">политикой конфиденциальности</a>.</span>
+    </label>
+
+    <p class="lead-form__notice">
+      Заявка не является автоматическим бронированием. Менеджер проверит доступность и подтвердит условия.
+    </p>
+
+    <button type="submit">Отправить заявку <span aria-hidden="true">→</span></button>
+    <p class="lead-form__status" data-form-status role="alert" tabindex="-1" hidden></p>
+  </div>
+
+  <div class="lead-form__success" data-form-success role="status" tabindex="-1" hidden>
+    <span aria-hidden="true">✓</span>
+    <div>
+      <h3>Заявка отправлена</h3>
+      <p>Менеджер свяжется с вами, проверит выбранные позиции и подтвердит доступность.</p>
+    </div>
+  </div>
+</form>
+
+<style>
+  .lead-form {
+    display: grid;
+    grid-template-columns: minmax(250px, 0.7fr) minmax(420px, 1.3fr);
+    gap: clamp(30px, 5vw, 76px);
+    padding: clamp(24px, 4vw, 52px);
+    border-radius: var(--radius-lg);
+  }
+
+  .lead-form--light {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+
+  .lead-form--dark {
+    color: #fff;
+    background: #252522;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .lead-form--plain {
+    padding: 0;
+    background: transparent;
+  }
+
+  .lead-form__intro { align-self: start; }
+  .lead-form__eyebrow {
+    margin: 0 0 18px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .lead-form__intro h2 {
+    max-width: 540px;
+    margin: 0;
+    font-size: clamp(30px, 4vw, 54px);
+    font-weight: 720;
+    letter-spacing: -0.055em;
+    line-height: 1.02;
+  }
+
+  .lead-form__intro > p:not(.lead-form__eyebrow) {
+    max-width: 500px;
+    margin: 22px 0 0;
+    color: var(--muted);
+  }
+
+  .lead-form--dark .lead-form__intro > p:not(.lead-form__eyebrow) { color: rgba(255, 255, 255, 0.62); }
+
+  .lead-form__intro > span {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    margin-top: 24px;
+    padding: 0 12px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .lead-form__fields { display: grid; gap: 18px; }
+  .lead-form__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .lead-form label { display: grid; gap: 8px; }
+  .lead-form label > span:first-child {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .lead-form input:not([type="checkbox"]),
+  .lead-form select,
+  .lead-form textarea {
+    width: 100%;
+    min-height: 50px;
+    padding: 13px 15px;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .lead-form textarea { min-height: 112px; resize: vertical; }
+  .lead-form input:focus,
+  .lead-form select:focus,
+  .lead-form textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.12);
+  }
+
+  .lead-form__consent {
+    grid-template-columns: 22px 1fr;
+    align-items: start;
+    gap: 11px !important;
+    cursor: pointer;
+  }
+  .lead-form__consent input {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--accent);
+  }
+  .lead-form__consent span {
+    font-family: var(--font-sans) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.5;
+    text-transform: none !important;
+  }
+  .lead-form__consent a { text-decoration: underline; text-underline-offset: 3px; }
+
+  .lead-form__notice {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .lead-form--dark .lead-form__notice { color: rgba(255, 255, 255, 0.56); }
+
+  .lead-form button[type="submit"] {
+    display: inline-flex;
+    width: 100%;
+    min-height: 54px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 0 18px;
+    color: #fff;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    font-weight: 750;
+    transition: background 160ms ease, transform 160ms ease;
+  }
+  .lead-form button[type="submit"]:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: var(--accent-hover);
+  }
+  .lead-form button[type="submit"]:disabled { opacity: 0.65; }
+
+  .lead-form__status {
+    margin: 0;
+    padding: 12px 14px;
+    color: #7b1111;
+    background: var(--danger-soft);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+  }
+
+  .lead-form__honeypot {
+    position: absolute !important;
+    left: -10000px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+  }
+
+  .lead-form__success {
+    display: grid;
+    grid-column: 2;
+    grid-template-columns: 48px 1fr;
+    align-items: start;
+    gap: 16px;
+    padding: 24px;
+    color: var(--positive);
+    background: var(--positive-soft);
+    border-radius: var(--radius-md);
+  }
+  .lead-form__success > span {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    color: #fff;
+    background: var(--positive);
+    border-radius: 999px;
+    font-size: 22px;
+  }
+  .lead-form__success h3 { margin: 0 0 6px; font-size: 20px; }
+  .lead-form__success p { margin: 0; color: inherit; font-size: 14px; }
+  .lead-form.is-success .lead-form__fields { display: none; }
+
+  @media (max-width: 860px) {
+    .lead-form { grid-template-columns: 1fr; }
+    .lead-form__success { grid-column: 1; }
+  }
+
+  @media (max-width: 560px) {
+    .lead-form { padding: 22px; border-radius: 20px; }
+    .lead-form--plain { padding: 0; }
+    .lead-form__grid { grid-template-columns: 1fr; }
+    .lead-form__intro h2 { font-size: 32px; }
+  }
+</style>

@@ -1,101 +1,41 @@
 ---
-// Реальная страница новости /news/<slug>. Markup повторяет наложение articlePage
-// с главной (дизайн 1:1), но как самостоятельная страница с SEO-meta.
-import SiteHead from "../../components/SiteHead.astro";
-import Footer from "../../components/Footer.astro";
-import CookieBanner from "../../components/CookieBanner.astro";
+import NewsArticle from "../../components/news/NewsArticle.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
 import { fetchNews, fetchSiteSettings, toNewsView, type News } from "../../lib/api";
 import { buildChrome } from "../../lib/chrome";
-import { absUrl } from "../../lib/site";
+import { absUrl, BRAND_NAME } from "../../lib/site";
 
 export async function getStaticPaths() {
   const news = await fetchNews();
-  return news.map((n) => ({ params: { slug: n.slug }, props: { item: n } }));
+  return news.map((item) => ({ params: { slug: item.slug }, props: { item } }));
 }
-
-interface Props {
-  item: News;
-}
+interface Props { item: News; }
 const { item } = Astro.props;
 const view = toNewsView(item);
 const chrome = buildChrome(await fetchSiteSettings());
-const s = chrome.s;
-
-const title = `${view.title} | Noesis`;
-const description = (item.excerpt || view.body[0] || view.title).slice(0, 200);
-
-// Schema.org NewsArticle — rich-сниппет статьи в выдаче. datePublished ставим
-// только при валидной дате; издатель — Organization (как на главной).
-const publishedAt = (() => {
-  const t = new Date(item.date);
-  return Number.isNaN(t.getTime()) ? undefined : t.toISOString();
-})();
-const articleJsonLd = {
+const title = `${view.title} | ${BRAND_NAME}`;
+const description = (item.excerpt || view.body[0] || view.title).slice(0, 220);
+const published = Number.isNaN(new Date(item.date).getTime()) ? undefined : new Date(item.date).toISOString();
+const jsonLd = {
   "@context": "https://schema.org",
   "@type": "NewsArticle",
   headline: view.title,
-  ...(publishedAt ? { datePublished: publishedAt } : {}),
+  ...(published ? { datePublished: published } : {}),
   ...(view.tag ? { articleSection: view.tag } : {}),
-  image: absUrl(view.img || "/assets/og-default.jpg"),
+  ...(view.img ? { image: absUrl(view.img) } : {}),
   mainEntityOfPage: absUrl(`/news/${item.slug}`),
-  publisher: { "@type": "Organization", name: s.siteName },
+  publisher: { "@type": "Organization", name: BRAND_NAME },
 };
 ---
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<SiteHead
+<BaseLayout
+  chrome={chrome}
   title={title}
   description={description}
   path={`/news/${item.slug}`}
-  image={view.img || "/assets/og-default.jpg"}
+  image={view.img || undefined}
   type="article"
-  jsonLd={articleJsonLd}
-  siteName={s.siteName}
-  metrikaId={chrome.metrikaId}
-/>
-</head>
-<body>
-<div class="project-page-bar">
-  <div class="wrap-narrow project-bar-inner">
-    <a class="bar-icon-btn bar-icon-back" href="/news" aria-label="Все новости"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg></a>
-    <a href="/"><span class="brand-word brand-word--ink">{s.siteName}</span></a>
-    <a href={chrome.phoneHref} class="bar-icon-btn bar-icon-call" aria-label="Позвонить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></a>
-  </div>
-</div>
-
-<div class="project-hero article-hero">
-  <img src={view.img} srcset={view.imgSrcset || undefined} sizes={view.imgSrcset ? "100vw" : undefined} alt={view.title}>
-  <div class="project-hero-gradient"></div>
-  <div class="project-hero-content">
-    <div class="wrap-narrow">
-      {view.tag && <span class="news-card-tag mono">{view.tag}</span>}
-      <h1>{view.title}</h1>
-      <p class="article-date">{view.date}</p>
-    </div>
-  </div>
-</div>
-
-<div class="wrap-narrow article-body">
-  <div class="article-content">
-    {view.body.map((p) => <p>{p}</p>)}
-  </div>
-  <div class="project-cta">
-    <div class="pattern-overlay pattern-overlay-cta"></div>
-    <div class="project-cta-text">
-      <h3>Остались вопросы?</h3>
-      <p>Оставьте заявку — расскажем об условиях размещения и подберём подходящие конструкции.</p>
-    </div>
-    <div class="project-cta-actions">
-      <a href={chrome.phoneHref} class="btn btn-white">{chrome.phoneDisplay}</a>
-      <a href="/news" class="btn btn-outline-white">Все новости</a>
-    </div>
-  </div>
-</div>
-
-<Footer chrome={chrome} />
-<CookieBanner />
-
-<script is:inline src="/js/page.js"></script>
-</body>
-</html>
+  jsonLd={jsonLd}
+  current="news"
+>
+  <NewsArticle item={view} />
+</BaseLayout>

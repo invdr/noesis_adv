@@ -1,59 +1,284 @@
 ---
 import type { Chrome } from "../lib/chrome";
+import BrandMark from "./BrandMark.astro";
 
 interface Props {
   chrome: Chrome;
-  home?: boolean;
-  showDocs?: boolean;
-  solid?: boolean;
+  current?: "home" | "catalog" | "news" | "materials" | "selection" | "other";
 }
 
-const { chrome, home = false, showDocs = false, solid = false } = Astro.props;
-const { s } = chrome;
-const navClass = solid ? "nav scrolled" : "nav";
-const homeHref = home ? "#top" : "/";
-const base = home ? "" : "/";
-const link = (hash: string) => `${base}${hash}`;
-// «Карта» ведёт на полноценную страницу каталога с картой и фильтрами (Этап 3).
-const mapHref = "/catalog";
+const { chrome, current = "other" } = Astro.props;
+const nav = [
+  { href: "/catalog", label: "Каталог", key: "catalog" },
+  { href: "/catalog#map", label: "Карта", key: "map" },
+  { href: "/#process", label: "Как это работает", key: "process" },
+  { href: "/news", label: "Кейсы", key: "news" },
+  { href: "/materials", label: "Материалы", key: "materials" },
+];
 ---
-<nav class={navClass} id="nav">
-  <a href={homeHref} class="nav-logo">
-    <span class="brand-word">{s.siteName}</span>
-  </a>
+<header class="header" data-site-header>
+  <div class="header__inner container">
+    <a class="header__brand" href="/" aria-label="NOESIS |ad — на главную">
+      <BrandMark />
+    </a>
 
-  <div class="nav-links">
-    <a href={link("#catalog")}>{s.navCatalog}</a>
-    <a href={mapHref}>{s.navFlats}</a>
-    <a href={link("#about")}>{s.navAbout}</a>
-    {showDocs && <a href={link("#docs")}>{s.navDocs}</a>}
-    <a href={link("#contacts")}>{s.navContacts}</a>
-  </div>
-  <div class="nav-right">
-    <a href={chrome.phoneHref} class="nav-phone">{chrome.phoneDisplay}</a>
-    <a href={link("#catalog")} class="btn btn-primary">{s.ctaSelectFlat}</a>
+    <nav class="header__nav" aria-label="Основная навигация">
+      {nav.map((item) => (
+        <a
+          href={item.href}
+          aria-current={current === item.key ? "page" : undefined}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="header__actions">
+      <a class="header__phone" href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
+      <a class="header__selection" href="/selection" aria-current={current === "selection" ? "page" : undefined}>
+        Подборка
+        <span class="header__count" data-shortlist-count aria-label="Позиций в подборке">0</span>
+      </a>
+      <button
+        class="header__menu-button"
+        type="button"
+        aria-label="Открыть меню"
+        aria-controls="mobile-navigation"
+        aria-expanded="false"
+        data-menu-toggle
+      >
+        <span></span><span></span>
+      </button>
+    </div>
   </div>
 
-  <button class="burger" id="burgerBtn" aria-label="Меню">
-    <span></span><span></span><span></span>
-  </button>
-</nav>
+  <div class="mobile-nav" id="mobile-navigation" data-mobile-menu hidden>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__top">
+        <BrandMark />
+        <button type="button" aria-label="Закрыть меню" data-menu-close>Закрыть</button>
+      </div>
+      <nav aria-label="Мобильная навигация">
+        <a href="/">Главная</a>
+        {nav.map((item) => <a href={item.href}>{item.label}</a>)}
+        <a href="/#contacts">Контакты</a>
+      </nav>
+      <div class="mobile-nav__bottom">
+        <a href="/selection">Подборка <span data-shortlist-count>0</span></a>
+        <a href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
+      </div>
+    </div>
+  </div>
+</header>
 
-<div class="mobile-menu" id="mobileMenu">
-  <div class="mobile-menu-top">
-    <span class="brand-word">{s.siteName}</span>
-    <button class="mobile-close" id="mobileCloseBtn" aria-label="Закрыть">×</button>
-  </div>
-  <div class="mobile-menu-links">
-    <a href={homeHref}>Главная</a>
-    <a href={link("#catalog")}>{s.navCatalog}</a>
-    <a href={mapHref}>{s.navFlats}</a>
-    <a href={link("#about")}>{s.navAbout}</a>
-    {showDocs && <a href={link("#docs")}>{s.navDocs}</a>}
-    <a href={link("#contacts")}>{s.navContacts}</a>
-  </div>
-  <div class="mobile-menu-bottom">
-    <a href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
-    <a href={link("#catalog")} class="btn btn-primary">{s.ctaSelectFlat}</a>
-  </div>
-</div>
+<style>
+  .header {
+    position: sticky;
+    z-index: 100;
+    top: 0;
+    height: var(--header-height);
+    border-bottom: 1px solid rgba(25, 25, 24, 0.12);
+    background: color-mix(in srgb, var(--paper) 94%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .header__inner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    height: 100%;
+    gap: clamp(24px, 4vw, 72px);
+  }
+
+  .header__brand {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .header__nav {
+    display: flex;
+    align-items: center;
+    gap: clamp(18px, 2vw, 34px);
+  }
+
+  .header__nav a,
+  .header__phone {
+    position: relative;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+
+  .header__nav a::after {
+    position: absolute;
+    right: 0;
+    bottom: 4px;
+    left: 0;
+    height: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    background: var(--accent);
+    content: "";
+    transition: transform 180ms ease;
+  }
+
+  .header__nav a:hover::after,
+  .header__nav a[aria-current="page"]::after {
+    transform: scaleX(1);
+  }
+
+  .header__actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header__phone:hover { color: var(--accent); }
+
+  .header__selection {
+    display: inline-flex;
+    min-height: 46px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 750;
+    transition: background 180ms ease, transform 180ms ease;
+  }
+
+  .header__selection:hover {
+    transform: translateY(-1px);
+    background: var(--accent-hover);
+  }
+
+  .header__count {
+    display: grid;
+    min-width: 22px;
+    height: 22px;
+    place-items: center;
+    padding-inline: 5px;
+    color: var(--accent);
+    background: #fff;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .header__menu-button {
+    display: none;
+    width: 46px;
+    height: 46px;
+    place-content: center;
+    gap: 7px;
+    padding: 0;
+    color: var(--ink);
+    background: transparent;
+  }
+
+  .header__menu-button span {
+    width: 23px;
+    height: 2px;
+    background: currentColor;
+  }
+
+  .mobile-nav {
+    position: fixed;
+    z-index: 200;
+    inset: 0;
+    background: rgba(25, 25, 24, 0.48);
+  }
+
+  .mobile-nav__panel {
+    width: min(100%, 430px);
+    height: 100%;
+    margin-left: auto;
+    padding: 20px;
+    overflow-y: auto;
+    background: var(--paper);
+    box-shadow: -20px 0 60px rgba(25, 25, 24, 0.18);
+  }
+
+  .mobile-nav__top,
+  .mobile-nav__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .mobile-nav__top button {
+    min-height: 44px;
+    padding: 0 12px;
+    color: var(--muted);
+    background: transparent;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .mobile-nav nav {
+    display: grid;
+    margin-block: 54px;
+  }
+
+  .mobile-nav nav a {
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    font-size: clamp(22px, 7vw, 32px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  .mobile-nav__bottom {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mobile-nav__bottom a {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-weight: 750;
+  }
+
+  .mobile-nav__bottom a:first-child {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 1180px) {
+    .header__nav,
+    .header__phone { display: none; }
+    .header__inner { grid-template-columns: auto 1fr; }
+    .header__actions { justify-content: flex-end; }
+    .header__menu-button { display: grid; }
+  }
+
+  @media (max-width: 560px) {
+    .header__selection {
+      width: 46px;
+      justify-content: center;
+      padding: 0;
+      font-size: 0;
+    }
+    .header__selection::before {
+      font-size: 19px;
+      content: "+";
+    }
+    .header__count { position: absolute; transform: translate(16px, -15px); }
+  }
+</style>

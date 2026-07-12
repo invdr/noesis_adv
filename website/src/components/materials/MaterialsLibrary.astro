@@ -1,0 +1,154 @@
+---
+import type { Document } from "../../lib/api";
+import { documentHref, documentMeta } from "../../lib/api";
+
+interface CategoryEntry {
+  category: { id: string; name: string; slug: string };
+  constructions: {
+    id: string;
+    slug: string;
+    name: string;
+    code: string;
+    address: string;
+    image: string;
+    documents: Document[];
+  }[];
+}
+
+interface Props { categories: CategoryEntry[]; }
+const { categories } = Astro.props;
+const documentCount = categories.reduce((sum, category) => sum + category.constructions.reduce((inner, item) => inner + item.documents.length, 0), 0);
+---
+<section class="materials-page">
+  <div class="materials-page__intro container">
+    <div>
+      <p>Библиотека NOESIS |ad</p>
+      <h1>Материалы <em>для размещения</em></h1>
+    </div>
+    <div>
+      <strong>{documentCount}</strong>
+      <span>{documentCount === 1 ? "опубликованный документ" : "опубликованных документов"}</span>
+      <p>Файлы и ссылки поступают из CRM и привязаны к конкретным конструкциям.</p>
+    </div>
+  </div>
+
+  {categories.length > 0 ? (
+    <>
+      <nav class="materials-page__index container" aria-label="Категории материалов">
+        {categories.map((category, index) => (
+          <a href={`#${category.category.slug}`}><span>{String(index + 1).padStart(2, "0")}</span>{category.category.name}</a>
+        ))}
+      </nav>
+
+      <div class="materials-page__categories container">
+        {categories.map((category, categoryIndex) => (
+          <section id={category.category.slug}>
+            <header>
+              <span>{String(categoryIndex + 1).padStart(2, "0")}</span>
+              <h2>{category.category.name}</h2>
+              <p>{category.constructions.reduce((sum, item) => sum + item.documents.length, 0)} файлов и ссылок</p>
+            </header>
+            <div class="materials-page__constructions">
+              {category.constructions.map((item) => (
+                <article>
+                  <div class="materials-page__construction">
+                    <div>
+                      {item.image ? <img src={item.image} alt="" loading="lazy" decoding="async" /> : <span>{item.code || "NOESIS"}</span>}
+                    </div>
+                    <div>
+                      <span>{item.code || "Код уточняется"}</span>
+                      <h3>{item.name}</h3>
+                      <p>{item.address}</p>
+                      <a href={`/constructions/${item.slug}#materials`}>Карточка конструкции ↗</a>
+                    </div>
+                  </div>
+                  <div class="materials-page__files">
+                    {item.documents.map((document) => (
+                      <a href={documentHref(document)} target="_blank" rel="noopener noreferrer">
+                        <span>{document.name}</span>
+                        <small>{documentMeta(document)}</small>
+                        <b aria-hidden="true">↗</b>
+                      </a>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </>
+  ) : (
+    <div class="materials-page__empty container">
+      <span aria-hidden="true">DOC</span>
+      <h2>Материалы готовятся к публикации</h2>
+      <p>Когда файлы появятся в CRM, эта библиотека обновится при следующей публикации сайта.</p>
+      <a href="/catalog">Перейти в каталог →</a>
+    </div>
+  )}
+</section>
+
+<style>
+  .materials-page { padding: clamp(48px, 7vw, 94px) 0 clamp(90px, 11vw, 160px); }
+  .materials-page__intro { display: grid; grid-template-columns: 1.3fr 0.7fr; align-items: end; gap: 50px; }
+  .materials-page__intro > div:first-child > p { margin: 0 0 18px; color: var(--accent); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .materials-page__intro h1 { margin: 0; font-size: clamp(54px, 8vw, 116px); font-weight: 720; letter-spacing: -0.075em; line-height: 0.86; }
+  .materials-page__intro h1 em { display: block; color: var(--accent); font-style: normal; }
+  .materials-page__intro > div:last-child { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0 14px; }
+  .materials-page__intro strong { color: var(--accent); font-family: var(--font-mono); font-size: 50px; line-height: 1; }
+  .materials-page__intro span { color: var(--muted); font-size: 11px; }
+  .materials-page__intro > div:last-child p { grid-column: 1 / -1; margin: 18px 0 0; color: var(--muted); font-size: 13px; }
+
+  .materials-page__index { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 54px; padding-block: 18px; border-block: 1px solid var(--line); }
+  .materials-page__index a { display: inline-flex; min-height: 42px; align-items: center; gap: 9px; padding: 0 13px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .materials-page__index a:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .materials-page__index span { font-family: var(--font-mono); font-size: 8px; }
+
+  .materials-page__categories { display: grid; gap: clamp(80px, 10vw, 140px); margin-top: 76px; }
+  .materials-page__categories > section { scroll-margin-top: calc(var(--header-height) + 20px); }
+  .materials-page__categories > section > header { display: grid; grid-template-columns: 60px 1fr auto; align-items: end; gap: 20px; padding-bottom: 24px; border-bottom: 1px solid var(--line-strong); }
+  .materials-page__categories header > span { color: var(--accent); font-family: var(--font-mono); font-size: 11px; }
+  .materials-page__categories h2 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -0.055em; line-height: 1; }
+  .materials-page__categories header p { margin: 0; color: var(--muted); font-size: 11px; }
+  .materials-page__constructions { display: grid; }
+  .materials-page__constructions > article { display: grid; grid-template-columns: 0.75fr 1.25fr; gap: 40px; padding: 28px 0; border-bottom: 1px solid var(--line); }
+  .materials-page__construction { display: grid; grid-template-columns: 120px 1fr; gap: 18px; }
+  .materials-page__construction > div:first-child { min-height: 120px; overflow: hidden; background: var(--surface); border-radius: 10px; }
+  .materials-page__construction img { width: 100%; height: 100%; object-fit: cover; }
+  .materials-page__construction > div:first-child > span { display: grid; width: 100%; height: 100%; place-items: center; color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+  .materials-page__construction > div:last-child { display: grid; align-content: start; gap: 5px; }
+  .materials-page__construction > div:last-child > span { color: var(--accent); font-family: var(--font-mono); font-size: 9px; }
+  .materials-page__construction h3 { margin: 0; font-size: 19px; letter-spacing: -0.035em; line-height: 1.15; }
+  .materials-page__construction p { margin: 0; color: var(--muted); font-size: 10px; }
+  .materials-page__construction a { width: fit-content; margin-top: 8px; color: var(--accent); font-size: 9px; font-weight: 700; }
+  .materials-page__files { display: grid; align-content: start; }
+  .materials-page__files > a { display: grid; min-height: 58px; grid-template-columns: 1fr auto 24px; align-items: center; gap: 16px; border-top: 1px solid var(--line); }
+  .materials-page__files > a:last-child { border-bottom: 1px solid var(--line); }
+  .materials-page__files span { font-size: 12px; font-weight: 650; }
+  .materials-page__files small { color: var(--muted); font-family: var(--font-mono); font-size: 8px; }
+  .materials-page__files b { text-align: right; }
+  .materials-page__files > a:hover span { color: var(--accent); }
+
+  .materials-page__empty { display: grid; min-height: 480px; place-content: center; margin-top: 60px; padding: 40px; text-align: center; background: var(--paper); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); }
+  .materials-page__empty > span { color: var(--accent); font-family: var(--font-mono); }
+  .materials-page__empty h2 { margin: 18px 0 0; font-size: clamp(28px, 4vw, 50px); }
+  .materials-page__empty p { max-width: 580px; margin: 12px auto 0; color: var(--muted); }
+  .materials-page__empty a { margin-top: 20px; color: var(--accent); font-weight: 700; }
+
+  @media (max-width: 900px) {
+    .materials-page__intro { grid-template-columns: 1fr; }
+    .materials-page__constructions > article { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    .materials-page__categories > section > header { grid-template-columns: 36px 1fr; }
+    .materials-page__categories header p { grid-column: 2; }
+    .materials-page__construction { grid-template-columns: 90px 1fr; }
+  }
+  @media (max-width: 430px) {
+    .materials-page__construction { grid-template-columns: 1fr; }
+    .materials-page__construction > div:first-child { min-height: 200px; }
+    .materials-page__files > a { grid-template-columns: 1fr 22px; padding: 10px 0; }
+    .materials-page__files small { grid-column: 1; grid-row: 2; }
+    .materials-page__files b { grid-column: 2; grid-row: 1 / span 2; }
+  }
+</style>

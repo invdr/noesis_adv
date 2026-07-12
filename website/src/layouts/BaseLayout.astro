@@ -1,0 +1,74 @@
+---
+import CookieBanner from "../components/CookieBanner.astro";
+import Footer from "../components/Footer.astro";
+import Header from "../components/Header.astro";
+import MobileSelectionBar from "../components/MobileSelectionBar.astro";
+import SiteHead from "../components/SiteHead.astro";
+import type { Chrome } from "../lib/chrome";
+import { jsonForHtml } from "../lib/json";
+import { BRAND_NAME } from "../lib/site";
+import "../styles/global.css";
+
+interface Props {
+  chrome: Chrome;
+  title: string;
+  description: string;
+  path: string;
+  image?: string;
+  type?: "website" | "article";
+  jsonLd?: unknown;
+  current?: "home" | "catalog" | "news" | "materials" | "selection" | "other";
+  noindex?: boolean;
+}
+
+const {
+  chrome,
+  title,
+  description,
+  path,
+  image,
+  type,
+  jsonLd,
+  current = "other",
+  noindex = false,
+} = Astro.props;
+
+const siteConfig = jsonForHtml({
+  apiUrl: import.meta.env.PUBLIC_API_URL ?? "",
+});
+---
+<!doctype html>
+<html lang="ru">
+  <head>
+    <SiteHead
+      title={title}
+      description={description}
+      path={path}
+      image={image}
+      type={type}
+      jsonLd={jsonLd}
+      siteName={BRAND_NAME}
+      metrikaId={chrome.metrikaId}
+      noindex={noindex}
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Перейти к содержанию</a>
+    {chrome.metrikaId && (
+      <noscript>
+        <div class="metrika-noscript">
+          <img src={`https://mc.yandex.ru/watch/${chrome.metrikaId}`} alt="" />
+        </div>
+      </noscript>
+    )}
+    <Header chrome={chrome} current={current} />
+    <main id="main-content"><slot /></main>
+    <Footer chrome={chrome} />
+    <CookieBanner />
+    <MobileSelectionBar />
+    <script is:inline id="site-config" type="application/json" set:html={siteConfig}></script>
+    <script>
+      import "../scripts/site";
+    </script>
+  </body>
+</html>

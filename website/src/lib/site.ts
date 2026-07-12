@@ -6,6 +6,9 @@ export const SITE_URL = (
   process.env.SITE_URL || "http://168.222.140.78"
 ).replace(/\/+$/, "");
 
+/** Публичное написание бренда. Не зависит от исторических настроек лендинга. */
+export const BRAND_NAME = "NOESIS |ad";
+
 // Название, телефон, email и адрес теперь живут в настройках сайта (Веха 4.3,
 // packages/contracts/src/site-settings.ts) — здесь дублировать их не нужно.
 

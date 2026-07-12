@@ -1,443 +1,86 @@
 ---
-// Главная лендинга. Дизайн перенесён 1:1; данные каталога/новостей/документов
-// запекаются из публичного API на этапе сборки (см. website/src/lib/api.ts) и
-// прокидываются в main.js через window.NOESIS_DATA. Пустые блоки (и их пункты
-// меню) скрываются. URL API в браузере — через PUBLIC_API_URL.
-import SiteHead from "../components/SiteHead.astro";
-import Footer from "../components/Footer.astro";
-import CookieBanner from "../components/CookieBanner.astro";
-import Header from "../components/Header.astro";
+import { CONSTRUCTION_FORMAT_LABEL, orderHomepageConstructions } from "@noesis/contracts";
+import BenefitsSection from "../components/home/BenefitsSection.astro";
+import ContactSection from "../components/home/ContactSection.astro";
+import HomeHero from "../components/home/HomeHero.astro";
+import HomeInventory from "../components/home/HomeInventory.astro";
+import MaterialsSection from "../components/home/MaterialsSection.astro";
+import NewsSection from "../components/home/NewsSection.astro";
+import ProcessSection from "../components/home/ProcessSection.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 import {
   fetchConstructions,
-  fetchNews,
   fetchDocumentCategories,
-  fetchSiteStats,
+  fetchNews,
   fetchSiteSettings,
-  toConstructionView,
+  fetchSiteStats,
+  toCatalogItem,
   toNewsView,
 } from "../lib/api";
-import { SITE_URL, absUrl } from "../lib/site";
 import { buildChrome } from "../lib/chrome";
-import { orderHomepageConstructions } from "@noesis/contracts";
+import { absUrl, BRAND_NAME } from "../lib/site";
 
-const apiUrl = import.meta.env.PUBLIC_API_URL ?? "http://localhost:3000";
-const yandexMapsApiKey = import.meta.env.PUBLIC_YANDEX_MAPS_API_KEY ?? "";
-const GROZNY_CENTER = [43.318, 45.698] as const;
-
-const [constructions, news, docCategories, stats, settings] = await Promise.all([
+const [constructions, news, documentCategories, stats, settings] = await Promise.all([
   fetchConstructions(),
   fetchNews(),
   fetchDocumentCategories(),
   fetchSiteStats(),
   fetchSiteSettings(),
 ]);
-
 const chrome = buildChrome(settings);
-const s = chrome.s;
+const ordered = orderHomepageConstructions(constructions, settings.homepageOrder, settings.homepageHidden);
+const items = ordered.map(toCatalogItem);
+const formats = Array.from(new Set(items.map((item) => item.format))).map((value) => ({
+  value,
+  label: CONSTRUCTION_FORMAT_LABEL[value],
+}));
+const districts = Array.from(new Set(items.map((item) => item.district).filter((value): value is string => Boolean(value)))).sort((a, b) => a.localeCompare(b, "ru"));
+const newsItems = news.map(toNewsView).slice(0, settings.newsHomeCount);
+const hidden = new Set(settings.homepageHidden);
+const visibleDocuments = documentCategories
+  .map((category) => ({ ...category, constructions: category.constructions.filter((item) => !hidden.has(item.id)) }))
+  .filter((category) => category.constructions.length > 0);
+const mapApiKey = import.meta.env.PUBLIC_YANDEX_MAPS_API_KEY ?? "";
 
-// Видимость/порядок конструкций на главной из настроек: скрытые убираем из
-// каталога, карты и блока «Документы».
-const homepageConstructions = orderHomepageConstructions(constructions, s.homepageOrder, s.homepageHidden);
-const hiddenSet = new Set(s.homepageHidden);
-const docCategoriesVisible = docCategories
-  .map((c) => ({
-    ...c,
-    constructions: c.constructions.filter((p) => !hiddenSet.has(p.id)),
-  }))
-  .filter((c) => c.constructions.length > 0);
-
-const constructionViews = homepageConstructions.map(toConstructionView);
-const newsViews = news.map(toNewsView);
-const heroOwnerCount = stats.developerCount;
-// Hero показывает количество публичных конструкций, не зависящее от ручного
-// скрытия карточек на главной.
-const heroConstructionCount = constructions.length;
-
-// Бегущая строка — те же видимые конструкции, что и в каталоге (скрытая уходит, новая
-// добавляется); названия капсом, как в дизайне.
-const marqueeNames = constructionViews.map((p) => p.name.toUpperCase());
-
-const hasNews = newsViews.length > 0;
-const hasDocs = docCategoriesVisible.length > 0;
-
-// Данные для main.js: каталожные карточки получают прямые href на
-// /constructions/<slug>, новости и документы по-прежнему открываются в overlay.
-const noesisData = {
-  constructions: constructionViews,
-  news: newsViews,
-  newsHomeCount: s.newsHomeCount,
-  map: {
-    apiKey: yandexMapsApiKey,
-    center: GROZNY_CENTER,
-    zoom: 12,
-  },
-  docs: docCategoriesVisible.map((c) => ({
-    name: c.category.name,
-    slug: c.category.slug,
-    constructions: c.constructions.map((p) => ({
-      slug: p.slug,
-      name: p.name,
-      address: p.address ?? "",
-      img: p.cover?.url ?? "",
-    })),
-  })),
-};
-
-const orgJsonLd = {
+const title = `${BRAND_NAME} — наружная реклама на карте Грозного`;
+const description = "Цифровой каталог наружной рекламы в Грозном: карта конструкций, стороны A/B/C, цены, трафик, доступность по датам и единая заявка по подборке.";
+const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: s.siteName,
-  url: SITE_URL,
-  logo: absUrl("/assets/logo-white.png"),
-  telephone: chrome.phoneDisplay,
-  email: s.email,
+  name: BRAND_NAME,
+  url: absUrl("/"),
+  telephone: settings.phonePrimary,
+  email: settings.email,
   address: {
     "@type": "PostalAddress",
-    addressCountry: "RU",
+    streetAddress: settings.address,
     addressLocality: "Грозный",
-    streetAddress: s.address,
+    addressCountry: "RU",
   },
 };
-
-const title = "Noesis — наружная реклама в Грозном";
-const description =
-  "Рекламное агентство Noesis: каталог рекламных конструкций в Грозном, фото, адреса, охват и заявки на размещение.";
 ---
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<SiteHead title={title} description={description} path="/" jsonLd={orgJsonLd} siteName={s.siteName} metrikaId={chrome.metrikaId} />
-</head>
-<body>
-
-<Header chrome={chrome} home showDocs={hasDocs} />
-
-<header id="top" class="hero">
-  <div class="hero-bg">
-    <div class="hero-bg-img" id="heroParallax">
-      <img src="/assets/hiro.webp" alt="" width="1536" height="1024">
-    </div>
-    <div class="hero-gradient-v"></div>
-    <div class="hero-gradient-h"></div>
-    <div class="hero-pattern"></div>
-  </div>
-
-  <div class="hero-content">
-    <div class="hero-grid">
-      <div class="hero-text">
-        <div class="hero-eyebrow reveal-up">
-          <svg class="hero-eyebrow-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="9" width="4" height="12" rx="1"></rect><rect x="10" y="3" width="4" height="18" rx="1"></rect><rect x="17" y="12" width="4" height="9" rx="1"></rect></svg>
-          <span class="mono">{s.heroEyebrow}</span>
-        </div>
-        <h1 class="hero-title reveal-up"><span class="hero-title-line">{s.heroTitleLine1}</span><br><span class="hero-title-line accent">{s.heroTitleLine2}</span></h1>
-        <p class="hero-sub reveal-up">{s.heroSubtitle}</p>
-        <div class="hero-actions reveal-up">
-          <a href="#catalog" class="btn btn-primary btn-lg">{s.heroCtaPrimary}</a>
-        </div>
-      </div>
-
-      <div class="hero-card reveal-up">
-        <span class="mono hero-card-label">Отдел размещений</span>
-        <p class="hero-card-title">Оставьте номер — перезвоним за 15 минут и подберём подходящую рекламную конструкцию</p>
-        <form class="hero-card-form" id="heroLeadForm" novalidate>
-          <label class="visually-hidden" for="leadName">Как к вам обращаться</label>
-          <input id="leadName" type="text" placeholder="Как к вам обращаться" name="name" autocomplete="name" required>
-          <label class="visually-hidden" for="leadPhone">Номер телефона</label>
-          <input id="leadPhone" type="tel" placeholder="+7 (___) ___-__-__" name="phone" autocomplete="tel" inputmode="tel" maxlength="18" required>
-          <input class="lead-hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <label class="hero-card-consent">
-            <input type="checkbox" id="leadConsent" name="consent" required>
-            <span class="hero-card-consent-box" aria-hidden="true">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"></path></svg>
-            </span>
-            <span class="hero-card-consent-text">Нажимая кнопку, вы соглашаетесь с <a href="/privacy" target="_blank" rel="noopener">обработкой персональных данных</a></span>
-          </label>
-          <button type="submit" class="btn btn-primary">{s.ctaOrderCall}</button>
-          <p class="hero-card-success" id="leadSuccess" role="status" aria-live="polite" hidden>Спасибо! Перезвоним в течение 15 минут.</p>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <div class="hero-ornament-strip"></div>
-
-  <div class="hero-stats">
-    <div class="hero-stats-row">
-      <div class="stat">
-        <span class="stat-num stat-count" data-target={heroOwnerCount}>0</span>
-        <span class="stat-label">владельцев сети<br>в каталоге</span>
-      </div>
-      <div class="stat">
-        <span class="stat-num stat-count" data-target={heroConstructionCount}>0</span>
-        <span class="stat-label">рекламных конструкций<br>в Грозном</span>
-      </div>
-      <div class="scroll-hint">
-        <span class="mono">Листайте</span>
-        <span class="scroll-pill"><span class="scroll-dot"></span></span>
-      </div>
-    </div>
-  </div>
-</header>
-
-{marqueeNames.length > 0 && (
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-track">
-    <div class="marquee-group">
-      {marqueeNames.map((n) => (<><span>{n}</span><span class="dot">/</span></>))}
-    </div>
-    <div class="marquee-group">
-      {marqueeNames.map((n) => (<><span>{n}</span><span class="dot">/</span></>))}
-    </div>
-  </div>
-</div>
-)}
-
-<section id="catalog" class="section section-gray">
-  <div class="wrap">
-    <div class="section-head reveal-up">
-      <div>
-        <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.catalogEyebrow}</span></div>
-        <h2 class="h2 h2-cat">{s.catalogTitle}</h2>
-      </div>
-      <p class="section-desc">Выберите сити-формат или другую рекламную конструкцию, посмотрите параметры и оставьте заявку на размещение.</p>
-    </div>
-
-    <div class="catalog-grid" id="catalogGrid"></div>
-  </div>
-</section>
-
-<section id="map" class="section section-white">
-  <div class="wrap">
-    <div class="section-head reveal-up">
-      <div>
-        <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.flatsEyebrow}</span></div>
-        <h2 class="h2 h2-flats">{s.flatsTitle}</h2>
-      </div>
-      <p class="section-desc">Стартовая точка карты — Грозный. Пины показывают опубликованные конструкции с координатами из CRM.</p>
-    </div>
-
-    <div class="map-shell reveal-up">
-      <div id="constructionsMap" class="constructions-map" role="img" aria-label="Карта рекламных конструкций в Грозном">
-        <p class="map-placeholder">Карта загружается…</p>
-      </div>
-      <div class="map-side">
-        <div class="map-stat">
-          <span class="flats-image-num">{constructionViews.filter((c) => c.lat != null && c.lng != null).length}</span>
-          <span class="flats-image-cap">пинов на карте</span>
-        </div>
-        <div class="flats-feature reveal-up">
-          <span class="flats-feature-n">01</span>
-          <div><span class="flats-feature-t">География по городу</span><span class="flats-feature-d">Смотрите расположение конструкций перед заявкой.</span></div>
-        </div>
-        <div class="flats-feature reveal-up">
-          <span class="flats-feature-n">02</span>
-          <div><span class="flats-feature-t">Быстрый переход в карточку</span><span class="flats-feature-d">Откройте пин, затем страницу конструкции с фото и параметрами.</span></div>
-        </div>
-        <a href="/catalog" class="btn btn-primary reveal-up flats-cta">{s.flatsCta}</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="about" class="section section-dark">
-  <div class="pattern-overlay pattern-overlay-right"></div>
-  <div class="wrap">
-    <div class="section-head-single reveal-up">
-      <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.aboutEyebrow}</span></div>
-      <h2 class="h2">Преимущества <span class="h2-spaced">Noesis</span></h2>
-    </div>
-    <div class="advantages">
-      <div class="advantage reveal-up">
-        <span class="advantage-n">01</span>
-        <span class="advantage-t">Городской инвентарь в одном месте</span>
-        <span class="advantage-d">Адреса, фото, формат и цена собраны в едином каталоге</span>
-      </div>
-      <div class="advantage reveal-up">
-        <span class="advantage-n">02</span>
-        <span class="advantage-t">Быстрый подбор под задачу</span>
-        <span class="advantage-d">Менеджер уточнит период, сторону и подходящие локации</span>
-      </div>
-      <div class="advantage reveal-up">
-        <span class="advantage-n">03</span>
-        <span class="advantage-t">Прозрачная заявка</span>
-        <span class="advantage-d">Заявка из карточки сразу привязывается к выбранной конструкции</span>
-      </div>
-      <div class="advantage reveal-up">
-        <span class="advantage-n">04</span>
-        <span class="advantage-t">Основа для бронирования</span>
-        <span class="advantage-d">Следующим шагом период размещения попадёт в календарь занятости</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-{hasNews && (
-<section id="news" class="section section-gray">
-  <div class="wrap">
-    <div class="eyebrow reveal-up"><span class="eyebrow-line"></span><span class="mono">{s.newsEyebrow}</span></div>
-    <h2 class="h2 news-title reveal-up">{s.newsTitle}</h2>
-    <div class="news-grid" id="newsGrid"></div>
-    <div class="news-all-wrap reveal-up"><button class="btn btn-outline-dark" id="newsAllBtn">{s.newsAllCta}</button></div>
-  </div>
-</section>
-)}
-
-{hasDocs && (
-<section id="docs" class="section section-white">
-  <div class="wrap">
-    <div class="section-head reveal-up">
-      <div>
-        <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">{s.docsEyebrow}</span></div>
-        <h2 class="h2 h2-nowrap">{s.docsTitle}</h2>
-      </div>
-      <p class="section-desc">Выберите категорию, затем конструкцию — покажем связанные материалы именно по ней.</p>
-    </div>
-    <div class="docs-grid" id="docsGrid"></div>
-  </div>
-</section>
-)}
-
-<section class="section section-accent">
-  <div class="pattern-overlay pattern-overlay-full"></div>
-  <div class="wrap contacts-wrap">
-    <div class="contacts-title-col reveal-up">
-      <span class="mono contacts-eyebrow">{s.contactsEyebrow}</span>
-      <h2 class="h2 contacts-title">{s.contactsTitle}</h2>
-    </div>
-    <div class="contacts-main reveal-up">
-      <p class="contacts-desc">Оставьте заявку или позвоните в отдел размещений. Поможем подобрать конструкцию, сторону и период кампании.</p>
-      <div class="contacts-info">
-        <div class="contacts-info-row">
-          <span class="mono">Офис продаж</span>
-          <span>{s.address}</span>
-        </div>
-        <div class="contacts-info-row contacts-info-row-last">
-          <span class="mono">Режим работы</span>
-          <span>{s.workHoursWeekday}<br>{s.workHoursSaturday}</span>
-        </div>
-      </div>
-      <div class="contacts-actions">
-        <button type="button" class="btn btn-white" data-lead-open="contacts">{s.contactsLeaveCta}</button>
-        <a href={chrome.phoneHref} class="btn btn-outline-white">{chrome.phoneDisplay}</a>
-        <a href={chrome.secondary.href} class="btn btn-outline-white">{chrome.secondary.label}</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<Footer chrome={chrome} home={true} showDocs={hasDocs} />
-
-<div class="project-page" id="newsListPage" role="dialog" aria-modal="true" aria-labelledby="newsListTitle">
-  <div class="project-page-bar">
-    <div class="wrap-narrow project-bar-inner">
-      <button class="bar-icon-btn bar-icon-back" id="newsListBackBtn" aria-label="На главную"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg></button>
-      <span class="brand-word brand-word--ink">{s.siteName}</span>
-      <a href={chrome.phoneHref} class="bar-icon-btn bar-icon-call" aria-label="Позвонить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></a>
-    </div>
-  </div>
-  <div class="wrap-narrow news-list-body">
-    <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Акции и новости</span></div>
-    <h1 id="newsListTitle">Все акции и новости</h1>
-    <div class="news-grid" id="newsListGrid"></div>
-  </div>
-</div>
-
-<div class="project-page" id="articlePage" role="dialog" aria-modal="true" aria-labelledby="articleTitle">
-  <div class="project-page-bar">
-    <div class="wrap-narrow project-bar-inner">
-      <button class="bar-icon-btn bar-icon-back" id="articleBackBtn" aria-label="Назад"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg></button>
-      <span class="brand-word brand-word--ink">{s.siteName}</span>
-      <a href={chrome.phoneHref} class="bar-icon-btn bar-icon-call" aria-label="Позвонить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></a>
-    </div>
-  </div>
-  <div class="project-hero article-hero">
-    <img id="articleHeroImg" src="" alt="">
-    <div class="project-hero-gradient"></div>
-    <div class="project-hero-content">
-      <div class="wrap-narrow">
-        <span class="news-card-tag mono" id="articleTag"></span>
-        <h1 id="articleTitle"></h1>
-        <p id="articleDate" class="article-date"></p>
-      </div>
-    </div>
-  </div>
-  <div class="wrap-narrow article-body">
-    <div class="article-content" id="articleContent"></div>
-    <div class="project-cta">
-      <div class="pattern-overlay pattern-overlay-cta"></div>
-      <div class="project-cta-text">
-        <h3>Остались вопросы?</h3>
-        <p>Оставьте заявку — расскажем об условиях размещения и подберём подходящую конструкцию.</p>
-      </div>
-      <div class="project-cta-actions">
-        <a href={chrome.phoneHref} class="btn btn-white">{chrome.phoneDisplay}</a>
-        <button class="btn btn-outline-white" id="articleCtaBack">Все новости</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-{hasDocs && (
-<div class="project-page" id="docsPage" role="dialog" aria-modal="true" aria-labelledby="docsPageTitle">
-  <div class="project-page-bar">
-    <div class="wrap-narrow project-bar-inner">
-      <button class="bar-icon-btn bar-icon-back" id="docsPageBackBtn" aria-label="На главную"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg></button>
-      <span class="brand-word brand-word--ink">{s.siteName}</span>
-      <a href={chrome.phoneHref} class="bar-icon-btn bar-icon-call" aria-label="Позвонить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></a>
-    </div>
-  </div>
-  <div class="wrap-narrow docs-page-body">
-    <div id="docsPageList">
-      <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Документы</span></div>
-      <h1 id="docsPageTitle">Выберите конструкцию</h1>
-      <div class="catalog-grid docs-project-grid" id="docsProjectGrid"></div>
-    </div>
-    <div id="docsPageDetail" hidden>
-      <button class="link-back" id="docsDetailBackBtn" type="button">← Все конструкции</button>
-      <div class="eyebrow"><span class="eyebrow-line"></span><span class="mono">Документы</span></div>
-      <h1 id="docsProjectName"></h1>
-      <div id="docsCategories"></div>
-    </div>
-  </div>
-</div>
-)}
-
-<a href="#catalog" class="mobile-sticky-cta btn btn-primary">{s.ctaSelectFlat}</a>
-
-<div class="lead-modal" id="leadModal" role="dialog" aria-modal="true" aria-labelledby="leadModalTitle" hidden>
-  <div class="lead-modal-overlay" data-lead-close></div>
-  <div class="lead-modal-card hero-card" role="document">
-    <button type="button" class="lead-modal-close" id="leadModalClose" aria-label="Закрыть" data-lead-close>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-    </button>
-    <span class="mono hero-card-label">Отдел размещений</span>
-    <p class="hero-card-title" id="leadModalTitle">Оставьте номер — перезвоним за 15 минут и подберём рекламную конструкцию</p>
-    <form class="hero-card-form" id="modalLeadForm" novalidate>
-      <label class="visually-hidden" for="modalLeadName">Как к вам обращаться</label>
-      <input id="modalLeadName" type="text" placeholder="Как к вам обращаться" name="name" autocomplete="name" required>
-      <label class="visually-hidden" for="modalLeadPhone">Номер телефона</label>
-      <input id="modalLeadPhone" type="tel" placeholder="+7 (___) ___-__-__" name="phone" autocomplete="tel" inputmode="tel" maxlength="18" required>
-      <input class="lead-hp" type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <label class="hero-card-consent">
-        <input type="checkbox" id="modalLeadConsent" name="consent" required>
-        <span class="hero-card-consent-box" aria-hidden="true">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"></path></svg>
-        </span>
-        <span class="hero-card-consent-text">Нажимая кнопку, вы соглашаетесь с <a href="/privacy" target="_blank" rel="noopener">обработкой персональных данных</a></span>
-      </label>
-      <button type="submit" class="btn btn-primary">{s.ctaOrderCall}</button>
-      <p class="hero-card-success" id="modalLeadSuccess" role="status" aria-live="polite" hidden>Спасибо! Перезвоним в течение 15 минут.</p>
-    </form>
-  </div>
-</div>
-
-<CookieBanner />
-
-<script is:inline define:vars={{ apiUrl, noesisData }}>
-  window.NOESIS_API_URL = apiUrl;
-  window.NOESIS_DATA = noesisData;
-</script>
-<script is:inline src="/js/main.js"></script>
-</body>
-</html>
+<BaseLayout
+  chrome={chrome}
+  title={title}
+  description={description}
+  path="/"
+  jsonLd={organizationJsonLd}
+  current="home"
+>
+  <HomeHero
+    featured={items[0]}
+    constructionCount={constructions.length}
+    developerCount={stats.developerCount}
+    formats={formats}
+    districts={districts}
+  />
+  <HomeInventory items={items} mapApiKey={mapApiKey} center={[43.318, 45.698]} />
+  <ProcessSection />
+  <BenefitsSection />
+  <NewsSection items={newsItems} />
+  <MaterialsSection categories={visibleDocuments} />
+  <ContactSection chrome={chrome} />
+  <script>
+    import "../scripts/home";
+  </script>
+</BaseLayout>

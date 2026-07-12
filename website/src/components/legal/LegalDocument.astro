@@ -1,0 +1,38 @@
+<section class="legal-shell">
+  <header class="legal-shell__intro container-narrow">
+    <p>Правовая информация</p>
+    <span>NOESIS |ad · обработка персональных данных</span>
+  </header>
+  <div class="legal-shell__layout container-narrow">
+    <aside>
+      <span>Документ</span>
+      <a href="/">← На главную</a>
+      <a href="mailto:info@noesis-grozny.ru">Задать вопрос</a>
+    </aside>
+    <article class="legal"><slot /></article>
+  </div>
+</section>
+
+<style>
+  .legal-shell { padding: clamp(46px, 7vw, 90px) 0 clamp(90px, 11vw, 160px); }
+  .legal-shell__intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line-strong); }
+  .legal-shell__intro p { margin: 0; color: var(--accent); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .legal-shell__intro span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+  .legal-shell__layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: clamp(34px, 6vw, 80px); padding-top: 48px; }
+  .legal-shell aside { position: sticky; top: calc(var(--header-height) + 20px); display: grid; align-content: start; gap: 14px; height: fit-content; color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+  .legal-shell aside a { color: var(--accent); }
+  :global(.legal h1) { max-width: 850px; margin: 0 0 60px; font-size: clamp(42px, 6vw, 78px); font-weight: 720; letter-spacing: -0.065em; line-height: 0.98; }
+  :global(.legal h2) { margin: 58px 0 20px; padding-top: 22px; border-top: 1px solid var(--line); font-size: clamp(22px, 3vw, 34px); letter-spacing: -0.04em; line-height: 1.2; }
+  :global(.legal p),
+  :global(.legal li) { color: var(--ink-soft); font-size: 14px; line-height: 1.8; }
+  :global(.legal p) { margin: 0 0 1em; }
+  :global(.legal ul),
+  :global(.legal ol) { display: grid; gap: 8px; padding-left: 22px; }
+  :global(.legal a) { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+  @media (max-width: 720px) {
+    .legal-shell__intro { align-items: start; flex-direction: column; }
+    .legal-shell__layout { grid-template-columns: 1fr; }
+    .legal-shell aside { position: static; grid-template-columns: repeat(3, auto); justify-content: start; }
+  }
+  @media (max-width: 440px) { .legal-shell aside { grid-template-columns: 1fr; } }
+</style>

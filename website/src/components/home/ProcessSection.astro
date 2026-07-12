@@ -1,0 +1,38 @@
+---
+import SectionHeading from "../SectionHeading.astro";
+const steps = [
+  { n: "01", title: "Задайте период", text: "Выберите даты, формат и район. Каталог покажет подходящие локации и статусы сторон." },
+  { n: "02", title: "Соберите подборку", text: "Сравните фотографии, направление обзора, трафик и стоимость. Добавьте нужные стороны." },
+  { n: "03", title: "Получите подтверждение", text: "Одна заявка передаёт менеджеру весь shortlist. Он проверит остатки и согласует размещение." },
+];
+---
+<section class="process" id="process">
+  <div class="container process__inner">
+    <SectionHeading eyebrow="Процесс" title="От карты до согласованного размещения" description="Сайт помогает выбрать инвентарь. Бронирование возникает только после проверки и подтверждения менеджером." tone="light" />
+    <ol>
+      {steps.map((step) => (
+        <li>
+          <span>{step.n}</span>
+          <h3>{step.title}</h3>
+          <p>{step.text}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .process { padding: clamp(80px, 10vw, 140px) 0; color: #fff; background: #20201e; }
+  .process__inner { display: grid; grid-template-columns: minmax(300px, 0.75fr) minmax(500px, 1.25fr); gap: clamp(50px, 8vw, 120px); }
+  .process ol { display: grid; margin: 0; padding: 0; list-style: none; }
+  .process li { display: grid; grid-template-columns: 64px 0.7fr 1fr; gap: 24px; padding: 28px 0; border-top: 1px solid rgba(255, 255, 255, 0.18); }
+  .process li:last-child { border-bottom: 1px solid rgba(255, 255, 255, 0.18); }
+  .process li > span { color: var(--accent); font-family: var(--font-mono); font-size: 12px; }
+  .process h3 { margin: 0; font-size: clamp(20px, 2.2vw, 30px); letter-spacing: -0.04em; }
+  .process li p { margin: 0; color: rgba(255, 255, 255, 0.6); font-size: 14px; }
+  @media (max-width: 900px) { .process__inner { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    .process li { grid-template-columns: 46px 1fr; gap: 12px; }
+    .process li p { grid-column: 2; }
+  }
+</style>

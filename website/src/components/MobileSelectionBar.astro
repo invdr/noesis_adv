@@ -1,0 +1,40 @@
+<a class="selection-bar" href="/selection" data-mobile-selection hidden>
+  <span>Открыть подборку</span>
+  <span class="selection-bar__meta"><b data-shortlist-count>0</b> <span data-shortlist-word>позиций</span></span>
+</a>
+
+<style>
+  .selection-bar { display: none; }
+
+  @media (max-width: 760px) {
+    .selection-bar {
+      position: fixed;
+      z-index: 150;
+      right: 10px;
+      bottom: 10px;
+      left: 10px;
+      min-height: 58px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 18px;
+      color: #fff;
+      background: var(--accent);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      box-shadow: 0 16px 36px rgba(85, 0, 0, 0.28);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .selection-bar__meta {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .selection-bar__meta b { color: #fff; font-family: var(--font-mono); font-size: 14px; }
+  }
+</style>

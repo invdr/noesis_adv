@@ -1,0 +1,91 @@
+---
+import type { CatalogItem } from "../../lib/api";
+import { jsonForHtml } from "../../lib/json";
+import ConstructionCard from "../ConstructionCard.astro";
+import MapCanvas from "../MapCanvas.astro";
+import SectionHeading from "../SectionHeading.astro";
+
+interface Props {
+  items: CatalogItem[];
+  mapApiKey: string;
+  center: readonly [number, number];
+}
+const { items, mapApiKey, center } = Astro.props;
+const preview = items.slice(0, 4);
+const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center, zoom: 12 } });
+---
+<section class="inventory" id="inventory">
+  <div class="container inventory__heading">
+    <SectionHeading
+      eyebrow="Каталог и география"
+      title="Выбирайте по локации, а не по обещаниям"
+      description="Каждая позиция привязана к адресу, стороне и инвентарному коду. Задайте даты — статусы обновятся по данным бронирований."
+    />
+    <a href="/catalog">Все конструкции <span aria-hidden="true">→</span></a>
+  </div>
+
+  <div class="inventory__layout container">
+    <div class="inventory__list" data-home-list>
+      {preview.map((item) => <ConstructionCard item={item} mapAction />)}
+    </div>
+    <div class="inventory__map" id="map">
+      <div class="inventory__map-head">
+        <div><span>Карта Грозного</span><strong>{items.filter((item) => item.lat != null && item.lng != null).length} точек с координатами</strong></div>
+        <div class="inventory__legend" aria-label="Обозначения статусов">
+          <span><i></i> Свободно</span><span><i></i> Частично</span><span><i></i> Занято</span>
+        </div>
+      </div>
+      <MapCanvas id="home-map" />
+      <p class="inventory__map-status" data-home-map-status role="status" aria-live="polite"></p>
+    </div>
+  </div>
+  <script is:inline id="home-data" type="application/json" set:html={data}></script>
+</section>
+
+<style>
+  .inventory { padding: clamp(110px, 13vw, 190px) 0 clamp(78px, 9vw, 130px); }
+  .inventory__heading { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 46px; }
+  .inventory__heading > a {
+    display: inline-flex;
+    min-height: 48px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 0 16px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 750;
+  }
+  .inventory__heading > a:hover { color: #fff; background: var(--ink); border-color: var(--ink); }
+  .inventory__layout { display: grid; grid-template-columns: minmax(360px, 0.78fr) minmax(500px, 1.22fr); align-items: start; gap: 22px; }
+  .inventory__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .inventory__map { position: sticky; top: calc(var(--header-height) + 18px); min-width: 0; }
+  .inventory__map-head { display: flex; min-height: 62px; align-items: center; justify-content: space-between; gap: 16px; padding: 0 4px 14px; }
+  .inventory__map-head > div:first-child { display: grid; gap: 2px; }
+  .inventory__map-head span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .inventory__map-head strong { font-size: 13px; }
+  .inventory__legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; }
+  .inventory__legend span { display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0; text-transform: none; }
+  .inventory__legend i { width: 7px; height: 7px; background: var(--positive); border-radius: 999px; }
+  .inventory__legend span:nth-child(2) i { background: var(--warning); }
+  .inventory__legend span:nth-child(3) i { background: var(--accent); }
+  .inventory__map-status { min-height: 22px; margin: 10px 4px 0; color: var(--muted); font-size: 11px; }
+  @media (max-width: 1220px) {
+    .inventory__layout { grid-template-columns: minmax(320px, 0.9fr) minmax(440px, 1.1fr); }
+    .inventory__list { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    .inventory__heading { align-items: start; flex-direction: column; }
+    .inventory__layout { grid-template-columns: 1fr; }
+    .inventory__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .inventory__map { position: static; grid-row: 1; }
+  }
+  @media (max-width: 620px) {
+    .inventory { padding-top: 76px; }
+    .inventory__list { grid-template-columns: 1fr; }
+    .inventory__map-head { align-items: start; flex-direction: column; }
+    .inventory__legend { justify-content: flex-start; }
+  }
+</style>

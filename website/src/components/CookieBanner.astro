@@ -1,30 +1,49 @@
----
-// Cookie-баннер (152-ФЗ): показывается один раз, согласие хранится в
-// localStorage. Не перекрывает контент (полоса снизу), со ссылкой на Политику.
----
-<div class="cookie-banner" id="cookieBanner" role="region" aria-label="Уведомление о файлах cookie" hidden>
-  <p class="cookie-banner-text">
-    Мы используем файлы cookie и обрабатываем персональные данные для работы
-    сайта и улучшения сервиса. Оставаясь на сайте, вы соглашаетесь с
-    <a href="/privacy">Политикой обработки персональных данных</a>.
+<aside class="cookie" data-cookie-banner aria-label="Уведомление о cookie" hidden>
+  <p>
+    Сайт использует cookie для работы интерфейса и обезличенной аналитики.
+    Подробнее — в <a href="/privacy">политике конфиденциальности</a>.
   </p>
-  <div class="cookie-banner-actions">
-    <button type="button" class="btn btn-primary" id="cookieAcceptBtn">Принять</button>
-  </div>
-</div>
+  <button type="button" data-cookie-accept>Понятно</button>
+</aside>
 
-<script is:inline>
-  (() => {
-    const KEY = "noesis_cookie_consent";
-    const banner = document.getElementById("cookieBanner");
-    if (!banner) return;
-    let consented = false;
-    try { consented = localStorage.getItem(KEY) === "1"; } catch (_) { /* private mode */ }
-    if (consented) return;
-    banner.hidden = false;
-    document.getElementById("cookieAcceptBtn").addEventListener("click", () => {
-      try { localStorage.setItem(KEY, "1"); } catch (_) { /* ignore */ }
-      banner.hidden = true;
-    });
-  })();
-</script>
+<style>
+  .cookie {
+    position: fixed;
+    z-index: 300;
+    right: 18px;
+    bottom: 18px;
+    display: grid;
+    width: min(520px, calc(100% - 36px));
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 18px;
+    padding: 18px;
+    color: #fff;
+    background: #262623;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+  }
+  .cookie p { margin: 0; font-size: 13px; line-height: 1.5; }
+  .cookie a { text-decoration: underline; text-underline-offset: 3px; }
+  .cookie button {
+    min-width: 86px;
+    min-height: 44px;
+    padding: 0 16px;
+    color: var(--accent);
+    background: #fff;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  @media (max-width: 560px) {
+    .cookie {
+      right: 10px;
+      bottom: 10px;
+      width: calc(100% - 20px);
+      grid-template-columns: 1fr;
+    }
+    .cookie button { width: 100%; }
+  }
+</style>
