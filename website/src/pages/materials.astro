@@ -5,6 +5,7 @@ import {
   fetchConstructionDocuments,
   fetchConstructions,
   fetchSiteSettings,
+  CITY_FORMAT_IMAGE,
   type Document,
 } from "../lib/api";
 import { buildChrome } from "../lib/chrome";
@@ -30,7 +31,7 @@ for (const row of rows) {
         name: row.construction.name,
         code: row.construction.code || "",
         address: row.construction.address || "Грозный",
-        image: row.construction.cover?.renditions?.thumbnailUrl || row.construction.cover?.url || "",
+        image: CITY_FORMAT_IMAGE,
         documents: group.documents,
       });
     }

@@ -7,7 +7,6 @@ interface Props {
 }
 
 const { constructionCount, developerCount, formats, districts } = Astro.props;
-const heroImage = "/assets/city-format-noesis-v2.png";
 ---
 <section class="hero">
   <div class="hero__grid container">
@@ -29,19 +28,67 @@ const heroImage = "/assets/city-format-noesis-v2.png";
       )}
     </div>
 
-    <div class="hero__visual">
-      <img
-        src={heroImage}
-        alt="Сити-формат NOESIS на городской улице"
-        fetchpriority="high"
-        decoding="async"
-      />
+    <div class="hero__visual hero__diagram" aria-label="Схема расположения рекламных щитов в Грозном">
+      <div class="hero__diagram-head">
+        <span>СХЕМА РАСПОЛОЖЕНИЯ</span>
+        <strong>Грозный · 08 точек</strong>
+      </div>
+      <svg class="hero__diagram-svg" viewBox="0 0 800 560" role="img" aria-labelledby="diagram-title diagram-desc">
+        <title id="diagram-title">Расположение рекламных щитов на карте города</title>
+        <desc id="diagram-desc">Схематичная карта дорог с отмеченными сити-форматами и направлениями движения.</desc>
+        <defs>
+          <pattern id="diagram-grid" width="42" height="42" patternUnits="userSpaceOnUse">
+            <path d="M 42 0 L 0 0 0 42" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1" />
+          </pattern>
+          <linearGradient id="diagram-road" x1="0" x2="1">
+            <stop offset="0" stop-color="#3c3c38" />
+            <stop offset="1" stop-color="#555550" />
+          </linearGradient>
+        </defs>
+        <rect width="800" height="560" rx="16" fill="url(#diagram-grid)" />
+        <path d="M-80 470 C120 350 170 440 310 350 S550 170 880 110" fill="none" stroke="#10100f" stroke-width="88" opacity=".55" />
+        <path d="M-80 470 C120 350 170 440 310 350 S550 170 880 110" fill="none" stroke="url(#diagram-road)" stroke-width="58" />
+        <path d="M-80 470 C120 350 170 440 310 350 S550 170 880 110" fill="none" stroke="#d4c9ac" stroke-width="2" stroke-dasharray="12 12" opacity=".8" />
+        <path d="M30 80 L270 280 L430 230 L750 500" fill="none" stroke="#4e4e49" stroke-width="22" opacity=".8" />
+        <path d="M30 80 L270 280 L430 230 L750 500" fill="none" stroke="#858277" stroke-width="1.5" stroke-dasharray="8 10" opacity=".8" />
+        <g fill="#d78e8e" font-family="var(--font-mono)" font-size="10" letter-spacing=".12em">
+          <text x="90" y="118">ПРОСПЕКТ</text>
+          <text x="625" y="478" transform="rotate(38 625 478)">ЦЕНТР</text>
+        </g>
+        <g class="hero__marker" transform="translate(166 368)">
+          <circle r="25" fill="#8b0000" opacity=".25" />
+          <circle r="15" fill="#a91616" stroke="#fff" stroke-width="2" />
+          <rect x="-5" y="-8" width="10" height="16" rx="2" fill="#fff" />
+          <text x="22" y="4">СФ-01</text>
+        </g>
+        <g class="hero__marker" transform="translate(330 350)">
+          <circle r="25" fill="#8b0000" opacity=".25" />
+          <circle r="15" fill="#a91616" stroke="#fff" stroke-width="2" />
+          <rect x="-5" y="-8" width="10" height="16" rx="2" fill="#fff" />
+          <text x="22" y="4">СФ-02</text>
+        </g>
+        <g class="hero__marker hero__marker--active" transform="translate(494 262)">
+          <circle r="32" fill="#d78e8e" opacity=".25" />
+          <circle r="17" fill="#a91616" stroke="#fff" stroke-width="3" />
+          <rect x="-6" y="-9" width="12" height="18" rx="2" fill="#fff" />
+          <text x="26" y="4">СФ-03</text>
+        </g>
+        <g class="hero__marker" transform="translate(635 188)">
+          <circle r="25" fill="#8b0000" opacity=".25" />
+          <circle r="15" fill="#a91616" stroke="#fff" stroke-width="2" />
+          <rect x="-5" y="-8" width="10" height="16" rx="2" fill="#fff" />
+          <text x="22" y="4">СФ-04</text>
+        </g>
+        <g fill="#fff" opacity=".54" font-family="var(--font-mono)" font-size="9">
+          <text x="44" y="526">43.318° N</text>
+          <text x="690" y="42">45.698° E</text>
+        </g>
+      </svg>
       <div class="hero__visual-meta">
         <span>СИТИ-ФОРМАТ</span>
-        <p>Грозный · наружная реклама</p>
+        <p>Городская сеть рекламных поверхностей</p>
         <a href="/catalog">Открыть каталог ↗</a>
       </div>
-      <span class="hero__coordinates">43.318° N<br />45.698° E</span>
     </div>
   </div>
 
@@ -138,10 +185,16 @@ const heroImage = "/assets/city-format-noesis-v2.png";
   .hero__stats dt { color: var(--accent); font-family: var(--font-mono); font-size: 28px; font-weight: 600; }
   .hero__stats dd { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
 
-  .hero__visual { position: relative; min-height: 500px; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
-  .hero__visual > img { width: 100%; height: 100%; object-fit: cover; }
-  .hero__visual::after { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(15, 15, 14, 0.68)); content: ""; pointer-events: none; }
-  .hero__visual-fallback { display: grid; width: 100%; height: 100%; place-items: center; color: var(--muted); font-family: var(--font-mono); }
+  .hero__visual { position: relative; height: clamp(440px, 36vw, 560px); min-height: 0; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
+  .hero__diagram { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; padding: 22px; color: #fff; background: #242421; border: 1px solid rgba(25, 25, 24, 0.12); }
+  .hero__diagram::after { display: none; }
+  .hero__diagram-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
+  .hero__diagram-head span { color: #d78e8e; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; }
+  .hero__diagram-head strong { color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600; }
+  .hero__diagram-svg { width: 100%; height: 100%; min-height: 0; }
+  .hero__marker { color: #fff; font-family: var(--font-mono); font-size: 10px; }
+  .hero__marker text { fill: rgba(255, 255, 255, 0.86); }
+  .hero__marker--active text { fill: #fff; font-weight: 700; }
   .hero__visual-meta {
     position: absolute;
     z-index: 2;
@@ -157,20 +210,6 @@ const heroImage = "/assets/city-format-noesis-v2.png";
   .hero__visual-meta span { font-family: var(--font-mono); font-size: 11px; }
   .hero__visual-meta p { margin: 0; font-size: 12px; }
   .hero__visual-meta a { font-size: 11px; font-weight: 700; }
-  .hero__coordinates {
-    position: absolute;
-    z-index: 2;
-    top: 20px;
-    right: 20px;
-    padding: 9px 10px;
-    color: #fff;
-    background: rgba(25, 25, 24, 0.78);
-    border-radius: 8px;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    line-height: 1.5;
-  }
-
   .hero__search-wrap { position: relative; z-index: 3; transform: translateY(50%); }
   .hero__search {
     display: grid;
@@ -217,7 +256,7 @@ const heroImage = "/assets/city-format-noesis-v2.png";
 
   @media (max-width: 1180px) {
     .hero__grid { grid-template-columns: 1fr 1fr; }
-    .hero__visual { min-height: 460px; }
+    .hero__visual { height: 460px; }
     .hero__search { grid-template-columns: repeat(3, 1fr); }
     .hero__search-heading { grid-column: span 1; }
   }
@@ -226,7 +265,7 @@ const heroImage = "/assets/city-format-noesis-v2.png";
     .hero__grid { grid-template-columns: 1fr; }
     .hero__content { padding-bottom: 0; }
     .hero__stats { margin-top: 34px; padding-top: 0; }
-    .hero__visual { min-height: min(72vh, 620px); }
+    .hero__visual { height: min(72vh, 620px); min-height: 0; }
     .hero__search-wrap { transform: none; padding-block: 18px; }
     .hero__search { grid-template-columns: repeat(2, 1fr); }
     .hero__search-heading,
@@ -235,7 +274,7 @@ const heroImage = "/assets/city-format-noesis-v2.png";
   @media (max-width: 520px) {
     .hero h1 { font-size: clamp(40px, 13vw, 58px); }
     .hero__actions { display: grid; }
-    .hero__visual { min-height: 420px; border-radius: 16px; }
+    .hero__visual { height: 420px; border-radius: 16px; }
     .hero__visual-meta { grid-template-columns: 1fr auto; }
     .hero__visual-meta p { grid-column: 1 / -1; grid-row: 2; }
     .hero__search { grid-template-columns: 1fr; }

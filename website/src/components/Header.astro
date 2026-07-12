@@ -193,8 +193,16 @@ const nav = [
     position: fixed;
     z-index: 200;
     inset: 0;
+    display: block;
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
     background: rgba(25, 25, 24, 0.48);
+    overscroll-behavior: contain;
   }
+
+  .mobile-nav[hidden] { display: none !important; }
 
   .mobile-nav__panel {
     width: min(100%, 430px);
@@ -202,6 +210,7 @@ const nav = [
     margin-left: auto;
     padding: 20px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--paper);
     box-shadow: -20px 0 60px rgba(25, 25, 24, 0.18);
   }

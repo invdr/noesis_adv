@@ -25,6 +25,9 @@ const API_BASE = (
   "http://localhost:3000"
 ).replace(/\/+$/, "");
 
+/** Единый визуал для публичных карточек: реальные фото конструкций не выводим в лендинге. */
+export const CITY_FORMAT_IMAGE = "/assets/city-format-noesis-wide-v3.png";
+
 /** Подмножество DTO ассета, нужное лендингу. */
 export interface Asset {
   url: string;
@@ -163,8 +166,7 @@ export function toConstructionView(c: Construction): ConstructionView {
     name: c.name,
     code: c.code ?? "",
     address: c.address ?? "Грозный",
-    img: c.cover?.url ?? "",
-    imgSrcset: c.cover?.renditions?.srcset,
+    img: CITY_FORMAT_IMAGE,
     priceLabel: c.priceLabel,
     formatLabel: CONSTRUCTION_FORMAT_LABEL[c.format],
     sizeLabel: c.size || "Размер по запросу",
@@ -279,8 +281,7 @@ export function toNewsView(n: News): NewsView {
     tag: n.label?.name ?? "",
     title: n.title,
     excerpt: n.excerpt ?? "",
-    img: n.cover?.url ?? "",
-    imgSrcset: n.cover?.renditions?.srcset,
+    img: CITY_FORMAT_IMAGE,
     date: formatNewsDate(n.date),
     body: newsBodyToParagraphs(n.body),
     href: `/news/${n.slug}`,

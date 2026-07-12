@@ -5,6 +5,7 @@ import {
   fetchConstructionDocuments,
   fetchConstructions,
   fetchSiteSettings,
+  CITY_FORMAT_IMAGE,
   type Construction,
 } from "../../lib/api";
 import { buildChrome } from "../../lib/chrome";
@@ -25,7 +26,7 @@ const chrome = buildChrome(settings);
 const mapApiKey = import.meta.env.PUBLIC_YANDEX_MAPS_API_KEY ?? "";
 const title = `${construction.name}${construction.code ? ` (${construction.code})` : ""} | ${BRAND_NAME}`;
 const description = (construction.description || `${construction.address || "Грозный"}. Формат, стороны, фотографии, стоимость и календарь доступности рекламной конструкции.`).slice(0, 220);
-const image = construction.cover?.url || construction.images[0]?.url;
+const image = CITY_FORMAT_IMAGE;
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Product",

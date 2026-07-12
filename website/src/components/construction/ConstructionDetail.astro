@@ -1,5 +1,5 @@
 ---
-import type { Construction, DocumentGroup } from "../../lib/api";
+import type { Asset, Construction, DocumentGroup } from "../../lib/api";
 import { documentHref, documentMeta } from "../../lib/api";
 import { jsonForHtml } from "../../lib/json";
 import LeadForm from "../LeadForm.astro";
@@ -12,7 +12,14 @@ interface Props {
 }
 const { construction, documents, mapApiKey } = Astro.props;
 const firstSide = construction.sides[0];
-const mainImage = firstSide?.photo ?? construction.cover ?? construction.images[0];
+const cityFormatImage: Asset = { url: "/assets/city-format-noesis-wide-v3.png" };
+const visualConstruction = {
+  ...construction,
+  cover: cityFormatImage,
+  images: [cityFormatImage],
+  sides: construction.sides.map((side) => ({ ...side, photo: cityFormatImage })),
+};
+const mainImage = cityFormatImage;
 const traffic = firstSide?.trafficPerDay ?? construction.trafficPerDay;
 const grp = firstSide?.grp ?? construction.grp;
 const initialReach = grp != null
@@ -29,7 +36,7 @@ const formatLabels: Record<string, string> = {
   other: "Другое",
 };
 const lightingLabels: Record<string, string> = { none: "Без подсветки", internal: "Внутренняя", external: "Внешняя" };
-const data = jsonForHtml({ construction, map: { apiKey: mapApiKey, zoom: 16 } });
+const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapApiKey, zoom: 16 } });
 ---
 <article class="detail">
   <div class="detail__breadcrumbs container" aria-label="Хлебные крошки">
@@ -100,11 +107,11 @@ const data = jsonForHtml({ construction, map: { apiKey: mapApiKey, zoom: 16 } })
     </div>
   </section>
 
-  {construction.images.length > 1 && (
+  {visualConstruction.images.length > 1 && (
     <section class="detail__gallery container" aria-label="Фотогалерея">
-      <div class="detail__gallery-head"><span>Фотогалерея</span><strong>{construction.images.length} фото</strong></div>
+      <div class="detail__gallery-head"><span>Фотогалерея</span><strong>{visualConstruction.images.length} фото</strong></div>
       <div class="detail__gallery-strip">
-        {construction.images.map((image, index) => (
+        {visualConstruction.images.map((image, index) => (
           <button type="button" data-gallery-index={index} aria-label={`Показать фотографию ${index + 1}`} aria-pressed={index === 0 ? "true" : "false"}>
             <img src={image.renditions?.thumbnailUrl || image.url} alt="" loading="lazy" decoding="async" />
           </button>
