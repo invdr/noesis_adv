@@ -414,6 +414,61 @@ describe("financeRoutes — переоткрытие месяца", () => {
   });
 });
 
+/** Рантайм для проверки связей расхода: статья есть, бронь принадлежит конструкции cA. */
+function expenseLinksRuntime(): Runtime {
+  const prisma: Record<string, unknown> = {
+    session: {
+      findUnique: async ({ where }: { where: { tokenHash: string } }) =>
+        where.tokenHash === tokenHash(TOKEN)
+          ? {
+              id: "session-admin",
+              userId: "user-admin",
+              expiresAt: new Date(Date.now() + 60_000),
+              lastSeenAt: new Date(),
+              user: {
+                id: "user-admin",
+                email: "admin@example.com",
+                name: null,
+                role: "admin",
+                mustChangePassword: false,
+                isActive: true,
+              },
+            }
+          : null,
+      update: async () => ({}),
+    },
+    financeExpenseCategory: {
+      findUnique: async () => ({ id: "cat1", name: "Аренда", order: 1, archivedAt: null }),
+    },
+    booking: {
+      findUnique: async () => ({ constructionId: "cA" }),
+    },
+    construction: { count: async () => 1 },
+  };
+  return {
+    env: { CORS_ORIGINS: [ORIGIN], COOKIE_SECURE: false, SESSION_TTL_HOURS: 12 },
+    prisma,
+  } as unknown as Runtime;
+}
+
+describe("financeRoutes — связи расхода", () => {
+  test("бронь другой конструкции — 422 booking_construction_mismatch", async () => {
+    const res = await createApp(expenseLinksRuntime()).request("/api/finance/expenses", {
+      method: "POST",
+      headers: { ...auth(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: "2026-07-10",
+        amount: 5000,
+        categoryId: "cat1",
+        bookingId: "bk1",
+        constructionId: "cB", // не совпадает с конструкцией брони (cA)
+      }),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe("booking_construction_mismatch");
+  });
+});
+
 describe("financeRoutes — закрытие месяца", () => {
   const close = (rt: Runtime) =>
     createApp(rt).request("/api/finance/distributions/2026-07/close", {
@@ -447,6 +502,27 @@ describe("financeRoutes — закрытие месяца", () => {
       }).rt,
     );
     expect(res.status).toBe(409);
+  });
+
+  test("закрытие разносит чистый доход по нескольким долям (60/40)", async () => {
+    const { rt, state } = runtimeWith("admin", {
+      income: 100000,
+      expense: 0,
+      participants: [
+        { id: "p1", name: "A", shares: [{ shareBps: 6000 }] },
+        { id: "p2", name: "B", shares: [{ shareBps: 4000 }] },
+      ],
+    });
+    const res = await close(rt);
+    expect(res.status).toBe(200);
+    expect((await res.json()).netIncome).toBe(100000);
+    const byId = Object.fromEntries(
+      (state.created ?? []).map((a) => [a.participantId as string, a.amount as number]),
+    );
+    expect(byId.p1).toBe(60000);
+    expect(byId.p2).toBe(40000);
+    // Разнесённое ровно равно чистому доходу — копейки не теряются.
+    expect((state.created ?? []).reduce((s, a) => s + (a.amount as number), 0)).toBe(100000);
   });
 
   test("успешное закрытие разносит чистый доход по доле", async () => {

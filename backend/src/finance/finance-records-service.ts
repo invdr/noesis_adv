@@ -243,8 +243,20 @@ async function validateExpenseLinks(
   });
   if (!category) throw new HttpError(422, "category_not_found", "Статья не найдена");
   if (input.bookingId) {
-    const exists = await rt.prisma.booking.count({ where: { id: input.bookingId } });
-    if (exists === 0) throw new HttpError(422, "booking_not_found", "Бронь не найдена");
+    const booking = await rt.prisma.booking.findUnique({
+      where: { id: input.bookingId },
+      select: { constructionId: true },
+    });
+    if (!booking) throw new HttpError(422, "booking_not_found", "Бронь не найдена");
+    // Бронь задаёт конструкцию, если та не выбрана явно; иначе — должна совпадать.
+    if (!input.constructionId) input.constructionId = booking.constructionId;
+    else if (input.constructionId !== booking.constructionId) {
+      throw new HttpError(
+        422,
+        "booking_construction_mismatch",
+        "Бронь относится к другой конструкции",
+      );
+    }
   }
   if (input.constructionSideId) {
     const side = await rt.prisma.constructionSide.findUnique({
@@ -311,7 +323,7 @@ export async function createPayout(
   user: SessionUser,
   input: UpsertFinancePayoutInput,
 ): Promise<FinancePayout> {
-  await requireActiveParticipant(rt, input.participantId);
+  await requireParticipantExists(rt, input.participantId);
   const row = await rt.prisma.financePayout.create({
     data: {
       participantId: input.participantId,
@@ -332,7 +344,7 @@ export async function updatePayout(
   input: UpsertFinancePayoutInput,
 ): Promise<FinancePayout> {
   await requirePayout(rt, id);
-  await requireActiveParticipant(rt, input.participantId);
+  await requireParticipantExists(rt, input.participantId);
   const row = await rt.prisma.financePayout.update({
     where: { id },
     data: {
@@ -352,7 +364,8 @@ export async function deletePayout(rt: Runtime, id: string): Promise<void> {
   await rt.prisma.financePayout.delete({ where: { id } });
 }
 
-async function requireActiveParticipant(rt: Runtime, id: string) {
+// Архивного участника выплачивать можно (закрыть остаток) — проверяем только существование.
+async function requireParticipantExists(rt: Runtime, id: string) {
   const row = await rt.prisma.financeParticipant.findUnique({ where: { id } });
   if (!row) throw new HttpError(422, "participant_not_found", "Участник не найден");
   return row;
