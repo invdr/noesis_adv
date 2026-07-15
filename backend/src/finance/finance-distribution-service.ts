@@ -66,6 +66,9 @@ async function activeSharesForMonth(
   const participants = await db.financeParticipant.findMany({
     where: { archivedAt: null },
     include: { shares: true },
+    // Стабильный порядок → детерминированный тай-брейк лишнего рубля при
+    // равных дробных остатках и долях (важно для повторяемости reopen→re-close).
+    orderBy: { id: "asc" },
   });
   const active: ActiveShare[] = [];
   for (const p of participants) {
@@ -105,6 +108,11 @@ export async function getDistribution(
   });
 
   if (row && row.status === "closed") {
+    // Снимок заморожен при закрытии; сверяем с живым итогом, чтобы поймать правки
+    // поступлений/расходов месяца, сделанные уже после закрытия.
+    const live = await monthTotals(rt.prisma, month);
+    const stale =
+      live.totalIncome !== row.totalIncome || live.totalExpense !== row.totalExpense;
     return {
       month,
       status: "closed",
@@ -118,6 +126,7 @@ export async function getDistribution(
         shareBps: a.shareBps,
         amount: a.amount,
       })),
+      stale,
       closedAt: row.closedAt ? row.closedAt.toISOString() : null,
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -131,6 +140,7 @@ export async function getDistribution(
     ...totals,
     shareBpsTotal: shares.reduce((a, s) => a + s.shareBps, 0),
     allocations: previewAllocations(totals.netIncome, shares),
+    stale: false,
     closedAt: null,
     updatedAt: row ? row.updatedAt.toISOString() : null,
   };
@@ -149,6 +159,26 @@ export async function listDistributions(
 }
 
 /**
+ * Прогнать fn в serializable-транзакции. Конфликт сериализации (P2034) при
+ * конкурентном close/reopen отдаём чистым 409, а не 500 — клиент повторит.
+ */
+async function inSerializableTx<T>(
+  rt: Runtime,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  try {
+    return await rt.prisma.$transaction(fn, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034") {
+      throw new HttpError(409, "conflict", "Месяц одновременно меняют. Повторите попытку.");
+    }
+    throw e;
+  }
+}
+
+/**
  * Закрыть месяц: зафиксировать снимок сумм и долей. Требует, чтобы доли активных
  * участников месяца в сумме давали ровно 100%. Идёт в serializable-транзакции,
  * чтобы параллельная правда (доли/суммы) не разъехалась со снимком.
@@ -159,70 +189,67 @@ export async function closeDistribution(
   month: Month,
 ): Promise<FinanceDistribution> {
   const periodMonth = monthToDate(month);
-  await rt.prisma.$transaction(
-    async (tx) => {
-      const existing = await tx.financeDistribution.findUnique({
-        where: { periodMonth },
-      });
-      if (existing?.status === "closed") {
-        throw new HttpError(
-          409,
-          "already_closed",
-          "Месяц уже закрыт. Переоткройте его для пересчёта.",
-        );
-      }
-      const totals = await monthTotals(tx, month);
-      const shares = await activeSharesForMonth(tx, month);
-      if (shares.length === 0) {
-        throw new HttpError(
-          422,
-          "no_participants",
-          "Нет участников с долей на этот месяц.",
-        );
-      }
-      const shareBpsTotal = shares.reduce((a, s) => a + s.shareBps, 0);
-      if (shareBpsTotal !== FINANCE_TOTAL_BPS) {
-        throw new HttpError(
-          422,
-          "shares_not_full",
-          `Доли участников за месяц должны в сумме давать 100% (сейчас ${(shareBpsTotal / 100).toFixed(2)}%).`,
-        );
-      }
-      const allocations = previewAllocations(totals.netIncome, shares);
+  await inSerializableTx(rt, async (tx) => {
+    const existing = await tx.financeDistribution.findUnique({
+      where: { periodMonth },
+    });
+    if (existing?.status === "closed") {
+      throw new HttpError(
+        409,
+        "already_closed",
+        "Месяц уже закрыт. Переоткройте его для пересчёта.",
+      );
+    }
+    const totals = await monthTotals(tx, month);
+    const shares = await activeSharesForMonth(tx, month);
+    if (shares.length === 0) {
+      throw new HttpError(
+        422,
+        "no_participants",
+        "Нет участников с долей на этот месяц.",
+      );
+    }
+    const shareBpsTotal = shares.reduce((a, s) => a + s.shareBps, 0);
+    if (shareBpsTotal !== FINANCE_TOTAL_BPS) {
+      throw new HttpError(
+        422,
+        "shares_not_full",
+        `Доли участников за месяц должны в сумме давать 100% (сейчас ${(shareBpsTotal / 100).toFixed(2)}%).`,
+      );
+    }
+    const allocations = previewAllocations(totals.netIncome, shares);
 
-      const dist = await tx.financeDistribution.upsert({
-        where: { periodMonth },
-        create: {
-          periodMonth,
-          status: "closed",
-          totalIncome: totals.totalIncome,
-          totalExpense: totals.totalExpense,
-          netIncome: totals.netIncome,
-          closedAt: new Date(),
-          closedById: user.id,
-        },
-        update: {
-          status: "closed",
-          totalIncome: totals.totalIncome,
-          totalExpense: totals.totalExpense,
-          netIncome: totals.netIncome,
-          closedAt: new Date(),
-          closedById: user.id,
-        },
-      });
-      await tx.financeAllocation.deleteMany({ where: { distributionId: dist.id } });
-      await tx.financeAllocation.createMany({
-        data: allocations.map((a) => ({
-          distributionId: dist.id,
-          participantId: a.participantId,
-          participantName: a.participantName,
-          shareBps: a.shareBps,
-          amount: a.amount,
-        })),
-      });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+    const dist = await tx.financeDistribution.upsert({
+      where: { periodMonth },
+      create: {
+        periodMonth,
+        status: "closed",
+        totalIncome: totals.totalIncome,
+        totalExpense: totals.totalExpense,
+        netIncome: totals.netIncome,
+        closedAt: new Date(),
+        closedById: user.id,
+      },
+      update: {
+        status: "closed",
+        totalIncome: totals.totalIncome,
+        totalExpense: totals.totalExpense,
+        netIncome: totals.netIncome,
+        closedAt: new Date(),
+        closedById: user.id,
+      },
+    });
+    await tx.financeAllocation.deleteMany({ where: { distributionId: dist.id } });
+    await tx.financeAllocation.createMany({
+      data: allocations.map((a) => ({
+        distributionId: dist.id,
+        participantId: a.participantId,
+        participantName: a.participantName,
+        shareBps: a.shareBps,
+        amount: a.amount,
+      })),
+    });
+  });
   return getDistribution(rt, month);
 }
 
@@ -236,22 +263,19 @@ export async function reopenDistribution(
   month: Month,
 ): Promise<FinanceDistribution> {
   const periodMonth = monthToDate(month);
-  await rt.prisma.$transaction(
-    async (tx) => {
-      const existing = await tx.financeDistribution.findUnique({
-        where: { periodMonth },
-      });
-      if (!existing || existing.status !== "closed") {
-        throw new HttpError(422, "not_closed", "Месяц не закрыт.");
-      }
-      await tx.financeAllocation.deleteMany({ where: { distributionId: existing.id } });
-      await tx.financeDistribution.update({
-        where: { id: existing.id },
-        data: { status: "open", closedAt: null, closedById: null },
-      });
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+  await inSerializableTx(rt, async (tx) => {
+    const existing = await tx.financeDistribution.findUnique({
+      where: { periodMonth },
+    });
+    if (!existing || existing.status !== "closed") {
+      throw new HttpError(422, "not_closed", "Месяц не закрыт.");
+    }
+    await tx.financeAllocation.deleteMany({ where: { distributionId: existing.id } });
+    await tx.financeDistribution.update({
+      where: { id: existing.id },
+      data: { status: "open", closedAt: null, closedById: null },
+    });
+  });
   return getDistribution(rt, month);
 }
 

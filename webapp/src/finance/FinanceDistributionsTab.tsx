@@ -15,6 +15,7 @@ export function FinanceDistributionsTab() {
   const distributions = useQuery({
     queryKey: ["finance-distributions", from, to],
     queryFn: () => api.listFinanceDistributions({ from, to }),
+    enabled: from <= to,
   });
   // Тот же ключ, что у PayoutsSection — react-query делит кэш. Нужен, чтобы при
   // переоткрытии предупредить о выплатах, уже сделанных за месяц.
@@ -53,6 +54,10 @@ export function FinanceDistributionsTab() {
         <input type="month" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
 
+      {from > to && <p className="alert alert-error">Начало периода позже конца.</p>}
+      {distributions.error && (
+        <p className="alert alert-error" role="alert">{(distributions.error as Error).message}</p>
+      )}
       {error && <p className="alert alert-error" role="alert">{error}</p>}
 
       <div className="card" style={{ marginTop: "1rem" }}>
@@ -84,6 +89,15 @@ export function FinanceDistributionsTab() {
                   <span className={`badge ${d.status === "closed" ? "badge-success" : "badge-warn"}`}>
                     {d.status === "closed" ? "Закрыт" : "Открыт"}
                   </span>
+                  {d.status === "closed" && d.stale && (
+                    <span
+                      className="badge badge-warn"
+                      title="Данные месяца изменились после закрытия — переоткройте и закройте заново"
+                      style={{ marginLeft: 4 }}
+                    >
+                      ⚠ устарел
+                    </span>
+                  )}
                 </td>
                 <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
                   {d.status === "closed" ? (
@@ -136,6 +150,12 @@ function AllocationsPanel({ dist }: { dist: FinanceDistribution }) {
         {dist.shareBpsTotal !== 10000 && (
           <p className="alert alert-error">
             Сумма долей активных участников — {percentLabel(dist.shareBpsTotal)}. Для закрытия должно быть 100%.
+          </p>
+        )}
+        {dist.status === "closed" && dist.stale && (
+          <p className="alert alert-warn">
+            Поступления или расходы месяца изменились после закрытия — снимок устарел.
+            Переоткройте месяц и закройте заново, чтобы пересчитать распределение.
           </p>
         )}
         <table className="table-flush">

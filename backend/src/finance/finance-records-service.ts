@@ -126,7 +126,15 @@ async function resolveIncomeLinks(
       select: { constructionId: true },
     });
     if (!booking) throw new HttpError(422, "booking_not_found", "Бронь не найдена");
+    // Бронь задаёт конструкцию, если та не выбрана явно; иначе — должна совпадать.
     if (!constructionId) constructionId = booking.constructionId;
+    else if (constructionId !== booking.constructionId) {
+      throw new HttpError(
+        422,
+        "booking_construction_mismatch",
+        "Бронь относится к другой конструкции",
+      );
+    }
   }
   if (constructionId) {
     const exists = await rt.prisma.construction.count({ where: { id: constructionId } });

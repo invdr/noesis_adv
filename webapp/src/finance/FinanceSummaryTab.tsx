@@ -59,6 +59,13 @@ export function FinanceSummaryTab() {
               чтобы разнести чистый доход по участникам.
             </p>
           )}
+          {!s.hasOpenMonths && s.distributedNet !== s.netIncome && (
+            <p className="alert alert-warn" style={{ marginTop: "0.5rem" }}>
+              Итог закрытых месяцев ({rub(s.distributedNet)}) разошёлся с фактическим чистым доходом
+              ({rub(s.netIncome)}) — данные изменились после закрытия. Переоткройте затронутый месяц
+              во вкладке «Распределения» и закройте заново.
+            </p>
+          )}
 
           <h3 style={{ marginTop: "1.5rem" }}>Участники: начислено и выплачено</h3>
           <div className="card">

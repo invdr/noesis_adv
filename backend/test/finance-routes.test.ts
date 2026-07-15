@@ -15,6 +15,9 @@ function tokenHash(token: string): string {
 interface Opts {
   income?: number;
   expense?: number;
+  /** Замороженный снимок закрытого месяца, если отличается от живого итога. */
+  snapshotIncome?: number;
+  snapshotExpense?: number;
   participants?: { id: string; name: string; shares: { shareBps: number }[] }[];
   existingClosed?: boolean;
 }
@@ -82,11 +85,13 @@ function runtimeWith(role: UserRole | null, opts: Opts = {}) {
       findUnique: async ({ include }: { include?: { allocations?: unknown } }) => {
         if (include?.allocations) {
           // Пост-транзакционное чтение getDistribution: закрытый снимок.
+          const snapIncome = opts.snapshotIncome ?? opts.income ?? 0;
+          const snapExpense = opts.snapshotExpense ?? opts.expense ?? 0;
           return {
             status: "closed",
-            totalIncome: opts.income ?? 0,
-            totalExpense: opts.expense ?? 0,
-            netIncome: (opts.income ?? 0) - (opts.expense ?? 0),
+            totalIncome: snapIncome,
+            totalExpense: snapExpense,
+            netIncome: snapIncome - snapExpense,
             closedAt: new Date(),
             updatedAt: new Date(),
             allocations: (state.created ?? []).map((a) => ({
@@ -335,6 +340,37 @@ function lifecycleRuntime() {
   } as unknown as Runtime;
   return { rt, state };
 }
+
+describe("financeRoutes — устаревший снимок", () => {
+  test("закрытый месяц с изменившимися данными помечается stale", async () => {
+    const res = await createApp(
+      runtimeWith("admin", {
+        income: 150000, // живой итог после закрытия вырос
+        expense: 40000,
+        snapshotIncome: 100000, // снимок заморожен на моменте закрытия
+        snapshotExpense: 40000,
+        participants: [{ id: "p1", name: "Я", shares: [{ shareBps: 10000 }] }],
+      }).rt,
+    ).request("/api/finance/distributions/2026-07", { headers: auth() });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("closed");
+    expect(body.totalIncome).toBe(100000); // снимок заморожен
+    expect(body.stale).toBe(true); // но живой итог разошёлся
+  });
+
+  test("закрытый месяц без изменений — не stale", async () => {
+    const res = await createApp(
+      runtimeWith("admin", {
+        income: 100000,
+        expense: 40000,
+        participants: [{ id: "p1", name: "Я", shares: [{ shareBps: 10000 }] }],
+      }).rt,
+    ).request("/api/finance/distributions/2026-07", { headers: auth() });
+    expect(res.status).toBe(200);
+    expect((await res.json()).stale).toBe(false);
+  });
+});
 
 describe("financeRoutes — переоткрытие месяца", () => {
   test("месяц не закрыт — 422", async () => {
