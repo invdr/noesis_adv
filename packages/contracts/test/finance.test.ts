@@ -4,6 +4,7 @@ import {
   monthOfDate,
   monthStart,
   nextMonth,
+  reorderFinanceExpenseCategoriesSchema,
   shareActiveInMonth,
   upsertFinanceParticipantSchema,
 } from "../src/finance";
@@ -70,6 +71,11 @@ describe("хелперы месяцев", () => {
     expect(monthStart("2026-07")).toBe("2026-07-01");
   });
 
+  test("monthOfDate — конец месяца остаётся в своём месяце", () => {
+    expect(monthOfDate("2026-07-31")).toBe("2026-07");
+    expect(monthOfDate("2026-12-31")).toBe("2026-12");
+  });
+
   test("shareActiveInMonth — полуоткрытый интервал", () => {
     expect(shareActiveInMonth({ startMonth: "2026-01", endMonth: null }, "2026-05")).toBe(true);
     expect(shareActiveInMonth({ startMonth: "2026-01", endMonth: null }, "2025-12")).toBe(false);
@@ -124,5 +130,23 @@ describe("upsertFinanceParticipantSchema", () => {
   test("пустой таймлайн долей допустим", () => {
     const res = upsertFinanceParticipantSchema.safeParse({ ...base, shares: [] });
     expect(res.success).toBe(true);
+  });
+});
+
+describe("reorderFinanceExpenseCategoriesSchema", () => {
+  test("уникальные id проходят", () => {
+    expect(
+      reorderFinanceExpenseCategoriesSchema.safeParse({ ids: ["a", "b"] }).success,
+    ).toBe(true);
+  });
+
+  test("дублирующиеся id отклоняются", () => {
+    expect(
+      reorderFinanceExpenseCategoriesSchema.safeParse({ ids: ["a", "a"] }).success,
+    ).toBe(false);
+  });
+
+  test("пустой список отклоняется", () => {
+    expect(reorderFinanceExpenseCategoriesSchema.safeParse({ ids: [] }).success).toBe(false);
   });
 });

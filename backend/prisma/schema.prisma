@@ -1033,6 +1033,8 @@ model FinanceIncome {
   id             String        @id @default(cuid())
   date           DateTime
   amount         Int
+  /// Конструкция поступления; при её удалении ссылка обнуляется (сумма сохраняется,
+  /// запись уходит в P&L «без привязки») — как у Lead.construction.
   constructionId String?
   construction   Construction? @relation(fields: [constructionId], references: [id], onDelete: SetNull)
   bookingId      String?
@@ -1057,6 +1059,8 @@ model FinanceExpense {
   status             FinanceExpenseStatus   @default(draft)
   categoryId         String
   category           FinanceExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  /// Конструкция расхода; при её удалении ссылка обнуляется (сумма сохраняется,
+  /// запись уходит в P&L «без привязки») — как у Lead.construction.
   constructionId     String?
   construction       Construction?          @relation(fields: [constructionId], references: [id], onDelete: SetNull)
   constructionSideId String?

@@ -54,9 +54,14 @@ export type UpsertFinanceExpenseCategoryInput = z.infer<
   typeof upsertFinanceExpenseCategorySchema
 >;
 
-export const reorderFinanceExpenseCategoriesSchema = z.object({
-  ids: z.array(z.string()).min(1),
-});
+export const reorderFinanceExpenseCategoriesSchema = z
+  .object({
+    ids: z.array(z.string()).min(1),
+  })
+  .refine((v) => new Set(v.ids).size === v.ids.length, {
+    path: ["ids"],
+    message: "Список содержит повторяющиеся id",
+  });
 export type ReorderFinanceExpenseCategoriesInput = z.infer<
   typeof reorderFinanceExpenseCategoriesSchema
 >;
