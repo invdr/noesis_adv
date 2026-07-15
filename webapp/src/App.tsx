@@ -29,6 +29,10 @@ const BookingBrandsAdmin = lazy(() =>
 const BookingServiceReasonsAdmin = lazy(() =>
   import("./bookings/BookingServiceReasonsAdmin").then((m) => ({ default: m.BookingServiceReasonsAdmin })),
 );
+const FinanceView = lazy(() => import("./finance/FinanceView").then((m) => ({ default: m.FinanceView })));
+const FinanceCategoriesAdmin = lazy(() =>
+  import("./finance/FinanceCategoriesAdmin").then((m) => ({ default: m.FinanceCategoriesAdmin })),
+);
 const SourcesAdmin = lazy(() =>
   import("./sources/SourcesAdmin").then((m) => ({ default: m.SourcesAdmin })),
 );
@@ -55,9 +59,11 @@ type View =
   | "contactTypes"
   | "bookingBrands"
   | "bookingServiceReasons"
+  | "financeCategories"
   | "sources"
   | "newsLabels"
   | "docCategories"
+  | "finance"
   | "users"
   | "siteSettings";
 
@@ -78,6 +84,7 @@ const NAV_GROUPS: { label: string; items: NavLink[] }[] = [
       { id: "bookings", label: "Брони", icon: "calendar" },
       { id: "contacts", label: "Контрагенты и реквизиты", icon: "user" },
       { id: "analytics", label: "Аналитика", icon: "chart" },
+      { id: "finance", label: "Финансы", icon: "briefcase", admin: true },
       { id: "stages", label: "Воронки", icon: "layers", admin: true },
     ],
   },
@@ -97,6 +104,7 @@ const NAV_GROUPS: { label: string; items: NavLink[] }[] = [
       { id: "contactTypes", label: "Тип след. контакта", icon: "phone", admin: true },
       { id: "bookingBrands", label: "Бренды", icon: "tag", admin: true },
       { id: "bookingServiceReasons", label: "Причины броней", icon: "folder", admin: true },
+      { id: "financeCategories", label: "Статьи расходов", icon: "folder", admin: true },
       { id: "sources", label: "Источники заявок", icon: "inbox", admin: true },
       { id: "developers", label: "Владельцы сети", icon: "briefcase", admin: true },
       { id: "newsLabels", label: "Метки новостей", icon: "tag", admin: true },
@@ -122,9 +130,11 @@ const PAGE_TITLES: Record<View, string> = {
   contactTypes: "Тип следующего контакта",
   bookingBrands: "Бренды",
   bookingServiceReasons: "Причины служебных броней",
+  financeCategories: "Статьи расходов",
   sources: "Источники заявок",
   newsLabels: "Метки новостей",
   docCategories: "Категории документов",
+  finance: "Финансы",
   users: "Пользователи",
   siteSettings: "Настройки сайта",
 };
@@ -462,6 +472,7 @@ function Dashboard({ user }: { user: SessionUser }) {
               />
             )}
             {view === "analytics" && <AnalyticsView user={user} />}
+            {view === "finance" && isAdmin && <FinanceView />}
             {view === "projects" && <ProjectsView isAdmin={isAdmin} />}
             {view === "news" && <NewsView isAdmin={isAdmin} />}
             {view === "developers" && isAdmin && <DevelopersView />}
@@ -469,6 +480,7 @@ function Dashboard({ user }: { user: SessionUser }) {
             {view === "contactTypes" && isAdmin && <ContactTypesAdmin />}
             {view === "bookingBrands" && isAdmin && <BookingBrandsAdmin />}
             {view === "bookingServiceReasons" && isAdmin && <BookingServiceReasonsAdmin />}
+            {view === "financeCategories" && isAdmin && <FinanceCategoriesAdmin />}
             {view === "sources" && isAdmin && <SourcesAdmin />}
             {view === "newsLabels" && isAdmin && <NewsLabelsAdmin />}
             {view === "docCategories" && isAdmin && <DocumentCategoriesAdmin />}

@@ -16,6 +16,7 @@ export * from "./construction";
 export * from "./booking";
 export * from "./booking-report";
 export * from "./deal";
+export * from "./finance";
 export * from "./public-availability";
 export * from "./news";
 export * from "./document";

@@ -99,6 +99,47 @@ async function seedBookingServiceReasons(rt: Runtime): Promise<void> {
   }
 }
 
+/** Стартовые статьи расходов (Этап 4.5, стабильные id — для идемпотентности). */
+const DEFAULT_EXPENSE_CATEGORIES = [
+  { id: "finexp_mounting", name: "Монтаж", order: 1 },
+  { id: "finexp_dismantling", name: "Демонтаж", order: 2 },
+  { id: "finexp_cleaning", name: "Очистка", order: 3 },
+  { id: "finexp_power", name: "Электропитание", order: 4 },
+  { id: "finexp_lighting", name: "Подсветка", order: 5 },
+  { id: "finexp_repair", name: "Ремонт", order: 6 },
+  { id: "finexp_maintenance", name: "Обслуживание", order: 7 },
+];
+
+/**
+ * Финансы: статьи расходов и участник-владелец «Я» с долей 100% (открытая),
+ * чтобы помесячное распределение работало сразу после сидинга.
+ */
+async function seedFinance(rt: Runtime): Promise<void> {
+  for (const cat of DEFAULT_EXPENSE_CATEGORIES) {
+    await rt.prisma.financeExpenseCategory.upsert({
+      where: { id: cat.id },
+      update: {},
+      create: cat,
+    });
+  }
+  await rt.prisma.financeParticipant.upsert({
+    where: { id: "finance_participant_owner" },
+    update: {},
+    create: { id: "finance_participant_owner", name: "Я", kind: "owner" },
+  });
+  await rt.prisma.financeShare.upsert({
+    where: { id: "finance_share_owner_base" },
+    update: {},
+    create: {
+      id: "finance_share_owner_base",
+      participantId: "finance_participant_owner",
+      shareBps: 10000,
+      startMonth: new Date("2020-01-01T00:00:00.000Z"),
+      endMonth: null,
+    },
+  });
+}
+
 async function seedAdmin(rt: Runtime): Promise<void> {
   if (!rt.env.ADMIN_EMAIL || !rt.env.ADMIN_PASSWORD) {
     throw new Error(
@@ -128,6 +169,7 @@ async function main(): Promise<void> {
     await seedLeadSources(rt);
     await seedContactTypes(rt);
     await seedBookingServiceReasons(rt);
+    await seedFinance(rt);
     await seedAdmin(rt);
     await seedContent(rt);
   } finally {

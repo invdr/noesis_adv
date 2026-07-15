@@ -25,6 +25,7 @@ import { bookingReportRoutes } from "./bookings/booking-report-routes";
 import { bookingBrandRoutes } from "./bookings/booking-brand-routes";
 import { bookingServiceReasonRoutes } from "./bookings/booking-service-reason-routes";
 import { bookingReminderInternalRoutes } from "./bookings/booking-reminder-internal-routes";
+import { financeRoutes } from "./finance/finance-routes";
 import { newsLabelRoutes } from "./news/news-label-routes";
 import { newsRoutes } from "./news/news-routes";
 import { publicNewsRoutes } from "./news/news-public-routes";
@@ -100,6 +101,7 @@ export function createApp(rt: Runtime): Hono<AppEnv> {
   app.route("/api/bookings", bookingRoutes(rt));
   app.route("/api/booking-brands", bookingBrandRoutes(rt));
   app.route("/api/booking-service-reasons", bookingServiceReasonRoutes(rt));
+  app.route("/api/finance", financeRoutes(rt));
   // Документы и фотоотчёты по конструкции — отдельные роутеры на том же
   // префиксе; `:constructionId` в их путях, паттерны не пересекаются с `/:id`.
   app.route("/api/constructions", documentRoutes(rt));

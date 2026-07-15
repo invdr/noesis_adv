@@ -66,6 +66,11 @@ model User {
   authoredBookingReports BookingReport[]    @relation("BookingReportAuthor")
   /// Контакты CRM, заведённые пользователем вручную.
   authoredContacts       Contact[]          @relation("ContactAuthor")
+  /// Финансы (Этап 4.5): авторство записей и закрытие распределений.
+  financeIncomes         FinanceIncome[]       @relation("FinanceIncomeAuthor")
+  financeExpenses        FinanceExpense[]      @relation("FinanceExpenseAuthor")
+  closedDistributions    FinanceDistribution[] @relation("FinanceDistributionCloser")
+  financePayouts         FinancePayout[]       @relation("FinancePayoutAuthor")
 
   @@index([email])
 }
@@ -534,6 +539,8 @@ model Construction {
   progress      ProgressAlbum[]
   leads         Lead[]
   bookings      Booking[]
+  financeIncomes  FinanceIncome[]
+  financeExpenses FinanceExpense[]
 
   @@index([status])
   @@index([archivedAt])
@@ -557,6 +564,7 @@ model ConstructionSide {
   photoId        String?
   photo          Asset?       @relation("ConstructionSidePhoto", fields: [photoId], references: [id], onDelete: SetNull)
   bookings       Booking[]
+  financeExpenses FinanceExpense[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -641,6 +649,8 @@ model Booking {
   createdById       String?
   createdBy         User?                 @relation("BookingAuthor", fields: [createdById], references: [id], onDelete: SetNull)
   reports           BookingReport[]
+  financeIncomes    FinanceIncome[]
+  financeExpenses   FinanceExpense[]
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
@@ -940,4 +950,187 @@ model ProgressPhoto {
 
   @@unique([albumId, assetId])
   @@index([albumId])
+}
+
+// ---------------------------------------------------------------------------
+// Финансы (Этап 4.5). Доступ — только admin (проверяется в сервисе/роутах).
+// Деньги — целые рубли; доли участников — базисные пункты (bps, 100% = 10000).
+// Месяцы (`periodMonth`, `startMonth`, `endMonth`, `month`) хранятся как
+// UTC-полночь первого дня месяца; бизнес-логика работает с «ГГГГ-ММ».
+// ---------------------------------------------------------------------------
+
+/// Роль участника распределения чистого дохода.
+enum FinanceParticipantKind {
+  owner
+  investor
+  other
+}
+
+/// Статус расхода: только `confirmed` уменьшает чистый доход в распределении.
+enum FinanceExpenseStatus {
+  draft
+  confirmed
+}
+
+/// Статус помесячного распределения: `closed` фиксирует снимок долей и сумм.
+enum FinanceDistributionStatus {
+  open
+  closed
+}
+
+/// Редактируемая статья расходов (монтаж, демонтаж, электропитание и т. п.).
+/// Справочник admin-раздела «Финансы»; вместо удаления — архив.
+model FinanceExpenseCategory {
+  id         String           @id @default(cuid())
+  name       String
+  order      Int              @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  expenses   FinanceExpense[]
+
+  @@index([archivedAt])
+  @@index([order])
+}
+
+/// Участник распределения: «я» (владелец), инвестор или дополнительный участник.
+/// Доли задаются таймлайном (`FinanceShare`); вместо удаления — архив.
+model FinanceParticipant {
+  id          String              @id @default(cuid())
+  name        String
+  kind        FinanceParticipantKind @default(other)
+  note        String?
+  archivedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  shares      FinanceShare[]
+  allocations FinanceAllocation[]
+  payouts     FinancePayout[]
+
+  @@index([archivedAt])
+}
+
+/// Доля участника, действующая на интервале месяцев [startMonth, endMonth).
+/// `endMonth = null` — доля открыта. Доли одного участника не пересекаются.
+model FinanceShare {
+  id            String             @id @default(cuid())
+  participantId String
+  participant   FinanceParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  /// Доля в базисных пунктах (1..10000).
+  shareBps      Int
+  startMonth    DateTime
+  endMonth      DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([participantId])
+}
+
+/// Фактическое поступление денег: дата, сумма и (опционально) привязка к брони
+/// и конструкции. Плановая цена брони в распределении не участвует — только эти
+/// реальные поступления.
+model FinanceIncome {
+  id             String        @id @default(cuid())
+  date           DateTime
+  amount         Int
+  constructionId String?
+  construction   Construction? @relation(fields: [constructionId], references: [id], onDelete: SetNull)
+  bookingId      String?
+  booking        Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  comment        String?
+  createdById    String?
+  createdBy      User?         @relation("FinanceIncomeAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([date])
+  @@index([constructionId])
+  @@index([bookingId])
+}
+
+/// Запись расхода по статье с датой, суммой и привязкой к конструкции (опц. к
+/// стороне/брони). Только `confirmed` уменьшает чистый доход в распределении.
+model FinanceExpense {
+  id                 String                 @id @default(cuid())
+  date               DateTime
+  amount             Int
+  status             FinanceExpenseStatus   @default(draft)
+  categoryId         String
+  category           FinanceExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  constructionId     String?
+  construction       Construction?          @relation(fields: [constructionId], references: [id], onDelete: SetNull)
+  constructionSideId String?
+  constructionSide   ConstructionSide?      @relation(fields: [constructionSideId], references: [id], onDelete: SetNull)
+  bookingId          String?
+  booking            Booking?               @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  comment            String?
+  createdById        String?
+  createdBy          User?                  @relation("FinanceExpenseAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([date])
+  @@index([status])
+  @@index([categoryId])
+  @@index([constructionId])
+  @@index([constructionSideId])
+  @@index([bookingId])
+}
+
+/// Помесячное распределение чистого дохода. При закрытии фиксирует снимок сумм
+/// (`totalIncome`/`totalExpense`/`netIncome`) и долей (`FinanceAllocation`).
+model FinanceDistribution {
+  id           String                    @id @default(cuid())
+  /// Первый день месяца периода (UTC-полночь). Один месяц — одна строка.
+  periodMonth  DateTime                  @unique
+  status       FinanceDistributionStatus @default(open)
+  totalIncome  Int                       @default(0)
+  totalExpense Int                       @default(0)
+  netIncome    Int                       @default(0)
+  closedAt     DateTime?
+  closedById   String?
+  closedBy     User?                     @relation("FinanceDistributionCloser", fields: [closedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  allocations  FinanceAllocation[]
+
+  @@index([status])
+}
+
+/// Снимок доли участника в закрытом распределении: замороженные имя, доля и сумма.
+model FinanceAllocation {
+  id              String              @id @default(cuid())
+  distributionId  String
+  distribution    FinanceDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
+  participantId   String
+  participant     FinanceParticipant  @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  participantName String
+  shareBps        Int
+  amount          Int
+  createdAt       DateTime            @default(now())
+
+  @@unique([distributionId, participantId])
+  @@index([distributionId])
+  @@index([participantId])
+}
+
+/// Фактическая выплата участнику. `month` — учётный месяц выплаты (опц.), от
+/// которого считается остаток к выплате в сводке.
+model FinancePayout {
+  id            String             @id @default(cuid())
+  participantId String
+  participant   FinanceParticipant @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  date          DateTime
+  amount        Int
+  /// Учётный месяц (первый день, UTC-полночь), к которому отнесена выплата.
+  month         DateTime?
+  comment       String?
+  createdById   String?
+  createdBy     User?              @relation("FinancePayoutAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([participantId])
+  @@index([date])
+  @@index([month])
 }

@@ -69,7 +69,41 @@ import type {
   UpsertProgressAlbumInput,
   UpsertNewsLabelInput,
   UpsertConstructionInput,
+  FinanceExpenseCategory,
+  FinanceParticipant,
+  FinanceIncome,
+  FinanceExpense,
+  FinancePayout,
+  FinanceDistribution,
+  FinanceSummary,
+  UpsertFinanceExpenseCategoryInput,
+  UpsertFinanceParticipantInput,
+  UpsertFinanceIncomeInput,
+  UpsertFinanceExpenseInput,
+  UpsertFinancePayoutInput,
+  ListFinanceIncomeQuery,
+  ListFinanceExpenseQuery,
+  ListFinancePayoutsQuery,
 } from "@noesis/contracts";
+
+export interface PaginatedFinanceIncome {
+  items: FinanceIncome[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+export interface PaginatedFinanceExpenses {
+  items: FinanceExpense[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+export interface PaginatedFinancePayouts {
+  items: FinancePayout[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
@@ -146,6 +180,16 @@ async function requestMultipart<T>(
   await ensureOk(res);
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Query-string из параметров финансовых списков (пропускает пустые значения). */
+function financeQuery(params: Record<string, unknown>): string {
+  const q = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") q.set(key, String(value));
+  }
+  const qs = q.toString();
+  return qs ? `?${qs}` : "";
 }
 
 /** FormData сохранения конструкции: JSON-данные + новые фото `image_0`, `image_1`, … */
@@ -595,6 +639,161 @@ export const api = {
     if (params.search) q.set("search", params.search);
     const qs = q.toString();
     return request<PartnerAnalyticsResponse>(`/api/partner-analytics${qs ? `?${qs}` : ""}`);
+  },
+
+  // --- Финансы (Этап 4.5, admin) ---
+  // Статьи расходов (справочник).
+  listFinanceCategories(includeArchived = false) {
+    const qs = includeArchived ? "?includeArchived=true" : "";
+    return request<FinanceExpenseCategory[]>(`/api/finance/categories${qs}`);
+  },
+  createFinanceCategory(input: UpsertFinanceExpenseCategoryInput) {
+    return request<FinanceExpenseCategory>("/api/finance/categories", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateFinanceCategory(id: string, input: UpsertFinanceExpenseCategoryInput) {
+    return request<FinanceExpenseCategory>(`/api/finance/categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  reorderFinanceCategories(ids: string[]) {
+    return request<FinanceExpenseCategory[]>("/api/finance/categories/reorder", {
+      method: "PATCH",
+      body: JSON.stringify({ ids }),
+    });
+  },
+  archiveFinanceCategory(id: string) {
+    return request<FinanceExpenseCategory>(`/api/finance/categories/${id}/archive`, {
+      method: "POST",
+    });
+  },
+  restoreFinanceCategory(id: string) {
+    return request<FinanceExpenseCategory>(`/api/finance/categories/${id}/restore`, {
+      method: "POST",
+    });
+  },
+  deleteFinanceCategory(id: string) {
+    return request<void>(`/api/finance/categories/${id}`, { method: "DELETE" });
+  },
+
+  // Участники распределения.
+  listFinanceParticipants(includeArchived = false) {
+    const qs = includeArchived ? "?includeArchived=true" : "";
+    return request<FinanceParticipant[]>(`/api/finance/participants${qs}`);
+  },
+  createFinanceParticipant(input: UpsertFinanceParticipantInput) {
+    return request<FinanceParticipant>("/api/finance/participants", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateFinanceParticipant(id: string, input: UpsertFinanceParticipantInput) {
+    return request<FinanceParticipant>(`/api/finance/participants/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  archiveFinanceParticipant(id: string) {
+    return request<FinanceParticipant>(`/api/finance/participants/${id}/archive`, {
+      method: "POST",
+    });
+  },
+  restoreFinanceParticipant(id: string) {
+    return request<FinanceParticipant>(`/api/finance/participants/${id}/restore`, {
+      method: "POST",
+    });
+  },
+  deleteFinanceParticipant(id: string) {
+    return request<void>(`/api/finance/participants/${id}`, { method: "DELETE" });
+  },
+
+  // Поступления.
+  listFinanceIncome(params: Partial<ListFinanceIncomeQuery> = {}) {
+    const qs = financeQuery(params);
+    return request<PaginatedFinanceIncome>(`/api/finance/income${qs}`);
+  },
+  createFinanceIncome(input: UpsertFinanceIncomeInput) {
+    return request<FinanceIncome>("/api/finance/income", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateFinanceIncome(id: string, input: UpsertFinanceIncomeInput) {
+    return request<FinanceIncome>(`/api/finance/income/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  deleteFinanceIncome(id: string) {
+    return request<void>(`/api/finance/income/${id}`, { method: "DELETE" });
+  },
+
+  // Расходы.
+  listFinanceExpenses(params: Partial<ListFinanceExpenseQuery> = {}) {
+    const qs = financeQuery(params);
+    return request<PaginatedFinanceExpenses>(`/api/finance/expenses${qs}`);
+  },
+  createFinanceExpense(input: UpsertFinanceExpenseInput) {
+    return request<FinanceExpense>("/api/finance/expenses", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateFinanceExpense(id: string, input: UpsertFinanceExpenseInput) {
+    return request<FinanceExpense>(`/api/finance/expenses/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  deleteFinanceExpense(id: string) {
+    return request<void>(`/api/finance/expenses/${id}`, { method: "DELETE" });
+  },
+
+  // Выплаты.
+  listFinancePayouts(params: Partial<ListFinancePayoutsQuery> = {}) {
+    const qs = financeQuery(params);
+    return request<PaginatedFinancePayouts>(`/api/finance/payouts${qs}`);
+  },
+  createFinancePayout(input: UpsertFinancePayoutInput) {
+    return request<FinancePayout>("/api/finance/payouts", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  updateFinancePayout(id: string, input: UpsertFinancePayoutInput) {
+    return request<FinancePayout>(`/api/finance/payouts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+  deleteFinancePayout(id: string) {
+    return request<void>(`/api/finance/payouts/${id}`, { method: "DELETE" });
+  },
+
+  // Распределения и сводка.
+  listFinanceDistributions(params: { from?: string; to?: string } = {}) {
+    const qs = financeQuery(params);
+    return request<FinanceDistribution[]>(`/api/finance/distributions${qs}`);
+  },
+  getFinanceDistribution(month: string) {
+    return request<FinanceDistribution>(`/api/finance/distributions/${month}`);
+  },
+  closeFinanceDistribution(month: string) {
+    return request<FinanceDistribution>(`/api/finance/distributions/${month}/close`, {
+      method: "POST",
+    });
+  },
+  reopenFinanceDistribution(month: string) {
+    return request<FinanceDistribution>(`/api/finance/distributions/${month}/reopen`, {
+      method: "POST",
+    });
+  },
+  financeSummary(params: { from?: string; to?: string } = {}) {
+    const qs = financeQuery(params);
+    return request<FinanceSummary>(`/api/finance/summary${qs}`);
   },
   updateLeadStage(id: string, input: UpdateLeadStageInput) {
     return request<Lead>(`/api/leads/${id}/stage`, {
