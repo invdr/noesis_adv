@@ -187,14 +187,14 @@ export async function createExpense(
   user: SessionUser,
   input: UpsertFinanceExpenseInput,
 ): Promise<FinanceExpense> {
-  await validateExpenseLinks(rt, input);
+  const constructionId = await validateExpenseLinks(rt, input);
   const row = await rt.prisma.financeExpense.create({
     data: {
       date: dateOnlyToDate(input.date),
       amount: input.amount,
       status: input.status,
       categoryId: input.categoryId,
-      constructionId: input.constructionId ?? null,
+      constructionId,
       constructionSideId: input.constructionSideId ?? null,
       bookingId: input.bookingId ?? null,
       comment: input.comment ?? null,
@@ -211,7 +211,7 @@ export async function updateExpense(
   input: UpsertFinanceExpenseInput,
 ): Promise<FinanceExpense> {
   await requireExpense(rt, id);
-  await validateExpenseLinks(rt, input);
+  const constructionId = await validateExpenseLinks(rt, input);
   const row = await rt.prisma.financeExpense.update({
     where: { id },
     data: {
@@ -219,7 +219,7 @@ export async function updateExpense(
       amount: input.amount,
       status: input.status,
       categoryId: input.categoryId,
-      constructionId: input.constructionId ?? null,
+      constructionId,
       constructionSideId: input.constructionSideId ?? null,
       bookingId: input.bookingId ?? null,
       comment: input.comment ?? null,
@@ -234,10 +234,16 @@ export async function deleteExpense(rt: Runtime, id: string): Promise<void> {
   await rt.prisma.financeExpense.delete({ where: { id } });
 }
 
+/**
+ * Проверяет статью/бронь/сторону расхода и возвращает итоговую конструкцию:
+ * бронь или сторона задают её, если не выбрана явно, иначе должны совпадать.
+ * Не мутирует вход (симметрично `resolveIncomeLinks`).
+ */
 async function validateExpenseLinks(
   rt: Runtime,
   input: UpsertFinanceExpenseInput,
-): Promise<void> {
+): Promise<string | null> {
+  let constructionId = input.constructionId ?? null;
   const category = await rt.prisma.financeExpenseCategory.findUnique({
     where: { id: input.categoryId },
   });
@@ -249,8 +255,8 @@ async function validateExpenseLinks(
     });
     if (!booking) throw new HttpError(422, "booking_not_found", "Бронь не найдена");
     // Бронь задаёт конструкцию, если та не выбрана явно; иначе — должна совпадать.
-    if (!input.constructionId) input.constructionId = booking.constructionId;
-    else if (input.constructionId !== booking.constructionId) {
+    if (!constructionId) constructionId = booking.constructionId;
+    else if (constructionId !== booking.constructionId) {
       throw new HttpError(
         422,
         "booking_construction_mismatch",
@@ -265,8 +271,8 @@ async function validateExpenseLinks(
     });
     if (!side) throw new HttpError(422, "side_not_found", "Сторона не найдена");
     // Сторона задаёт свою конструкцию, если конструкция не выбрана явно.
-    if (!input.constructionId) input.constructionId = side.constructionId;
-    else if (input.constructionId !== side.constructionId) {
+    if (!constructionId) constructionId = side.constructionId;
+    else if (constructionId !== side.constructionId) {
       throw new HttpError(
         422,
         "side_construction_mismatch",
@@ -274,14 +280,15 @@ async function validateExpenseLinks(
       );
     }
   }
-  if (input.constructionId) {
+  if (constructionId) {
     const exists = await rt.prisma.construction.count({
-      where: { id: input.constructionId },
+      where: { id: constructionId },
     });
     if (exists === 0) {
       throw new HttpError(422, "construction_not_found", "Конструкция не найдена");
     }
   }
+  return constructionId;
 }
 
 async function requireExpense(rt: Runtime, id: string) {

@@ -15,6 +15,7 @@ import {
 } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
+import { mskDay } from "../http/msk";
 import { dateToMonth, monthToDate } from "./finance-dto";
 
 /** Потолок окна списка распределений/сводки, чтобы не строить сотни месяцев. */
@@ -531,7 +532,7 @@ export function monthRange(from: Month, to: Month): Month[] {
   return months;
 }
 
-/** Месяц по дате (для дефолтов периода). */
+/** Текущий месяц по МСК (продуктовая TZ) — для дефолтов периода, как на фронте. */
 export function currentMonth(): Month {
-  return monthOfDate(new Date().toISOString().slice(0, 10));
+  return monthOfDate(mskDay(new Date()));
 }

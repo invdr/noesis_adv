@@ -525,6 +525,20 @@ describe("financeRoutes — закрытие месяца", () => {
     expect((state.created ?? []).reduce((s, a) => s + (a.amount as number), 0)).toBe(100000);
   });
 
+  test("закрытие с убытком: отрицательный net разносится по доле", async () => {
+    const { rt, state } = runtimeWith("admin", {
+      income: 40000,
+      expense: 100000,
+      participants: [{ id: "p1", name: "Я", shares: [{ shareBps: 10000 }] }],
+    });
+    const res = await close(rt);
+    expect(res.status).toBe(200);
+    expect((await res.json()).netIncome).toBe(-60000);
+    expect(state.created).toEqual([
+      expect.objectContaining({ participantId: "p1", shareBps: 10000, amount: -60000 }),
+    ]);
+  });
+
   test("успешное закрытие разносит чистый доход по доле", async () => {
     const { rt, state } = runtimeWith("admin", {
       income: 100000,
