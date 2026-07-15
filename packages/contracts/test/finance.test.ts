@@ -38,6 +38,17 @@ describe("allocateByShares", () => {
     expect(out.reduce((a, o) => a + o.amount, 0)).toBe(-101);
   });
 
+  test("отрицательный net на трёх долях — сумма ровно net, без потери копеек", () => {
+    const out = allocateByShares(-100, [
+      { shareBps: 3333 },
+      { shareBps: 3333 },
+      { shareBps: 3334 },
+    ]);
+    expect(out.reduce((a, o) => a + o.amount, 0)).toBe(-100);
+    // Каждому — не больше его доли по модулю (метод наибольшего остатка).
+    expect(out.every((o) => o.amount <= 0)).toBe(true);
+  });
+
   test("частичные доли (Σ<100%) разносят только свою часть", () => {
     const out = allocateByShares(100, [{ shareBps: 5000 }]);
     expect(out[0]!.amount).toBe(50);

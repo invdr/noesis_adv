@@ -20,11 +20,18 @@ export const shareBpsSchema = z
   .min(1, "Доля должна быть больше 0")
   .max(FINANCE_TOTAL_BPS, "Доля не может превышать 100%");
 
-/** Сумма денег в рублях (целое, неотрицательное — для поступлений/расходов/выплат). */
+/**
+ * Верхний предел одной суммы в рублях. Ниже 2^31−1 (диапазон Postgres `Int`),
+ * с запасом на суммирование месячных итогов — переполнение отдаёт 422, не 500.
+ */
+export const FINANCE_MAX_AMOUNT = 1_000_000_000;
+
+/** Сумма денег в рублях (целое, положительное — для поступлений/расходов/выплат). */
 const positiveAmountSchema = z
   .number()
   .int()
-  .positive("Сумма должна быть больше 0");
+  .positive("Сумма должна быть больше 0")
+  .max(FINANCE_MAX_AMOUNT, "Сумма слишком большая");
 
 // --- Статьи расходов (справочник, admin) ---
 
@@ -210,6 +217,9 @@ export const financeExpenseSchema = z.object({
   category: financeExpenseCategorySchema,
   construction: FINANCE_CONSTRUCTION_REF.nullable(),
   booking: FINANCE_BOOKING_REF.nullable(),
+  /** Id выбранной стороны (для повторного редактирования). */
+  constructionSideId: z.string().nullable(),
+  /** Код стороны для показа. */
   sideCode: z.string().nullable(),
   comment: z.string().nullable(),
   createdAt: z.string(),

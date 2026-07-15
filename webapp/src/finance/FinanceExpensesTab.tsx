@@ -44,7 +44,7 @@ function toDraft(r: FinanceExpense): Draft {
     categoryId: r.category.id,
     status: r.status,
     constructionId: r.construction?.id ?? "",
-    constructionSideId: "",
+    constructionSideId: r.constructionSideId ?? "",
     bookingId: r.booking?.id ?? "",
     comment: r.comment ?? "",
   };

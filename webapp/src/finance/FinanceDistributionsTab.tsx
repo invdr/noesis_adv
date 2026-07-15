@@ -22,8 +22,9 @@ export function FinanceDistributionsTab() {
     queryKey: ["finance-payouts"],
     queryFn: () => api.listFinancePayouts({ pageSize: 100 }),
   });
+  // Выплаты, отнесённые к месяцу: по учётному `month`, а без него — по месяцу даты.
   const payoutsForMonth = (month: string) =>
-    payouts.data?.items.filter((p) => p.month === month).length ?? 0;
+    payouts.data?.items.filter((p) => (p.month ?? p.date.slice(0, 7)) === month).length ?? 0;
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["finance-distributions"] });

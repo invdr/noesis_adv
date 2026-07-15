@@ -160,6 +160,7 @@ export function toExpenseDto(row: ExpenseRow): FinanceExpense {
     category: toExpenseCategoryDto(row.category),
     construction: constructionRef(row.construction),
     booking: bookingRef(row.booking),
+    constructionSideId: row.constructionSideId ?? null,
     sideCode: row.constructionSide?.code ?? null,
     comment: row.comment,
     createdAt: row.createdAt.toISOString(),

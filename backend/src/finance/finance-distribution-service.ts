@@ -226,25 +226,32 @@ export async function closeDistribution(
   return getDistribution(rt, month);
 }
 
-/** Переоткрыть месяц: снять снимок долей, вернуть в статус «открыт». */
+/**
+ * Переоткрыть месяц: снять снимок долей, вернуть в статус «открыт». Чтение статуса
+ * и правка идут в одной serializable-транзакции, чтобы не разъехаться с конкурентным
+ * закрытием (которое тоже serializable).
+ */
 export async function reopenDistribution(
   rt: Runtime,
   month: Month,
 ): Promise<FinanceDistribution> {
   const periodMonth = monthToDate(month);
-  const existing = await rt.prisma.financeDistribution.findUnique({
-    where: { periodMonth },
-  });
-  if (!existing || existing.status !== "closed") {
-    throw new HttpError(422, "not_closed", "Месяц не закрыт.");
-  }
-  await rt.prisma.$transaction(async (tx) => {
-    await tx.financeAllocation.deleteMany({ where: { distributionId: existing.id } });
-    await tx.financeDistribution.update({
-      where: { id: existing.id },
-      data: { status: "open", closedAt: null, closedById: null },
-    });
-  });
+  await rt.prisma.$transaction(
+    async (tx) => {
+      const existing = await tx.financeDistribution.findUnique({
+        where: { periodMonth },
+      });
+      if (!existing || existing.status !== "closed") {
+        throw new HttpError(422, "not_closed", "Месяц не закрыт.");
+      }
+      await tx.financeAllocation.deleteMany({ where: { distributionId: existing.id } });
+      await tx.financeDistribution.update({
+        where: { id: existing.id },
+        data: { status: "open", closedAt: null, closedById: null },
+      });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
   return getDistribution(rt, month);
 }
 
@@ -352,7 +359,11 @@ export async function getSummary(
   };
 }
 
-/** Месяцы периода, в которых есть хоть одно поступление или расход. */
+/**
+ * Месяцы периода с денежной активностью: поступление или ПОДТВЕРЖДЁННЫЙ расход.
+ * Черновики не считаем — их нечего разносить (в чистый доход не входят), иначе
+ * месяц с одними черновиками ложно помечался бы как незакрытый.
+ */
 async function monthsWithActivity(
   rt: Runtime,
   start: Date,
@@ -364,7 +375,7 @@ async function monthsWithActivity(
       select: { date: true },
     }),
     rt.prisma.financeExpense.findMany({
-      where: { date: { gte: start, lt: end } },
+      where: { status: "confirmed", date: { gte: start, lt: end } },
       select: { date: true },
     }),
   ]);

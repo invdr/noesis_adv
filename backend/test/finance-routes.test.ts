@@ -242,6 +242,142 @@ describe("financeRoutes — сводка, накопительный остат�
   });
 });
 
+/**
+ * Stateful-рантайм для жизненного цикла распределения: хранит статус и снимок,
+ * чтобы прогнать reopen → open (превью) → re-close → closed (снимок).
+ */
+function lifecycleRuntime() {
+  const state = {
+    status: "closed" as "open" | "closed",
+    allocations: [
+      { participantId: "p1", participantName: "Я", shareBps: 10000, amount: 60000 },
+    ] as Record<string, unknown>[],
+  };
+  const owner = new Date("2020-01-01T00:00:00.000Z");
+  const prisma: Record<string, unknown> = {
+    session: {
+      findUnique: async ({ where }: { where: { tokenHash: string } }) =>
+        where.tokenHash === tokenHash(TOKEN)
+          ? {
+              id: "session-admin",
+              userId: "user-admin",
+              expiresAt: new Date(Date.now() + 60_000),
+              lastSeenAt: new Date(),
+              user: {
+                id: "user-admin",
+                email: "admin@example.com",
+                name: null,
+                role: "admin",
+                mustChangePassword: false,
+                isActive: true,
+              },
+            }
+          : null,
+      update: async () => ({}),
+    },
+    financeIncome: { aggregate: async () => ({ _sum: { amount: 100000 } }) },
+    financeExpense: { aggregate: async () => ({ _sum: { amount: 40000 } }) },
+    financeParticipant: {
+      findMany: async () => [
+        {
+          id: "p1",
+          name: "Я",
+          kind: "owner",
+          archivedAt: null,
+          shares: [{ shareBps: 10000, startMonth: owner, endMonth: null }],
+        },
+      ],
+    },
+    financeAllocation: {
+      deleteMany: async () => {
+        state.allocations = [];
+        return { count: 0 };
+      },
+      createMany: async ({ data }: { data: Record<string, unknown>[] }) => {
+        state.allocations = data;
+        return { count: data.length };
+      },
+    },
+    financeDistribution: {
+      findUnique: async ({ include }: { include?: { allocations?: unknown } }) => {
+        if (include?.allocations) {
+          return state.status === "closed"
+            ? {
+                status: "closed",
+                totalIncome: 100000,
+                totalExpense: 40000,
+                netIncome: 60000,
+                closedAt: new Date(),
+                updatedAt: new Date(),
+                allocations: state.allocations,
+              }
+            : { status: "open", updatedAt: new Date() };
+        }
+        return { id: "dist1", status: state.status };
+      },
+      upsert: async () => {
+        state.status = "closed";
+        return { id: "dist1" };
+      },
+      update: async ({ data }: { data: { status?: "open" | "closed" } }) => {
+        if (data.status) state.status = data.status;
+        return {};
+      },
+    },
+  };
+  prisma.$transaction = async (arg: unknown) =>
+    typeof arg === "function"
+      ? (arg as (tx: unknown) => Promise<unknown>)(prisma)
+      : Promise.all(arg as Promise<unknown>[]);
+  const rt = {
+    env: { CORS_ORIGINS: [ORIGIN], COOKIE_SECURE: false, SESSION_TTL_HOURS: 12 },
+    prisma,
+  } as unknown as Runtime;
+  return { rt, state };
+}
+
+describe("financeRoutes — переоткрытие месяца", () => {
+  test("месяц не закрыт — 422", async () => {
+    const res = await createApp(
+      runtimeWith("admin", { existingClosed: false }).rt,
+    ).request("/api/finance/distributions/2026-07/reopen", {
+      method: "POST",
+      headers: auth(),
+    });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.code).toBe("not_closed");
+  });
+
+  test("цикл reopen → open (превью) → re-close → тот же снимок", async () => {
+    const { rt } = lifecycleRuntime();
+    const app = createApp(rt);
+
+    const reopened = await app.request("/api/finance/distributions/2026-07/reopen", {
+      method: "POST",
+      headers: auth(),
+    });
+    expect(reopened.status).toBe(200);
+    const openBody = await reopened.json();
+    expect(openBody.status).toBe("open");
+    // Превью пересчитывается на лету из текущих сумм и долей.
+    expect(openBody.allocations).toEqual([
+      expect.objectContaining({ participantId: "p1", amount: 60000 }),
+    ]);
+
+    const reclosed = await app.request("/api/finance/distributions/2026-07/close", {
+      method: "POST",
+      headers: auth(),
+    });
+    expect(reclosed.status).toBe(200);
+    const closedBody = await reclosed.json();
+    expect(closedBody.status).toBe("closed");
+    expect(closedBody.netIncome).toBe(60000);
+    expect(closedBody.allocations).toEqual([
+      expect.objectContaining({ participantId: "p1", amount: 60000 }),
+    ]);
+  });
+});
+
 describe("financeRoutes — закрытие месяца", () => {
   const close = (rt: Runtime) =>
     createApp(rt).request("/api/finance/distributions/2026-07/close", {
