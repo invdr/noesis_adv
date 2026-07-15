@@ -16,6 +16,14 @@ export function FinanceDistributionsTab() {
     queryKey: ["finance-distributions", from, to],
     queryFn: () => api.listFinanceDistributions({ from, to }),
   });
+  // Тот же ключ, что у PayoutsSection — react-query делит кэш. Нужен, чтобы при
+  // переоткрытии предупредить о выплатах, уже сделанных за месяц.
+  const payouts = useQuery({
+    queryKey: ["finance-payouts"],
+    queryFn: () => api.listFinancePayouts({ pageSize: 100 }),
+  });
+  const payoutsForMonth = (month: string) =>
+    payouts.data?.items.filter((p) => p.month === month).length ?? 0;
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["finance-distributions"] });
@@ -82,7 +90,13 @@ export function FinanceDistributionsTab() {
                       type="button"
                       className="btn-sm"
                       disabled={reopen.isPending}
-                      onClick={() => { if (confirm(`Переоткрыть ${monthLabel(d.month)}? Снимок долей будет снят.`)) reopen.mutate(d.month); }}
+                      onClick={() => {
+                        const n = payoutsForMonth(d.month);
+                        const warn = n > 0
+                          ? ` Внимание: за месяц уже есть выплаты (${n}) — они останутся, а основание пересчитается. Проверьте их вручную.`
+                          : "";
+                        if (confirm(`Переоткрыть ${monthLabel(d.month)}? Снимок долей будет снят.${warn}`)) reopen.mutate(d.month);
+                      }}
                     >
                       Переоткрыть
                     </button>

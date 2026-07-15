@@ -26,6 +26,14 @@ export function dateOnlyToDate(dateOnly: string): Date {
   return new Date(`${dateOnly}T00:00:00.000Z`);
 }
 
+/**
+ * YYYY-MM-DD → Date полуночи СЛЕДУЮЩЕГО дня. Для включительной верхней границы
+ * периода: `date < dateOnlyEndExclusive(to)` покрывает весь день `to`.
+ */
+export function dateOnlyEndExclusive(dateOnly: string): Date {
+  return new Date(dateOnlyToDate(dateOnly).getTime() + 24 * 60 * 60 * 1000);
+}
+
 /** Date → YYYY-MM-DD. */
 export function dateToDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);

@@ -67,9 +67,9 @@ export function FinanceSummaryTab() {
                 <tr>
                   <th>Участник</th>
                   <th style={{ width: 130 }}>Роль</th>
-                  <th style={{ width: 150 }}>Начислено</th>
-                  <th style={{ width: 150 }}>Выплачено</th>
-                  <th style={{ width: 160 }}>К выплате</th>
+                  <th style={{ width: 150 }}>Начислено за период</th>
+                  <th style={{ width: 150 }}>Выплачено за период</th>
+                  <th style={{ width: 160 }}>К выплате (итого)</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,6 +92,10 @@ export function FinanceSummaryTab() {
               </tbody>
             </table>
           </div>
+          <p className="subtle" style={{ marginTop: "0.5rem" }}>
+            «К выплате (итого)» — накопительный остаток на конец периода: все начисления по
+            закрытым месяцам минус все выплаты. Не зависит от начала выбранного окна.
+          </p>
 
           <h3 style={{ marginTop: "1.5rem" }}>P&amp;L по конструкциям</h3>
           <div className="card">

@@ -255,7 +255,7 @@ export async function getSummary(
   from: Month,
   to: Month,
 ): Promise<FinanceSummary> {
-  const months = monthRange(from, to);
+  monthRange(from, to); // валидирует период (from ≤ to, ширина ≤ 60 мес.)
   const start = monthToDate(from);
   const end = monthToDate(nextMonth(to));
 
@@ -290,7 +290,9 @@ export async function getSummary(
   const activityMonths = await monthsWithActivity(rt, start, end);
   const hasOpenMonths = [...activityMonths].some((m) => !closedMonths.has(m));
 
-  // Балансы участников: начислено (закрытые распределения) − выплачено за период.
+  // Балансы участников. Колонки «начислено/выплачено» — за период; «остаток к
+  // выплате» — накопительно на конец периода (все начисления по закрытым месяцам
+  // ≤ конца − все выплаты ≤ конца), чтобы число не зависело от начала окна.
   const allocatedByParticipant = new Map<string, number>();
   for (const d of closed) {
     for (const a of d.allocations) {
@@ -301,10 +303,16 @@ export async function getSummary(
     }
   }
   const paidByParticipant = await payoutsByParticipantInRange(rt, from, to);
+  const [cumAllocated, cumPaid] = await Promise.all([
+    allocatedByParticipantBefore(rt, end),
+    paidByParticipantBefore(rt, end),
+  ]);
 
   const participantIds = new Set<string>([
     ...allocatedByParticipant.keys(),
     ...paidByParticipant.keys(),
+    ...cumAllocated.keys(),
+    ...cumPaid.keys(),
   ]);
   const participants = await rt.prisma.financeParticipant.findMany({
     where: { id: { in: [...participantIds] } },
@@ -321,9 +329,11 @@ export async function getSummary(
         kind: (p?.kind ?? "other") as FinanceParticipantKind,
         allocated,
         paidOut,
-        outstanding: allocated - paidOut,
+        outstanding: (cumAllocated.get(id) ?? 0) - (cumPaid.get(id) ?? 0),
       };
     })
+    // Прячем участников без активности за период и с нулевым остатком (шум).
+    .filter((b) => b.allocated !== 0 || b.paidOut !== 0 || b.outstanding !== 0)
     .sort((a, b) => b.outstanding - a.outstanding);
 
   const constructions = await constructionPnl(rt, start, end);
@@ -385,6 +395,45 @@ async function payoutsByParticipantInRange(
   for (const p of payouts) {
     map.set(p.participantId, (map.get(p.participantId) ?? 0) + p.amount);
   }
+  return map;
+}
+
+/**
+ * Начислено накопительно: сумма аллокаций по закрытым распределениям с
+ * periodMonth < end, сгруппированная по участнику. (Аллокации существуют только
+ * у закрытых месяцев — при переоткрытии снимок удаляется.)
+ */
+async function allocatedByParticipantBefore(
+  rt: Runtime,
+  end: Date,
+): Promise<Map<string, number>> {
+  const rows = await rt.prisma.financeAllocation.groupBy({
+    by: ["participantId"],
+    _sum: { amount: true },
+    where: { distribution: { status: "closed", periodMonth: { lt: end } } },
+  });
+  const map = new Map<string, number>();
+  for (const r of rows) map.set(r.participantId, r._sum.amount ?? 0);
+  return map;
+}
+
+/**
+ * Выплачено накопительно: сумма выплат, отнесённых к месяцу < end (учётный
+ * `month`, а при его отсутствии — `date`), по участнику.
+ */
+async function paidByParticipantBefore(
+  rt: Runtime,
+  end: Date,
+): Promise<Map<string, number>> {
+  const rows = await rt.prisma.financePayout.groupBy({
+    by: ["participantId"],
+    _sum: { amount: true },
+    where: {
+      OR: [{ month: { lt: end } }, { month: null, date: { lt: end } }],
+    },
+  });
+  const map = new Map<string, number>();
+  for (const r of rows) map.set(r.participantId, r._sum.amount ?? 0);
   return map;
 }
 

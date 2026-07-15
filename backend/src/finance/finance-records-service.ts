@@ -14,6 +14,7 @@ import type {
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import {
+  dateOnlyEndExclusive,
   dateOnlyToDate,
   expenseInclude,
   incomeInclude,
@@ -42,7 +43,7 @@ export async function listIncome(
 ): Promise<Paginated<FinanceIncome>> {
   const where: Prisma.FinanceIncomeWhereInput = {};
   if (query.from) where.date = { ...(where.date as object), gte: dateOnlyToDate(query.from) };
-  if (query.to) where.date = { ...(where.date as object), lt: dateOnlyToDate(query.to) };
+  if (query.to) where.date = { ...(where.date as object), lt: dateOnlyEndExclusive(query.to) };
   if (query.constructionId) where.constructionId = query.constructionId;
   if (query.bookingId) where.bookingId = query.bookingId;
 
@@ -150,7 +151,7 @@ export async function listExpenses(
 ): Promise<Paginated<FinanceExpense>> {
   const where: Prisma.FinanceExpenseWhereInput = {};
   if (query.from) where.date = { ...(where.date as object), gte: dateOnlyToDate(query.from) };
-  if (query.to) where.date = { ...(where.date as object), lt: dateOnlyToDate(query.to) };
+  if (query.to) where.date = { ...(where.date as object), lt: dateOnlyEndExclusive(query.to) };
   if (query.status) where.status = query.status;
   if (query.categoryId) where.categoryId = query.categoryId;
   if (query.constructionId) where.constructionId = query.constructionId;

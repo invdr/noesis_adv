@@ -20,7 +20,10 @@ interface Opts {
 }
 
 function runtimeWith(role: UserRole | null, opts: Opts = {}) {
-  const state: { created: Record<string, unknown>[] | null } = { created: null };
+  const state: {
+    created: Record<string, unknown>[] | null;
+    incomeWhere: Record<string, unknown> | null;
+  } = { created: null, incomeWhere: null };
   const owner = new Date("2020-01-01T00:00:00.000Z");
   const participants = (opts.participants ?? []).map((p) => ({
     id: p.id,
@@ -56,6 +59,11 @@ function runtimeWith(role: UserRole | null, opts: Opts = {}) {
     },
     financeIncome: {
       aggregate: async () => ({ _sum: { amount: opts.income ?? 0 } }),
+      findMany: async ({ where }: { where?: Record<string, unknown> }) => {
+        state.incomeWhere = where ?? {};
+        return [];
+      },
+      count: async () => 0,
     },
     financeExpense: {
       aggregate: async () => ({ _sum: { amount: opts.expense ?? 0 } }),
@@ -112,6 +120,70 @@ function auth(): Record<string, string> {
   return { Cookie: `${SESSION_COOKIE}=${TOKEN}`, Origin: ORIGIN };
 }
 
+/**
+ * Рантайм для сводки: сценарий «начислено в январе, выплачено в феврале».
+ * Окно Фев–Июл не содержит январского начисления, но остаток к выплате должен
+ * оставаться накопительным (0), а не показывать мнимую переплату (−100000).
+ */
+function summaryRuntime(): Runtime {
+  const prisma: Record<string, unknown> = {
+    session: {
+      findUnique: async ({ where }: { where: { tokenHash: string } }) =>
+        where.tokenHash === tokenHash(TOKEN)
+          ? {
+              id: "session-admin",
+              userId: "user-admin",
+              expiresAt: new Date(Date.now() + 60_000),
+              lastSeenAt: new Date(),
+              user: {
+                id: "user-admin",
+                email: "admin@example.com",
+                name: null,
+                role: "admin",
+                mustChangePassword: false,
+                isActive: true,
+              },
+            }
+          : null,
+      update: async () => ({}),
+    },
+    financeIncome: {
+      aggregate: async () => ({ _sum: { amount: 0 } }),
+      findMany: async () => [],
+      groupBy: async () => [],
+    },
+    financeExpense: {
+      aggregate: async () => ({ _sum: { amount: 0 } }),
+      findMany: async () => [],
+      groupBy: async () => [],
+    },
+    // В окне Фев–Июл закрытых распределений нет (январь вне окна).
+    financeDistribution: { findMany: async () => [] },
+    financePayout: {
+      // За период: февральская выплата попадает в окно.
+      findMany: async () => [{ participantId: "p1", amount: 100000 }],
+      // Накопительно до конца периода: та же выплата.
+      groupBy: async () => [{ participantId: "p1", _sum: { amount: 100000 } }],
+    },
+    // Накопительно: январское начисление (periodMonth ≤ конца окна).
+    financeAllocation: {
+      groupBy: async () => [{ participantId: "p1", _sum: { amount: 100000 } }],
+    },
+    financeParticipant: {
+      findMany: async () => [{ id: "p1", name: "Я", kind: "owner", archivedAt: null }],
+    },
+    construction: { findMany: async () => [] },
+  };
+  prisma.$transaction = async (arg: unknown) =>
+    typeof arg === "function"
+      ? (arg as (tx: unknown) => Promise<unknown>)(prisma)
+      : Promise.all(arg as Promise<unknown>[]);
+  return {
+    env: { CORS_ORIGINS: [ORIGIN], COOKIE_SECURE: false, SESSION_TTL_HOURS: 12 },
+    prisma,
+  } as unknown as Runtime;
+}
+
 describe("financeRoutes — доступ", () => {
   test("без сессии — 401", async () => {
     const app = createApp(runtimeWith(null).rt);
@@ -130,6 +202,43 @@ describe("financeRoutes — доступ", () => {
     const res = await app.request("/api/finance/categories", { headers: auth() });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
+  });
+});
+
+describe("financeRoutes — фильтр периода", () => {
+  test("верхняя граница 'to' включает граничный день", async () => {
+    const { rt, state } = runtimeWith("admin");
+    const res = await createApp(rt).request(
+      "/api/finance/income?from=2026-07-01&to=2026-07-15",
+      { headers: auth() },
+    );
+    expect(res.status).toBe(200);
+    const date = (state.incomeWhere?.date ?? {}) as { gte?: Date; lt?: Date };
+    // Нижняя граница включительна с полуночи 1 июля.
+    expect(date.gte?.toISOString()).toBe("2026-07-01T00:00:00.000Z");
+    // Верхняя — исключающая полночь 16 июля, т.е. весь день 15 июля попадает в выборку.
+    expect(date.lt?.toISOString()).toBe("2026-07-16T00:00:00.000Z");
+  });
+});
+
+describe("financeRoutes — сводка, накопительный остаток", () => {
+  test("остаток к выплате не зависит от начала окна (кросс-месячный сценарий)", async () => {
+    const res = await createApp(summaryRuntime()).request(
+      "/api/finance/summary?from=2026-02&to=2026-07",
+      { headers: auth() },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const p = body.participants.find(
+      (x: { participantId: string }) => x.participantId === "p1",
+    );
+    expect(p).toBeTruthy();
+    // За период (Фев–Июл) начислений нет: январь вне окна.
+    expect(p.allocated).toBe(0);
+    // Выплата за период есть.
+    expect(p.paidOut).toBe(100000);
+    // Накопительно: 100000 начислено − 100000 выплачено = 0 (а не −100000).
+    expect(p.outstanding).toBe(0);
   });
 });
 
