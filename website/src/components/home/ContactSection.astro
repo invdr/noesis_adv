@@ -8,7 +8,7 @@ const { s } = chrome;
 <section class="contact" id="request">
   <div class="container">
     <div class="contact__details">
-      <p>Связаться напрямую</p>
+      <p>{s.contactsEyebrow}</p>
       <div>
         <a href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
         <a href={chrome.secondary.href}>{chrome.secondary.label}</a>
@@ -20,7 +20,7 @@ const { s } = chrome;
       </div>
     </div>
     <LeadForm
-      title="Соберём медиаплан по вашему запросу"
+      title={s.contactsTitle}
       description="Оставьте контакты и параметры кампании. Если в подборке уже есть позиции, они автоматически приложатся к заявке."
       source="contacts"
       variant="light"

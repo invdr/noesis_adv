@@ -4,9 +4,28 @@ interface Props {
   developerCount: number;
   formats: { value: string; label: string }[];
   districts: string[];
+  // Тексты hero — из настроек сайта (CRM); дефолты повторяют дизайн-копирайт.
+  eyebrow?: string;
+  titleLine1?: string;
+  titleLine2?: string;
+  subtitle?: string;
+  ctaPrimary?: string;
+  ctaSecondary?: string;
 }
 
-const { constructionCount, developerCount, formats, districts } = Astro.props;
+const {
+  constructionCount,
+  developerCount,
+  formats,
+  districts,
+  eyebrow = "Наружная реклама в Грозном",
+  titleLine1 = "Займите нужную",
+  titleLine2 = "точку города",
+  subtitle = "Выберите рекламные конструкции на карте, сравните стороны и проверьте доступность на нужные даты. NOESIS |ad собирает запрос в одну подборку — условия подтверждает менеджер.",
+  ctaPrimary = "Открыть карту",
+  ctaSecondary = "Смотреть каталог",
+} = Astro.props;
+const heroTitle = [titleLine1, titleLine2].filter(Boolean).join(" ");
 
 // Декоративные пины для тизера карты (реальная Яндекс.Карта — в каталоге).
 const pins = [
@@ -21,14 +40,12 @@ const dot: Record<string, string> = { free: "#2e7d4e", partial: "#a0720f", busy:
 <section class="hero">
   <div class="hero__grid container">
     <div class="hero__content">
-      <p class="hero__eyebrow"><span aria-hidden="true"></span>Наружная реклама в Грозном</p>
-      <h1>Займите нужную точку города</h1>
-      <p class="hero__lead">
-        Выберите рекламные конструкции на карте, сравните стороны и проверьте доступность на нужные даты. NOESIS |ad собирает запрос в одну подборку — условия подтверждает менеджер.
-      </p>
+      <p class="hero__eyebrow"><span aria-hidden="true"></span>{eyebrow}</p>
+      <h1>{heroTitle}</h1>
+      <p class="hero__lead">{subtitle}</p>
       <div class="hero__actions">
-        <a class="hero__btn hero__btn--primary" href="/catalog#map">Открыть карту</a>
-        <a class="hero__btn hero__btn--ghost" href="/catalog">Смотреть каталог</a>
+        <a class="hero__btn hero__btn--primary" href="/catalog#map">{ctaPrimary}</a>
+        <a class="hero__btn hero__btn--ghost" href="/catalog">{ctaSecondary}</a>
       </div>
       <dl class="hero__stats" aria-label="Данные каталога">
         {constructionCount > 0 && <div><dt>{constructionCount}</dt><dd>конструкций в сети</dd></div>}

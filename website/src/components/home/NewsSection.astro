@@ -2,15 +2,20 @@
 import type { NewsView } from "../../lib/api";
 import NewsCard from "../NewsCard.astro";
 import SectionHeading from "../SectionHeading.astro";
-interface Props { items: NewsView[]; }
-const { items } = Astro.props;
+interface Props { items: NewsView[]; eyebrow?: string; title?: string; allCta?: string; }
+const {
+  items,
+  eyebrow = "Кейсы и новости",
+  title = "Город, кампании и практика размещения",
+  allCta = "Все материалы",
+} = Astro.props;
 ---
 {items.length > 0 && (
   <section class="news" id="cases">
     <div class="container">
       <div class="news__heading">
-        <SectionHeading eyebrow="Кейсы и новости" title="Город, кампании и практика размещения" description="Публикации из NOESIS |ad: новые позиции, примеры кампаний и полезные материалы для рекламодателей." />
-        <a href="/news">Все материалы →</a>
+        <SectionHeading eyebrow={eyebrow} title={title} description="Публикации из NOESIS |ad: новые позиции, примеры кампаний и полезные материалы для рекламодателей." />
+        <a href="/news">{allCta} →</a>
       </div>
       <div class="news__grid">{items.slice(0, 3).map((item) => <NewsCard item={item} />)}</div>
     </div>

@@ -1,13 +1,17 @@
 ---
 import type { DocumentCategoryConstructions } from "../../lib/api";
 import SectionHeading from "../SectionHeading.astro";
-interface Props { categories: DocumentCategoryConstructions[]; }
-const { categories } = Astro.props;
+interface Props { categories: DocumentCategoryConstructions[]; eyebrow?: string; title?: string; }
+const {
+  categories,
+  eyebrow = "Материалы",
+  title = "Файлы для планирования и производства",
+} = Astro.props;
 ---
 {categories.length > 0 && (
   <section class="materials" id="materials">
     <div class="container materials__inner">
-      <SectionHeading eyebrow="Материалы" title="Файлы для планирования и производства" description="Презентации, технические требования и документы привязаны к реальным конструкциям каталога." />
+      <SectionHeading eyebrow={eyebrow} title={title} description="Презентации, технические требования и документы привязаны к реальным конструкциям каталога." />
       <div class="materials__list">
         {categories.slice(0, 5).map((category, index) => (
           <a href={`/materials#${category.category.slug}`}>

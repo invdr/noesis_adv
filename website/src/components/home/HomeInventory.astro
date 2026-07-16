@@ -9,16 +9,24 @@ interface Props {
   items: CatalogItem[];
   mapApiKey: string;
   center: readonly [number, number];
+  eyebrow?: string;
+  title?: string;
 }
-const { items, mapApiKey, center } = Astro.props;
+const {
+  items,
+  mapApiKey,
+  center,
+  eyebrow = "Каталог и география",
+  title = "Локации и условия размещения",
+} = Astro.props;
 const preview = items.slice(0, 4);
 const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center, zoom: 12 } });
 ---
 <section class="inventory" id="inventory">
   <div class="container inventory__heading">
     <SectionHeading
-      eyebrow="Каталог и география"
-      title="Локации и условия размещения"
+      eyebrow={eyebrow}
+      title={title}
       description="Каждая позиция привязана к адресу, стороне и инвентарному коду. Задайте даты — статусы обновятся по данным бронирований."
     />
     <a href="/catalog">Все конструкции <span aria-hidden="true">→</span></a>

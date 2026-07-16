@@ -72,12 +72,24 @@ const organizationJsonLd = {
     developerCount={stats.developerCount}
     formats={formats}
     districts={districts}
+    eyebrow={settings.heroEyebrow}
+    titleLine1={settings.heroTitleLine1}
+    titleLine2={settings.heroTitleLine2}
+    subtitle={settings.heroSubtitle}
+    ctaPrimary={settings.heroCtaPrimary}
+    ctaSecondary={settings.heroCtaSecondary}
   />
-  <HomeInventory items={items} mapApiKey={mapApiKey} center={[43.318, 45.698]} />
+  <HomeInventory
+    items={items}
+    mapApiKey={mapApiKey}
+    center={[43.318, 45.698]}
+    eyebrow={settings.catalogEyebrow}
+    title={settings.catalogTitle}
+  />
   <ProcessSection />
-  <BenefitsSection />
-  <NewsSection items={newsItems} />
-  <MaterialsSection categories={visibleDocuments} />
+  <BenefitsSection eyebrow={settings.aboutEyebrow} />
+  <NewsSection items={newsItems} eyebrow={settings.newsEyebrow} title={settings.newsTitle} allCta={settings.newsAllCta} />
+  <MaterialsSection categories={visibleDocuments} eyebrow={settings.docsEyebrow} title={settings.docsTitle} />
   <ContactSection chrome={chrome} />
   <script>
     import "../scripts/home";

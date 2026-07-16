@@ -1,5 +1,7 @@
 ---
 import SectionHeading from "../SectionHeading.astro";
+interface Props { eyebrow?: string }
+const { eyebrow = "Почему NOESIS" } = Astro.props;
 const benefits = [
   { title: "Локация видна сразу", text: "Адрес, район и координаты помогают оценить маршрут и окружение до разговора с менеджером." },
   { title: "Каждая сторона отдельно", text: "У A, B и C могут отличаться направление обзора, фотография, трафик, цена и занятость." },
@@ -12,7 +14,7 @@ const benefits = [
 <section class="benefits" id="about">
   <div class="container">
     <SectionHeading
-      eyebrow="Почему NOESIS"
+      eyebrow={eyebrow}
       title="Город как медиасистема — с точными данными по каждой стороне"
       tone="light"
     />
