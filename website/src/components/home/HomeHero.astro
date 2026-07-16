@@ -7,89 +7,74 @@ interface Props {
 }
 
 const { constructionCount, developerCount, formats, districts } = Astro.props;
+
+// Декоративные пины для тизера карты (реальная Яндекс.Карта — в каталоге).
+const pins = [
+  { num: "014", x: 40, y: 53, status: "free" },
+  { num: "022", x: 57, y: 37, status: "free" },
+  { num: "036", x: 31, y: 70, status: "partial" },
+  { num: "047", x: 15, y: 15, status: "busy" },
+  { num: "064", x: 62, y: 30, status: "busy" },
+];
+const dot: Record<string, string> = { free: "#2e7d4e", partial: "#a0720f", busy: "#8a8478" };
 ---
 <section class="hero">
   <div class="hero__grid container">
     <div class="hero__content">
-      <p class="hero__eyebrow">Грозный · городской рекламный инвентарь</p>
-      <h1>Наружная реклама <em>на карте города</em></h1>
+      <p class="hero__eyebrow"><span aria-hidden="true"></span>Наружная реклама в Грозном</p>
+      <h1>Займите нужную точку города</h1>
       <p class="hero__lead">
-        Найдите конструкцию, сравните стороны и проверьте свободные даты. NOESIS |ad собирает запрос в одну подборку — условия подтверждает менеджер.
+        Выберите рекламные конструкции на карте, сравните стороны и проверьте доступность на нужные даты. NOESIS |ad собирает запрос в одну подборку — условия подтверждает менеджер.
       </p>
       <div class="hero__actions">
-        <a href="/catalog">Открыть каталог <span aria-hidden="true">→</span></a>
-        <a href="/catalog#map">Смотреть карту <span aria-hidden="true">↗</span></a>
+        <a class="hero__btn hero__btn--primary" href="/catalog#map">Открыть карту</a>
+        <a class="hero__btn hero__btn--ghost" href="/catalog">Смотреть каталог</a>
       </div>
-      {(constructionCount > 0 || developerCount > 0) && (
-        <dl class="hero__stats" aria-label="Данные каталога">
-          {constructionCount > 0 && <div><dt>{constructionCount}</dt><dd>конструкций опубликовано</dd></div>}
-          {developerCount > 0 && <div><dt>{developerCount}</dt><dd>владельцев инвентаря</dd></div>}
-        </dl>
-      )}
+      <dl class="hero__stats" aria-label="Данные каталога">
+        {constructionCount > 0 && <div><dt>{constructionCount}</dt><dd>конструкций в сети</dd></div>}
+        {districts.length > 0 && <div><dt>{districts.length}</dt><dd>района города</dd></div>}
+        {developerCount > 0 && <div><dt class="hero__stats-accent">{developerCount}</dt><dd>владельцев инвентаря</dd></div>}
+      </dl>
     </div>
 
-    <div class="hero__visual hero__diagram" aria-label="Схема расположения рекламных щитов в Грозном">
-      <div class="hero__diagram-head">
-        <span>СХЕМА РАСПОЛОЖЕНИЯ</span>
-        <strong>Грозный · 08 точек</strong>
+    <a class="hero__visual" href="/catalog#map" aria-label="Открыть карту конструкций в каталоге">
+      <div class="hero__map">
+        <svg class="hero__map-svg" viewBox="0 0 800 640" preserveAspectRatio="none" role="img" aria-label="Схематичная карта Грозного с рекламными конструкциями">
+          <rect width="800" height="640" fill="#eae6da"></rect>
+          <g fill="#e2ddce">
+            <rect x="60" y="60" width="150" height="100" rx="4"></rect><rect x="250" y="90" width="130" height="120" rx="4"></rect>
+            <rect x="90" y="220" width="170" height="130" rx="4"></rect><rect x="300" y="260" width="120" height="100" rx="4"></rect>
+            <rect x="120" y="420" width="180" height="120" rx="4"></rect><rect x="350" y="430" width="140" height="110" rx="4"></rect>
+            <rect x="560" y="120" width="150" height="110" rx="4"></rect><rect x="580" y="300" width="140" height="120" rx="4"></rect>
+            <rect x="540" y="470" width="170" height="100" rx="4"></rect>
+          </g>
+          <path d="M 470 0 C 458 120 516 210 498 330 C 482 450 542 540 532 640" stroke="#c5d2ce" stroke-width="16" fill="none"></path>
+          <path d="M 40 520 L 760 170" stroke="#d5cfc0" stroke-width="13" fill="none"></path>
+          <path d="M 40 520 L 760 170" stroke="#fbfaf5" stroke-width="9" fill="none"></path>
+          <path d="M 210 0 L 268 640" stroke="#fbfaf5" stroke-width="7" fill="none"></path>
+          <path d="M 0 330 L 800 368" stroke="#fbfaf5" stroke-width="6" fill="none"></path>
+          <path d="M 0 130 L 420 88" stroke="#fbfaf5" stroke-width="5" fill="none"></path>
+          <text x="330" y="352" font-family="JetBrains Mono" font-size="12" fill="#98937f" transform="rotate(-26 330 352)">пр. В.В. Путина</text>
+          <text x="600" y="352" font-family="JetBrains Mono" font-size="11" fill="#98937f">пр. Мохаммеда Али</text>
+          <text x="60" y="118" font-family="JetBrains Mono" font-size="11" fill="#98937f">ул. Маяковского</text>
+          <text x="500" y="90" font-family="JetBrains Mono" font-size="11" fill="#afc0bb" transform="rotate(80 500 90)">р. Сунжа</text>
+        </svg>
+        {pins.map((pin) => (
+          <span class="hero__pin" style={`left:${pin.x}%;top:${pin.y}%`}>
+            {pin.num}<span class="hero__pin-dot" style={`background:${dot[pin.status]}`}></span>
+          </span>
+        ))}
+        <div class="hero__legend">
+          <span><i style="background:#2e7d4e"></i>свободно</span>
+          <span><i style="background:#a0720f"></i>частично</span>
+          <span><i style="background:#8a8478"></i>занято</span>
+        </div>
+        <div class="hero__coord">Грозный · центр · 43.318 N, 45.698 E</div>
       </div>
-      <svg class="hero__diagram-svg" viewBox="0 0 800 560" role="img" aria-labelledby="diagram-title diagram-desc">
-        <title id="diagram-title">Расположение рекламных щитов на карте города</title>
-        <desc id="diagram-desc">Схематичная карта дорог с отмеченными сити-форматами и направлениями движения.</desc>
-        <defs>
-          <pattern id="diagram-grid" width="42" height="42" patternUnits="userSpaceOnUse">
-            <path d="M 42 0 L 0 0 0 42" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1" />
-          </pattern>
-          <linearGradient id="diagram-road" x1="0" x2="1">
-            <stop offset="0" stop-color="#3c3c38" />
-            <stop offset="1" stop-color="#555550" />
-          </linearGradient>
-        </defs>
-        <rect width="800" height="560" rx="16" fill="url(#diagram-grid)" />
-        <path d="M-80 470 C120 350 170 440 310 350 S550 170 880 110" fill="none" stroke="#10100f" stroke-width="88" opacity=".55" />
-        <path d="M-80 470 C120 350 170 440 310 350 S550 170 880 110" fill="none" stroke="url(#diagram-road)" stroke-width="58" />
-        <path d="M-80 470 C120 350 170 440 310 350 S550 170 880 110" fill="none" stroke="#d4c9ac" stroke-width="2" stroke-dasharray="12 12" opacity=".8" />
-        <path d="M30 80 L270 280 L430 230 L750 500" fill="none" stroke="#4e4e49" stroke-width="22" opacity=".8" />
-        <path d="M30 80 L270 280 L430 230 L750 500" fill="none" stroke="#858277" stroke-width="1.5" stroke-dasharray="8 10" opacity=".8" />
-        <g fill="#d78e8e" font-family="var(--font-mono)" font-size="10" letter-spacing=".12em">
-          <text x="90" y="118">ПРОСПЕКТ</text>
-          <text x="625" y="478" transform="rotate(38 625 478)">ЦЕНТР</text>
-        </g>
-        <g class="hero__marker" transform="translate(166 368)">
-          <circle r="25" fill="#8b0000" opacity=".25" />
-          <circle r="15" fill="#a91616" stroke="#fff" stroke-width="2" />
-          <rect x="-5" y="-8" width="10" height="16" rx="2" fill="#fff" />
-          <text x="22" y="4">СФ-01</text>
-        </g>
-        <g class="hero__marker" transform="translate(330 350)">
-          <circle r="25" fill="#8b0000" opacity=".25" />
-          <circle r="15" fill="#a91616" stroke="#fff" stroke-width="2" />
-          <rect x="-5" y="-8" width="10" height="16" rx="2" fill="#fff" />
-          <text x="22" y="4">СФ-02</text>
-        </g>
-        <g class="hero__marker hero__marker--active" transform="translate(494 262)">
-          <circle r="32" fill="#d78e8e" opacity=".25" />
-          <circle r="17" fill="#a91616" stroke="#fff" stroke-width="3" />
-          <rect x="-6" y="-9" width="12" height="18" rx="2" fill="#fff" />
-          <text x="26" y="4">СФ-03</text>
-        </g>
-        <g class="hero__marker" transform="translate(635 188)">
-          <circle r="25" fill="#8b0000" opacity=".25" />
-          <circle r="15" fill="#a91616" stroke="#fff" stroke-width="2" />
-          <rect x="-5" y="-8" width="10" height="16" rx="2" fill="#fff" />
-          <text x="22" y="4">СФ-04</text>
-        </g>
-        <g fill="#fff" opacity=".54" font-family="var(--font-mono)" font-size="9">
-          <text x="44" y="526">43.318° N</text>
-          <text x="690" y="42">45.698° E</text>
-        </g>
-      </svg>
-      <div class="hero__visual-meta">
-        <span>СИТИ-ФОРМАТ</span>
-        <p>Городская сеть рекламных поверхностей</p>
-        <a href="/catalog">Открыть каталог ↗</a>
+      <div class="hero__map-foot">
+        <span>Открыть карту с фильтрами</span><span aria-hidden="true">→</span>
       </div>
-    </div>
+    </a>
   </div>
 
   <div class="hero__search-wrap container">
@@ -120,165 +105,202 @@ const { constructionCount, developerCount, formats, districts } = Astro.props;
           {districts.map((district) => <option value={district}>{district}</option>)}
         </select>
       </label>
-      <button type="submit">Найти варианты <span aria-hidden="true">→</span></button>
+      <button type="submit">Показать варианты <span aria-hidden="true">→</span></button>
     </form>
   </div>
 </section>
 
 <style>
   .hero {
-    position: relative;
-    padding: clamp(20px, 3vw, 46px) 0 0;
-    background: var(--paper);
-    border-bottom: 1px solid var(--line);
+    padding: clamp(24px, 3vw, 40px) 0 clamp(28px, 4vw, 48px);
+    background: var(--canvas);
   }
   .hero__grid {
     display: grid;
-    grid-template-columns: minmax(340px, 0.82fr) minmax(460px, 1.18fr);
-    align-items: stretch;
-    gap: clamp(22px, 3.5vw, 48px);
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: clamp(28px, 4vw, 48px);
   }
-  .hero__content { display: flex; min-width: 0; flex-direction: column; padding: clamp(22px, 3vw, 42px) 0; }
+  .hero__content { display: flex; min-width: 0; flex-direction: column; }
   .hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 0 0 18px;
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.13em;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
   }
+  .hero__eyebrow span { width: 22px; height: 2px; background: currentColor; }
   .hero h1 {
-    max-width: 760px;
-    margin: 0;
-    font-size: clamp(44px, 5.4vw, 78px);
-    font-weight: 720;
-    letter-spacing: -0.075em;
-    line-height: 0.88;
+    max-width: 640px;
+    margin: 0 0 16px;
+    font-family: var(--font-display);
+    font-size: clamp(40px, 5vw, 58px);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.03;
+    text-transform: uppercase;
+    text-wrap: balance;
   }
-  .hero h1 em { display: block; color: var(--accent); font-style: normal; }
-  .hero__lead { max-width: 600px; margin: 20px 0 0; color: var(--muted); font-size: clamp(14px, 1.1vw, 16px); }
-  .hero__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-  .hero__actions a {
+  .hero__lead { max-width: 480px; margin: 0 0 24px; color: var(--muted); font-size: clamp(15px, 1.1vw, 17px); line-height: 1.5; }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 28px; }
+  .hero__btn {
     display: inline-flex;
-    min-height: 44px;
+    min-height: 50px;
+    align-items: center;
+    padding: 0 28px;
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .hero__btn--primary { color: #fbfaf5; background: var(--accent); }
+  .hero__btn--primary:hover { background: var(--accent-hover); }
+  .hero__btn--ghost { color: var(--ink); background: transparent; border: 1.5px solid var(--ink); }
+  .hero__btn--ghost:hover { color: #fbfaf5; background: var(--ink); }
+  .hero__stats { display: flex; flex-wrap: wrap; gap: 20px 36px; margin: 0; }
+  .hero__stats div { display: grid; gap: 2px; }
+  .hero__stats dt { font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--ink); }
+  .hero__stats dt.hero__stats-accent { color: var(--accent); }
+  .hero__stats dd { margin: 0; color: var(--muted); font-size: 13px; }
+
+  .hero__visual {
+    display: block;
+    overflow: hidden;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 14px 36px rgba(34, 32, 28, 0.14);
+  }
+  .hero__map { position: relative; height: clamp(320px, 30vw, 400px); background: var(--map); }
+  .hero__map-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .hero__pin {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    transform: translate(-50%, -50%);
+    background: var(--dark);
+    color: #fbfaf5;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(34, 32, 28, 0.3);
+  }
+  .hero__pin-dot { width: 8px; height: 8px; border-radius: 99px; }
+  .hero__legend {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    display: flex;
+    gap: 14px;
+    padding: 10px 14px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .hero__legend span { display: flex; align-items: center; gap: 6px; }
+  .hero__legend i { width: 9px; height: 9px; border-radius: 99px; }
+  .hero__coord {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    padding: 8px 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .hero__map-foot {
+    display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    padding: 0 14px;
-    border: 1px solid var(--ink);
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 750;
+    padding: 14px 18px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
   }
-  .hero__actions a:first-child { color: #fff; background: var(--accent); border-color: var(--accent); }
-  .hero__actions a:first-child:hover { background: var(--accent-hover); }
-  .hero__actions a:last-child:hover { color: #fff; background: var(--ink); }
-  .hero__stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 18px 28px;
-    margin: auto 0 0;
-    padding-top: 32px;
-  }
-  .hero__stats div { display: grid; grid-template-columns: auto minmax(100px, 150px); align-items: center; gap: 12px; }
-  .hero__stats dt { color: var(--accent); font-family: var(--font-mono); font-size: 28px; font-weight: 600; }
-  .hero__stats dd { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
+  .hero__visual:hover .hero__map-foot { color: var(--accent); }
+  .hero__map-foot span:last-child { font-family: var(--font-mono); }
 
-  .hero__visual { position: relative; height: clamp(440px, 36vw, 560px); min-height: 0; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
-  .hero__diagram { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; padding: 22px; color: #fff; background: #242421; border: 1px solid rgba(25, 25, 24, 0.12); }
-  .hero__diagram::after { display: none; }
-  .hero__diagram-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
-  .hero__diagram-head span { color: #d78e8e; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; }
-  .hero__diagram-head strong { color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600; }
-  .hero__diagram-svg { width: 100%; height: 100%; min-height: 0; }
-  .hero__marker { color: #fff; font-family: var(--font-mono); font-size: 10px; }
-  .hero__marker text { fill: rgba(255, 255, 255, 0.86); }
-  .hero__marker--active text { fill: #fff; font-weight: 700; }
-  .hero__visual-meta {
-    position: absolute;
-    z-index: 2;
-    right: 20px;
-    bottom: 20px;
-    left: 20px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: end;
-    gap: 18px;
-    color: #fff;
-  }
-  .hero__visual-meta span { font-family: var(--font-mono); font-size: 11px; }
-  .hero__visual-meta p { margin: 0; font-size: 12px; }
-  .hero__visual-meta a { font-size: 11px; font-weight: 700; }
-  .hero__search-wrap { position: relative; z-index: 3; transform: translateY(50%); }
+  .hero__search-wrap { margin-top: clamp(24px, 3vw, 36px); }
   .hero__search {
     display: grid;
-    grid-template-columns: minmax(200px, 1.2fr) repeat(4, minmax(130px, 0.8fr)) minmax(160px, 0.9fr);
+    grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(120px, 0.9fr)) minmax(160px, 1fr);
     align-items: end;
-    gap: 12px;
-    padding: 18px;
-    background: #242421;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 18px;
-    box-shadow: 0 22px 60px rgba(25, 25, 24, 0.22);
+    gap: 14px;
+    padding: 22px 24px;
+    background: var(--dark);
+    border-radius: var(--radius-lg);
   }
-  .hero__search-heading { display: grid; align-self: center; gap: 4px; color: #fff; }
+  .hero__search-heading { display: grid; align-self: center; gap: 4px; }
   .hero__search-heading span,
-  .hero__search label > span { color: rgba(255, 255, 255, 0.55); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
-  .hero__search-heading strong { font-size: 13px; }
+  .hero__search label > span {
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .hero__search-heading strong { color: #fbfaf5; font-size: 15px; font-weight: 600; }
   .hero__search label { display: grid; gap: 7px; }
   .hero__search input,
   .hero__search select {
     width: 100%;
     min-width: 0;
-    min-height: 48px;
+    min-height: 46px;
     padding: 0 12px;
-    color: var(--ink);
-    background: #fff;
-    border: 1px solid transparent;
-    border-radius: 9px;
-    font-size: 12px;
+    color: #fbfaf5;
+    background: var(--dark-surface);
+    border: 1.5px solid var(--dark-line);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
   }
+  .hero__search input:focus,
+  .hero__search select:focus { border-color: var(--accent); outline: none; }
+  .hero__search input[type="date"] { color-scheme: dark; }
   .hero__search button {
     display: flex;
-    min-height: 48px;
+    min-height: 46px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 10px;
-    padding: 0 14px;
-    color: #fff;
+    padding: 0 22px;
+    color: #fbfaf5;
     background: var(--accent);
-    border-radius: 9px;
-    font-size: 12px;
-    font-weight: 750;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
   }
-  .hero__search button:hover { background: var(--accent-hover); }
+  .hero__search button:hover { background: var(--accent-strong); }
 
   @media (max-width: 1180px) {
-    .hero__grid { grid-template-columns: 1fr 1fr; }
-    .hero__visual { height: 460px; }
     .hero__search { grid-template-columns: repeat(3, 1fr); }
-    .hero__search-heading { grid-column: span 1; }
+    .hero__search-heading { grid-column: 1 / -1; }
   }
   @media (max-width: 860px) {
-    .hero { padding-top: 10px; }
     .hero__grid { grid-template-columns: 1fr; }
-    .hero__content { padding-bottom: 0; }
-    .hero__stats { margin-top: 34px; padding-top: 0; }
-    .hero__visual { height: min(72vh, 620px); min-height: 0; }
-    .hero__search-wrap { transform: none; padding-block: 18px; }
     .hero__search { grid-template-columns: repeat(2, 1fr); }
     .hero__search-heading,
     .hero__search button { grid-column: 1 / -1; }
   }
   @media (max-width: 520px) {
-    .hero h1 { font-size: clamp(40px, 13vw, 58px); }
+    .hero h1 { font-size: clamp(34px, 11vw, 46px); }
     .hero__actions { display: grid; }
-    .hero__visual { height: 420px; border-radius: 16px; }
-    .hero__visual-meta { grid-template-columns: 1fr auto; }
-    .hero__visual-meta p { grid-column: 1 / -1; grid-row: 2; }
+    .hero__btn { justify-content: center; }
     .hero__search { grid-template-columns: 1fr; }
-    .hero__search-heading,
-    .hero__search button { grid-column: 1; }
+    .hero__legend { flex-wrap: wrap; gap: 8px 12px; }
   }
 </style>

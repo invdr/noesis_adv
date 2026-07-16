@@ -1,30 +1,44 @@
 :root {
   color-scheme: light;
-  --accent: #8b0000;
-  --accent-hover: #6f0000;
-  --accent-soft: #f3e4e2;
-  --ink: #191918;
-  --ink-soft: #44433f;
-  --muted: #6f6d66;
-  --paper: #fffefb;
-  --canvas: #f3f0ea;
-  --surface: #e9e5dd;
-  --line: #d6d1c7;
-  --line-strong: #aaa49a;
-  --positive: #17643c;
-  --positive-soft: #e5f2e9;
-  --warning: #8a5412;
-  --warning-soft: #f8ecd8;
-  --danger-soft: #f4dddd;
-  --shadow: 0 18px 48px rgba(25, 25, 24, 0.1);
-  --radius-sm: 10px;
-  --radius-md: 18px;
-  --radius-lg: 28px;
-  --font-sans: "Manrope", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", Consolas, monospace;
-  --page-gutter: clamp(16px, 3vw, 40px);
-  --content: 1440px;
-  --header-height: 78px;
+  /* Дизайн-система «NOESIS |ad» (айдентика v1). Токены заданы по смыслу:
+     --paper = светлейшая поверхность (карточки/панели), --canvas = фон
+     страницы (бумага), --surface = тонкая тёплая заливка/штриховка. */
+  --accent: #8b0000; /* терракота */
+  --accent-hover: #660000;
+  --accent-strong: #a6220f; /* «горячий» hover на тёмном */
+  --accent-soft: #f9e7e4;
+  --accent-light: #e97a63; /* коралл — акцент на тёмном фоне */
+  --ink: #22201c; /* графит */
+  --ink-soft: #3d3a34;
+  --muted: #6e6960; /* минеральный */
+  --faint: #a39d8f; /* тусклый — mono-подписи/третичный */
+  --paper: #fbfaf5; /* поверхность (карточки) */
+  --canvas: #f2efe8; /* бумага (фон страницы) */
+  --surface: #eae6da; /* тонкая заливка / основа штриховки */
+  --map: #eae6da; /* холст карты */
+  --line: #dcd6c8;
+  --line-strong: #b4ad99;
+  --dark: #22201c; /* тёмные секции */
+  --dark-surface: #2e2b26; /* поля на тёмном */
+  --dark-line: #4a463f;
+  --positive: #2e7d4e;
+  --positive-soft: #e6f0e9;
+  --warning: #a0720f;
+  --warning-soft: #f5edda;
+  --busy: #77716a; /* статус «занято» */
+  --busy-soft: #ece8df;
+  --danger: #b3432e;
+  --danger-soft: #f7ece9;
+  --shadow: 0 14px 36px rgba(34, 32, 28, 0.14);
+  --radius-sm: 6px; /* контролы */
+  --radius-md: 10px; /* карточки */
+  --radius-lg: 12px; /* крупные панели */
+  --font-display: "Oswald", "Golos Text", Arial, sans-serif;
+  --font-sans: "Golos Text", system-ui, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, monospace;
+  --page-gutter: clamp(16px, 3vw, 32px);
+  --content: 1360px;
+  --header-height: 64px;
 }
 
 *,
@@ -108,7 +122,7 @@ img {
 }
 
 :focus-visible {
-  outline: 3px solid #c84d4d;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -163,7 +177,7 @@ img {
 
 @media (max-width: 760px) {
   :root {
-    --header-height: 68px;
+    --header-height: 60px;
     --page-gutter: 16px;
   }
 

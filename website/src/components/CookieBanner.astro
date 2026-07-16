@@ -18,24 +18,25 @@
     align-items: center;
     gap: 18px;
     padding: 18px;
-    color: #fff;
-    background: #262623;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 16px;
+    color: #fbfaf5;
+    background: var(--dark);
+    border: 1px solid var(--dark-line);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow);
   }
   .cookie p { margin: 0; font-size: 13px; line-height: 1.5; }
-  .cookie a { text-decoration: underline; text-underline-offset: 3px; }
+  .cookie a { color: var(--accent-light); text-decoration: underline; text-underline-offset: 3px; }
   .cookie button {
     min-width: 86px;
     min-height: 44px;
     padding: 0 16px;
-    color: var(--accent);
-    background: #fff;
-    border-radius: 999px;
+    color: #fbfaf5;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
     font-size: 13px;
-    font-weight: 750;
+    font-weight: 600;
   }
+  .cookie button:hover { background: var(--accent-hover); }
 
   @media (max-width: 560px) {
     .cookie {

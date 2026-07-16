@@ -121,24 +121,26 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
-  .catalog-page__intro h1 { margin: 0; font-size: clamp(52px, 7vw, 104px); font-weight: 720; letter-spacing: -0.075em; line-height: 0.9; }
-  .catalog-page__intro h1 em { display: block; color: var(--accent); font-style: normal; }
+  .catalog-page__intro h1 { margin: 0; font-family: var(--font-display); font-size: clamp(38px, 5vw, 60px); font-weight: 600; letter-spacing: 0.01em; line-height: 1.02; text-transform: uppercase; }
+  .catalog-page__intro h1 em { color: var(--accent); font-style: normal; }
   .catalog-page__intro > p { max-width: 560px; margin: 0; color: var(--muted); font-size: 16px; }
 
-  .filters { margin-top: 50px; padding: 20px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md); }
+  .filters { margin-top: 40px; padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md); }
   .filters__main { display: grid; grid-template-columns: repeat(8, minmax(110px, 1fr)); gap: 10px; }
   .filters label { display: grid; gap: 7px; min-width: 0; }
-  .filters label > span { color: var(--muted); font-family: var(--font-mono); font-size: 8px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .filters label > span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
   .filters input:not([type="checkbox"]),
   .filters select {
     width: 100%;
     min-width: 0;
-    min-height: 46px;
+    min-height: 44px;
     padding: 0 10px;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    font-size: 11px;
+    color: var(--ink);
+    background: var(--canvas);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
   }
   .filters input:focus,
   .filters select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1); outline: none; }
@@ -166,9 +168,9 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
 
   .catalog-page__toolbar { display: flex; min-height: 74px; align-items: center; justify-content: space-between; gap: 18px; }
   .catalog-page__toolbar p { margin: 0; font-family: var(--font-mono); font-size: 11px; }
-  .catalog-page__switch { display: none; gap: 4px; padding: 4px; background: var(--surface); border-radius: 10px; }
-  .catalog-page__switch button { min-width: 84px; min-height: 40px; padding: 0 12px; background: transparent; border-radius: 7px; font-size: 12px; font-weight: 700; }
-  .catalog-page__switch button[aria-pressed="true"] { color: #fff; background: var(--ink); }
+  .catalog-page__switch { display: none; gap: 0; padding: 0; overflow: hidden; border: 1.5px solid var(--line); border-radius: var(--radius-sm); }
+  .catalog-page__switch button { min-width: 84px; min-height: 40px; padding: 0 14px; color: var(--muted); background: var(--paper); font-size: 13px; font-weight: 600; }
+  .catalog-page__switch button[aria-pressed="true"] { color: #fbfaf5; background: var(--ink); }
 
   .catalog-page__layout { display: grid; grid-template-columns: minmax(380px, 0.78fr) minmax(520px, 1.22fr); align-items: start; gap: 20px; }
   .catalog-page__list { position: relative; min-width: 0; }
@@ -200,9 +202,10 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
     border-radius: var(--radius-md);
   }
   .catalog-page__empty > span { color: var(--accent); font-family: var(--font-mono); font-size: 36px; }
-  .catalog-page__empty h2 { max-width: 500px; margin: 18px auto 0; font-size: clamp(25px, 3vw, 38px); letter-spacing: -0.04em; }
-  .catalog-page__empty p { max-width: 480px; margin: 12px auto 0; color: var(--muted); font-size: 13px; }
-  .catalog-page__empty button { min-height: 46px; margin: 24px auto 0; padding: 0 18px; color: #fff; background: var(--accent); border-radius: 9px; font-size: 12px; font-weight: 750; }
+  .catalog-page__empty h2 { max-width: 500px; margin: 18px auto 0; font-family: var(--font-display); font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: 0.01em; text-transform: uppercase; }
+  .catalog-page__empty p { max-width: 480px; margin: 12px auto 0; color: var(--muted); font-size: 14px; }
+  .catalog-page__empty button { min-height: 46px; margin: 24px auto 0; padding: 0 20px; color: #fbfaf5; background: var(--accent); border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; }
+  .catalog-page__empty button:hover { background: var(--accent-hover); }
 
   .catalog-page__map { position: sticky; top: calc(var(--header-height) + 16px); min-width: 0; }
   .catalog-page__map-head { display: flex; min-height: 52px; align-items: start; justify-content: space-between; gap: 16px; padding: 0 4px 12px; }
@@ -213,7 +216,7 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
   .catalog-page__map-head > div:last-child span { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 9px; }
   .catalog-page__map-head i { width: 7px; height: 7px; background: var(--positive); border-radius: 50%; }
   .catalog-page__map-head span:nth-child(2) i { background: var(--warning); }
-  .catalog-page__map-head span:nth-child(3) i { background: var(--accent); }
+  .catalog-page__map-head span:nth-child(3) i { background: var(--busy); }
   .catalog-page__map-note { min-height: 22px; margin: 9px 4px 0; color: var(--muted); font-size: 10px; }
 
   @media (max-width: 1240px) {

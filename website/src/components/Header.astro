@@ -18,7 +18,7 @@ const nav = [
 ---
 <header class="header" data-site-header>
   <div class="header__inner container">
-    <a class="header__brand" href="/" aria-label="NOESIS |ad — на главную">
+    <a class="header__brand" href="/" aria-label="NOESIS ad — на главную">
       <BrandMark />
     </a>
 
@@ -36,9 +36,10 @@ const nav = [
     <div class="header__actions">
       <a class="header__phone" href={chrome.phoneHref}>{chrome.phoneDisplay}</a>
       <a class="header__selection" href="/selection" aria-current={current === "selection" ? "page" : undefined}>
-        Подборка
+        <span class="header__selection-label">Подборка</span>
         <span class="header__count" data-shortlist-count aria-label="Позиций в подборке">0</span>
       </a>
+      <a class="header__cta" href="/catalog">Подобрать размещение</a>
       <button
         class="header__menu-button"
         type="button"
@@ -76,18 +77,18 @@ const nav = [
     position: sticky;
     z-index: 100;
     top: 0;
-    height: var(--header-height);
-    border-bottom: 1px solid rgba(25, 25, 24, 0.12);
-    background: color-mix(in srgb, var(--paper) 94%, transparent);
-    backdrop-filter: blur(14px);
+    min-height: var(--header-height);
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--canvas) 94%, transparent);
+    backdrop-filter: blur(8px);
   }
 
   .header__inner {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    height: 100%;
-    gap: clamp(24px, 4vw, 72px);
+    min-height: var(--header-height);
+    gap: clamp(20px, 3vw, 56px);
   }
 
   .header__brand {
@@ -99,25 +100,24 @@ const nav = [
   .header__nav {
     display: flex;
     align-items: center;
-    gap: clamp(18px, 2vw, 34px);
+    gap: clamp(16px, 1.8vw, 28px);
   }
 
-  .header__nav a,
-  .header__phone {
+  .header__nav a {
     position: relative;
     display: inline-flex;
     min-height: 44px;
     align-items: center;
-    color: var(--ink-soft);
-    font-size: 13px;
-    font-weight: 650;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
     white-space: nowrap;
   }
 
   .header__nav a::after {
     position: absolute;
     right: 0;
-    bottom: 4px;
+    bottom: 8px;
     left: 0;
     height: 2px;
     transform: scaleX(0);
@@ -127,6 +127,7 @@ const nav = [
     transition: transform 180ms ease;
   }
 
+  .header__nav a:hover { color: var(--accent); }
   .header__nav a:hover::after,
   .header__nav a[aria-current="page"]::after {
     transform: scaleX(1);
@@ -135,42 +136,68 @@ const nav = [
   .header__actions {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
   }
 
+  .header__phone {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
   .header__phone:hover { color: var(--accent); }
 
   .header__selection {
     display: inline-flex;
-    min-height: 46px;
+    min-height: 38px;
     align-items: center;
-    gap: 10px;
-    padding: 0 16px;
-    color: #fff;
-    background: var(--accent);
-    border-radius: 999px;
+    gap: 8px;
+    padding: 0 14px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-radius: var(--radius-sm);
     font-size: 13px;
-    font-weight: 750;
-    transition: background 180ms ease, transform 180ms ease;
+    font-weight: 600;
+    transition: background 160ms ease, color 160ms ease;
   }
-
-  .header__selection:hover {
-    transform: translateY(-1px);
-    background: var(--accent-hover);
-  }
+  .header__selection:hover { color: #fbfaf5; background: var(--ink); }
 
   .header__count {
-    display: grid;
-    min-width: 22px;
-    height: 22px;
-    place-items: center;
+    display: inline-flex;
+    min-width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
     padding-inline: 5px;
-    color: var(--accent);
-    background: #fff;
+    color: #fbfaf5;
+    background: var(--accent);
     border-radius: 999px;
     font-family: var(--font-mono);
     font-size: 11px;
+    font-weight: 600;
   }
+
+  .header__cta {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    padding: 0 16px;
+    color: #fbfaf5;
+    background: var(--accent);
+    border: 1.5px solid var(--accent);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .header__cta:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
   .header__menu-button {
     display: none;
@@ -198,7 +225,7 @@ const nav = [
     height: 100dvh;
     max-height: 100dvh;
     overflow: hidden;
-    background: rgba(25, 25, 24, 0.48);
+    background: rgba(34, 32, 28, 0.48);
     overscroll-behavior: contain;
   }
 
@@ -211,8 +238,8 @@ const nav = [
     padding: 20px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    background: var(--paper);
-    box-shadow: -20px 0 60px rgba(25, 25, 24, 0.18);
+    background: var(--canvas);
+    box-shadow: -20px 0 60px rgba(34, 32, 28, 0.18);
   }
 
   .mobile-nav__top,
@@ -229,22 +256,24 @@ const nav = [
     color: var(--muted);
     background: transparent;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   .mobile-nav nav {
     display: grid;
-    margin-block: 54px;
+    margin-block: 44px;
   }
 
   .mobile-nav nav a {
     display: flex;
-    min-height: 58px;
+    min-height: 56px;
     align-items: center;
     border-bottom: 1px solid var(--line);
-    font-size: clamp(22px, 7vw, 32px);
-    font-weight: 700;
-    letter-spacing: -0.04em;
+    font-family: var(--font-display);
+    font-size: clamp(22px, 6vw, 30px);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
   }
 
   .mobile-nav__bottom {
@@ -258,20 +287,21 @@ const nav = [
     align-items: center;
     justify-content: center;
     gap: 10px;
-    border: 1px solid var(--line-strong);
-    border-radius: 999px;
-    font-weight: 750;
+    border: 1.5px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
   }
 
   .mobile-nav__bottom a:first-child {
-    color: #fff;
+    color: #fbfaf5;
     background: var(--accent);
     border-color: var(--accent);
   }
 
   @media (max-width: 1180px) {
     .header__nav,
-    .header__phone { display: none; }
+    .header__phone,
+    .header__cta { display: none; }
     .header__inner { grid-template-columns: auto 1fr; }
     .header__actions { justify-content: flex-end; }
     .header__menu-button { display: grid; }
@@ -279,15 +309,11 @@ const nav = [
 
   @media (max-width: 560px) {
     .header__selection {
-      width: 46px;
+      width: 40px;
       justify-content: center;
       padding: 0;
-      font-size: 0;
     }
-    .header__selection::before {
-      font-size: 19px;
-      content: "+";
-    }
-    .header__count { position: absolute; transform: translate(16px, -15px); }
+    .header__selection-label { display: none; }
+    .header__count { min-width: 18px; height: 18px; }
   }
 </style>

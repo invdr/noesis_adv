@@ -41,8 +41,8 @@ const ogImage = absUrl(image);
 // Сниппет Яндекс.Метрики (Веха 4.3). Грузим всегда, когда задан ID; cookie-баннер
 // информирующий, согласие не гейтит загрузку (продуктовое решение). Анонимизация:
 // `webvisor:false` (без записи сессий); точная анонимизация IP — настройка
-// счётчика в кабинете Метрики. Заодно вешаем глобальные `window.ymGoal` (цели из
-// main.js/page.js) и делегированный клик по телефону — работает на всех страницах.
+// счётчика в кабинете Метрики. Заодно вешаем глобальный `window.ymGoal` (цели) и
+// делегированный клик по телефону — работает на всех страницах.
 const counter = Number(metrikaId);
 const metrikaScript = metrikaId
   ? `(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");` +
@@ -54,6 +54,8 @@ const metrikaScript = metrikaId
 ---
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="theme-color" content="#f2efe8" />
 <title>{title}</title>
 <meta name="description" content={description} />
 {noindex && <meta name="robots" content="noindex,follow" />}
@@ -74,7 +76,7 @@ const metrikaScript = metrikaId
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
 {jsonLd && (
   <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />

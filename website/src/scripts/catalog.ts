@@ -161,10 +161,10 @@ function init(): void {
   const markerColor = (id: string): string => {
     if (id === selectedId) return "#8B0000";
     const status = availability?.get(id)?.status;
-    if (status === "free") return "#17643c";
-    if (status === "partial") return "#8a5412";
-    if (status === "occupied") return "#77736c";
-    return "#333330";
+    if (status === "free") return "#2e7d4e";
+    if (status === "partial") return "#a0720f";
+    if (status === "occupied") return "#77716a";
+    return "#22201c";
   };
 
   const setSelected = (id: string) => {

@@ -7,7 +7,7 @@ const { categories } = Astro.props;
 {categories.length > 0 && (
   <section class="materials" id="materials">
     <div class="container materials__inner">
-      <SectionHeading eyebrow="Материалы" title="Файлы для планирования и производства" description="Презентации, технические требования и документы привязаны к реальным конструкциям каталога." tone="light" />
+      <SectionHeading eyebrow="Материалы" title="Файлы для планирования и производства" description="Презентации, технические требования и документы привязаны к реальным конструкциям каталога." />
       <div class="materials__list">
         {categories.slice(0, 5).map((category, index) => (
           <a href={`/materials#${category.category.slug}`}>
@@ -24,24 +24,27 @@ const { categories } = Astro.props;
 )}
 
 <style>
-  .materials { padding: clamp(60px, 8vw, 108px) 0; color: #fff; background: var(--accent); }
+  .materials { padding: clamp(56px, 7vw, 92px) 0; background: var(--canvas); }
   .materials__inner { display: grid; grid-template-columns: minmax(280px, 0.75fr) minmax(480px, 1.25fr); gap: clamp(34px, 5vw, 72px); }
   .materials__list { display: grid; align-content: start; }
   .materials__list > a {
     display: grid;
-    min-height: 58px;
+    min-height: 60px;
     grid-template-columns: 44px 1fr auto 30px;
     align-items: center;
     gap: 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    color: var(--ink);
+    border-top: 1px solid var(--line);
   }
-  .materials__list > a:last-child { border-bottom: 1px solid rgba(255, 255, 255, 0.28); }
-  .materials__list span,
-  .materials__list small { color: rgba(255, 255, 255, 0.58); font-family: var(--font-mono); font-size: 9px; }
-  .materials__list strong { font-size: 15px; }
-  .materials__list b { text-align: right; font-size: 18px; }
-  .materials__list > a:hover strong { text-decoration: underline; text-underline-offset: 4px; }
+  .materials__list > a:last-child { border-bottom: 1px solid var(--line); }
+  .materials__list span { color: var(--accent); font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
+  .materials__list small { color: var(--faint); font-family: var(--font-mono); font-size: 11px; }
+  .materials__list strong { font-size: 16px; font-weight: 600; }
+  .materials__list b { text-align: right; color: var(--muted); font-size: 18px; }
+  .materials__list > a:hover strong { color: var(--accent); }
+  .materials__list > a:hover b { color: var(--accent); }
   .materials__all { grid-template-columns: 44px 1fr 30px !important; }
+  .materials__all strong { color: var(--accent); }
   @media (max-width: 900px) { .materials__inner { grid-template-columns: 1fr; } }
   @media (max-width: 560px) { .materials__list > a { grid-template-columns: 30px 1fr 24px; } .materials__list small { display: none; } }
 </style>

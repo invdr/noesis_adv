@@ -144,7 +144,7 @@ function init(): void {
       card.classList.toggle("is-map-active", card.dataset.constructionCard === id);
     });
     placemarks.forEach((placemark, markerId) => {
-      (placemark as { options: { set: (name: string, value: string) => void } }).options.set("iconColor", markerId === id ? "#8B0000" : "#333330");
+      (placemark as { options: { set: (name: string, value: string) => void } }).options.set("iconColor", markerId === id ? "#8B0000" : "#22201c");
     });
   };
 
@@ -174,7 +174,7 @@ function init(): void {
           balloonContentBody: `${escapeHtml(item.address)}<br>${escapeHtml(item.formatLabel)} · ${escapeHtml(item.priceLabel)}<br><strong>${escapeHtml(sideText)}</strong>`,
           balloonContentFooter: item.isSoon ? "Скоро в каталоге" : `<a href="${escapeHtml(item.href)}">Открыть карточку</a>`,
         },
-        { preset: "islands#circleDotIcon", iconColor: item.id === selectedId ? "#8B0000" : "#333330" },
+        { preset: "islands#circleDotIcon", iconColor: item.id === selectedId ? "#8B0000" : "#22201c" },
       );
       (placemark as { events: { add: (name: string, callback: () => void) => void } }).events.add("click", () => focusCard(item.id));
       placemarks.set(item.id, placemark);

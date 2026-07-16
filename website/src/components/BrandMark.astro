@@ -1,12 +1,18 @@
 ---
 interface Props {
   tone?: "dark" | "light";
+  /** Базовый размер знака в px (масштабирует всю композицию). */
+  size?: number;
 }
 
-const { tone = "dark" } = Astro.props;
+const { tone = "dark", size = 24 } = Astro.props;
 ---
-<span class:list={["brand", `brand--${tone}`]} aria-label="NOESIS |ad">
-  <span class="brand__name">NOESIS</span><span class="brand__divider">|</span><span class="brand__suffix">ad</span>
+<span
+  class:list={["brand", `brand--${tone}`]}
+  style={`font-size:${size}px`}
+  aria-label="NOESIS ad"
+>
+  <span class="brand__name">NOESIS</span><span class="brand__bar" aria-hidden="true"></span><span class="brand__suffix">AD</span>
 </span>
 
 <style>
@@ -14,26 +20,35 @@ const { tone = "dark" } = Astro.props;
     display: inline-flex;
     align-items: baseline;
     white-space: nowrap;
-    font-family: var(--font-sans);
-    font-weight: 800;
-    letter-spacing: -0.045em;
     line-height: 1;
   }
 
-  .brand--dark { color: var(--ink); }
-  .brand--light { color: #fff; }
+  .brand__name {
+    font-family: var(--font-display);
+    font-size: 1em;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
 
-  .brand__name { font-size: 22px; }
-  .brand__divider {
-    margin-inline: 7px 5px;
-    color: var(--accent);
-    font-weight: 500;
+  .brand__bar {
+    align-self: center;
+    width: 0.13em;
+    height: 0.72em;
+    margin-inline: 0.3em 0.28em;
+    background: var(--accent);
+    transform: translateY(0.06em);
   }
+
   .brand__suffix {
-    color: currentColor;
     font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0;
+    font-size: 0.52em;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--accent);
   }
+
+  .brand--dark .brand__name { color: var(--ink); }
+  .brand--light .brand__name { color: #fbfaf5; }
+  .brand--light .brand__bar { background: var(--accent-light); }
+  .brand--light .brand__suffix { color: var(--accent-light); }
 </style>

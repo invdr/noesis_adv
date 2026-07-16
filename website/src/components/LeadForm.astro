@@ -108,9 +108,9 @@ const {
   }
 
   .lead-form--dark {
-    color: #fff;
-    background: #252522;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #fbfaf5;
+    background: var(--dark);
+    border: 1px solid var(--dark-line);
   }
 
   .lead-form--plain {
@@ -132,10 +132,12 @@ const {
   .lead-form__intro h2 {
     max-width: 540px;
     margin: 0;
-    font-size: clamp(30px, 4vw, 54px);
-    font-weight: 720;
-    letter-spacing: -0.055em;
-    line-height: 1.02;
+    font-family: var(--font-display);
+    font-size: clamp(28px, 3.6vw, 46px);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.05;
+    text-transform: uppercase;
   }
 
   .lead-form__intro > p:not(.lead-form__eyebrow) {
@@ -182,10 +184,11 @@ const {
     min-height: 50px;
     padding: 13px 15px;
     color: var(--ink);
-    background: #fff;
-    border: 1px solid var(--line-strong);
+    background: var(--canvas);
+    border: 1.5px solid var(--line);
     border-radius: var(--radius-sm);
     outline: none;
+    font-family: var(--font-sans);
     transition: border-color 160ms ease, box-shadow 160ms ease;
   }
 
@@ -246,10 +249,17 @@ const {
   }
   .lead-form button[type="submit"]:disabled { opacity: 0.65; }
 
+  .lead-form--dark input:not([type="checkbox"]),
+  .lead-form--dark select,
+  .lead-form--dark textarea {
+    background: var(--paper);
+    border-color: var(--paper);
+  }
+
   .lead-form__status {
     margin: 0;
     padding: 12px 14px;
-    color: #7b1111;
+    color: var(--danger);
     background: var(--danger-soft);
     border-radius: var(--radius-sm);
     font-size: 13px;
