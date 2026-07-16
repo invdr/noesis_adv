@@ -98,11 +98,11 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
 
   .card__media {
     position: relative;
-    min-height: 190px;
+    min-height: 168px;
     overflow: hidden;
     background: #d8d4cc;
   }
-  .card--featured .card__media { min-height: 240px; }
+  .card--featured .card__media { min-height: 210px; }
   .card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform 500ms ease; }
   .card:hover .card__media img { transform: scale(1.025); }
   .card__media::after {
@@ -156,6 +156,7 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
     z-index: 2;
     right: 14px;
     bottom: 14px;
+    max-width: calc(100% - 24px);
     margin: 0;
     color: var(--ink);
     background: rgba(251, 250, 245, 0.94);
@@ -168,37 +169,39 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
   .card__availability[data-state="partial"]::before { content: "◐"; color: var(--warning); }
   .card__availability[data-state="occupied"]::before { content: "✕"; color: var(--busy); }
 
-  .card__body { display: grid; gap: 12px; padding: 16px; }
-  .card__location { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; }
+  .card__body { display: grid; gap: 10px; padding: 14px; }
+  .card__location { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; }
   .card__location span {
+    min-width: 0;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   .card h3 {
     margin: 0;
+    overflow-wrap: anywhere;
     font-size: clamp(17px, 1.5vw, 20px);
     font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1.18;
   }
-  .card__address { min-height: 40px; margin: 0; color: var(--muted); font-size: 13px; }
+  .card__address { min-height: 20px; margin: 0; color: var(--muted); font-size: 13px; }
 
   .card__facts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px 10px;
     margin: 0;
-    padding-block: 12px;
+    padding-block: 10px;
     border-block: 1px solid var(--line);
   }
   .card__facts div { min-width: 0; }
   .card__facts dt {
     color: var(--faint);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
@@ -243,7 +246,7 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
 
   @media (max-width: 420px) {
     .card__actions { grid-template-columns: 1fr; }
-    .card__media { min-height: 230px; }
+    .card__media { min-height: 190px; }
   }
 
   @media (prefers-reduced-motion: reduce) {

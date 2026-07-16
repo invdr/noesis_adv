@@ -128,7 +128,7 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
   .filters { margin-top: 40px; padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md); }
   .filters__main { display: grid; grid-template-columns: repeat(8, minmax(110px, 1fr)); gap: 10px; }
   .filters label { display: grid; gap: 7px; min-width: 0; }
-  .filters label > span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+  .filters label > span { color: var(--muted); font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
   .filters input:not([type="checkbox"]),
   .filters select {
     width: 100%;
@@ -210,14 +210,14 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
   .catalog-page__map { position: sticky; top: calc(var(--header-height) + 16px); min-width: 0; }
   .catalog-page__map-head { display: flex; min-height: 52px; align-items: start; justify-content: space-between; gap: 16px; padding: 0 4px 12px; }
   .catalog-page__map-head > div:first-child { display: grid; gap: 2px; }
-  .catalog-page__map-head > div:first-child span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; }
-  .catalog-page__map-head strong { font-size: 12px; }
-  .catalog-page__map-head > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px 10px; }
-  .catalog-page__map-head > div:last-child span { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 9px; }
+  .catalog-page__map-head > div:first-child span { color: var(--muted); font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; }
+  .catalog-page__map-head strong { font-size: 13px; }
+  .catalog-page__map-head > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px 12px; }
+  .catalog-page__map-head > div:last-child span { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
   .catalog-page__map-head i { width: 7px; height: 7px; background: var(--positive); border-radius: 50%; }
   .catalog-page__map-head span:nth-child(2) i { background: var(--warning); }
   .catalog-page__map-head span:nth-child(3) i { background: var(--busy); }
-  .catalog-page__map-note { min-height: 22px; margin: 9px 4px 0; color: var(--muted); font-size: 10px; }
+  .catalog-page__map-note { min-height: 22px; margin: 9px 4px 0; color: var(--muted); font-size: 11px; }
 
   @media (max-width: 1240px) {
     .filters__main { grid-template-columns: repeat(4, minmax(0, 1fr)); }

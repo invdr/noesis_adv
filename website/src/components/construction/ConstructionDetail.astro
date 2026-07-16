@@ -206,7 +206,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
 
 <style>
   .detail { padding: 20px 0 clamp(80px, 10vw, 150px); }
-  .detail__breadcrumbs { display: flex; min-height: 52px; align-items: center; gap: 9px; overflow: hidden; color: var(--muted); font-family: var(--font-mono); font-size: 9px; white-space: nowrap; }
+  .detail__breadcrumbs { display: flex; min-height: 52px; align-items: center; gap: 9px; overflow: hidden; color: var(--muted); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
   .detail__breadcrumbs a:hover { color: var(--accent); }
   .detail__breadcrumbs > span:last-child { overflow: hidden; text-overflow: ellipsis; }
   .detail__hero { display: grid; grid-template-columns: minmax(500px, 1.25fr) minmax(360px, 0.75fr); min-height: 720px; gap: 20px; }
@@ -214,14 +214,14 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__media > img { width: 100%; height: 100%; object-fit: cover; }
   .detail__media::after { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 20, 18, 0.24), transparent 38%, rgba(20, 20, 18, 0.42)); content: ""; pointer-events: none; }
   .detail__media-fallback { display: grid; width: 100%; height: 100%; min-height: 620px; place-items: center; color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
-  .detail__media-code { position: absolute; z-index: 2; right: 18px; bottom: 18px; left: 18px; display: flex; justify-content: space-between; gap: 16px; color: #fff; font-family: var(--font-mono); font-size: 9px; }
+  .detail__media-code { position: absolute; z-index: 2; right: 18px; bottom: 18px; left: 18px; display: flex; justify-content: space-between; gap: 16px; color: #fff; font-family: var(--font-mono); font-size: 11px; }
   .detail__badges { position: absolute; z-index: 2; top: 18px; left: 18px; display: flex; flex-wrap: wrap; gap: 7px; }
   .detail__badges span { padding: 6px 10px; color: #fbfaf5; background: var(--accent); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 10px; }
 
   .detail__summary { display: flex; min-width: 0; flex-direction: column; padding: clamp(22px, 3vw, 38px); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); }
   .detail__summary-top > p,
   .detail__side-picker > span,
-  .detail__period > span { margin: 0; color: var(--accent); font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .detail__period > span { margin: 0; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
   .detail__summary h1 { margin: 15px 0 0; font-family: var(--font-display); font-size: clamp(34px, 4.2vw, 52px); font-weight: 600; letter-spacing: 0.01em; line-height: 1.04; text-transform: uppercase; }
   .detail__summary address { margin-top: 18px; color: var(--muted); font-size: 14px; font-style: normal; }
   .detail__side-picker { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line); }
@@ -229,12 +229,12 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__side-picker button { display: grid; min-height: 62px; align-content: center; gap: 3px; padding: 8px 12px; color: var(--ink); background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius-sm); text-align: left; }
   .detail__side-picker button[aria-pressed="true"] { color: #fbfaf5; background: var(--ink); border-color: var(--ink); }
   .detail__side-picker b { font-family: var(--font-mono); font-size: 16px; }
-  .detail__side-picker small { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+  .detail__side-picker small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
   .detail__side-picker button[aria-pressed="true"] small { color: rgba(251, 250, 245, 0.72); }
   .detail__side-data { margin-top: 18px; }
   .detail__side-data dl { display: grid; gap: 10px; margin: 0; }
   .detail__side-data dl > div { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-  .detail__side-data dt { color: var(--muted); font-size: 9px; }
+  .detail__side-data dt { color: var(--muted); font-size: 11px; }
   .detail__side-data dd { margin: 0; text-align: right; font-size: 11px; font-weight: 650; }
   .detail__period { margin-top: auto; padding-top: 24px; }
   .detail__period > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
@@ -250,10 +250,10 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__add:hover:not(:disabled) { background: var(--accent-hover); }
   .detail__add.is-added { color: var(--accent); background: var(--accent-soft); }
   .detail__add:disabled { opacity: 0.55; }
-  .detail__disclaimer { margin: 8px 0 0; color: var(--muted); font-size: 9px; }
+  .detail__disclaimer { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
 
   .detail__gallery { margin-top: 20px; }
-  .detail__gallery-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; }
+  .detail__gallery-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; }
   .detail__gallery-strip { display: grid; grid-auto-columns: minmax(150px, 230px); grid-auto-flow: column; gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
   .detail__gallery-strip button { min-height: 140px; padding: 0; overflow: hidden; background: var(--surface); border: 2px solid transparent; border-radius: 12px; scroll-snap-align: start; }
   .detail__gallery-strip button[aria-pressed="true"] { border-color: var(--accent); }
@@ -264,7 +264,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__description > p,
   .detail__documents-head > p,
   .detail__location-copy > p,
-  .detail__availability-head p { margin: 0 0 18px; color: var(--accent); font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .detail__availability-head p { margin: 0 0 18px; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
   .detail__description h2 { margin: 0; font-family: var(--font-display); font-size: clamp(28px, 4vw, 48px); font-weight: 600; letter-spacing: 0.01em; line-height: 1.08; text-transform: uppercase; }
   .detail__facts dl { display: grid; margin: 0; }
   .detail__facts dl > div { display: flex; min-height: 56px; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--dark-line); }
@@ -284,7 +284,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__legend span:nth-child(3) i { background: var(--ink); border-color: var(--ink); border-radius: 50%; }
   .detail__calendar-shell { display: grid; grid-template-columns: 200px 1fr; gap: 28px; margin-top: 38px; padding: 26px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md); }
   .detail__calendar-side { padding-right: 24px; border-right: 1px solid var(--line); }
-  .detail__calendar-side > span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; }
+  .detail__calendar-side > span { color: var(--muted); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; }
   .detail__calendar-side > strong { display: block; margin-top: 10px; color: var(--accent); font-family: var(--font-mono); font-size: 56px; line-height: 1; }
   .detail__calendar-side p { margin: 20px 0 0; color: var(--muted); font-size: 11px; }
   .detail__calendar { display: grid; grid-template-columns: repeat(2, minmax(250px, 1fr)); gap: 30px; min-width: 0; }
@@ -293,7 +293,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   :global(.availability-weekdays),
   :global(.availability-days) { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
   :global(.availability-weekdays span) { padding: 4px 0; color: var(--muted); font-family: var(--font-mono); font-size: 8px; text-align: center; }
-  :global(.availability-day) { display: grid; min-width: 28px; min-height: 30px; place-items: center; padding: 0; color: var(--ink); background: var(--positive-soft); border: 1px solid transparent; border-radius: 6px; font-family: var(--font-mono); font-size: 9px; }
+  :global(.availability-day) { display: grid; min-width: 28px; min-height: 30px; place-items: center; padding: 0; color: var(--ink); background: var(--positive-soft); border: 1px solid transparent; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; }
   :global(.availability-day[data-state="busy"]) { color: var(--busy); background: var(--busy-soft); text-decoration: line-through; }
   :global(.availability-day[data-today="true"]) { color: #fbfaf5; background: var(--ink); border-radius: 50%; }
   :global(.availability-day[data-outside="true"]) { visibility: hidden; }
@@ -317,7 +317,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__document-groups a { display: grid; min-height: 64px; grid-template-columns: 1fr auto 24px; align-items: center; gap: 16px; border-top: 1px solid var(--line); }
   .detail__document-groups a:last-child { border-bottom: 1px solid var(--line); }
   .detail__document-groups a > span { font-size: 13px; font-weight: 650; }
-  .detail__document-groups small { color: var(--muted); font-family: var(--font-mono); font-size: 9px; }
+  .detail__document-groups small { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
   .detail__document-groups a:hover > span { color: var(--accent); }
   .detail__form { padding-top: clamp(80px, 10vw, 140px); }
 

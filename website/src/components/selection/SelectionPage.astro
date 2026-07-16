@@ -97,7 +97,7 @@ import LeadForm from "../LeadForm.astro";
   :global(.selection-item__media img) { width: 100%; height: 100%; object-fit: cover; }
   :global(.selection-item__media span) { display: grid; width: 100%; height: 100%; place-items: center; color: var(--muted); font-family: var(--font-mono); font-size: 10px; }
   :global(.selection-item__body) { display: grid; min-width: 0; align-content: start; gap: 9px; padding: 6px 0; }
-  :global(.selection-item__code) { color: var(--accent); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+  :global(.selection-item__code) { color: var(--accent); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
   :global(.selection-item h3) { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.18; }
   :global(.selection-item__address) { margin: 0; color: var(--muted); font-size: 11px; }
   :global(.selection-item__edit) { display: grid; grid-template-columns: 0.8fr 1fr 1fr; gap: 8px; margin-top: 8px; }
@@ -108,9 +108,9 @@ import LeadForm from "../LeadForm.astro";
   :global(.selection-item select:focus),
   :global(.selection-item input:focus) { border-color: var(--accent); outline: none; }
   :global(.selection-item__aside) { display: flex; flex-direction: column; align-items: stretch; padding: 6px 0; text-align: right; }
-  :global(.selection-item__aside > span) { color: var(--muted); font-size: 9px; }
+  :global(.selection-item__aside > span) { color: var(--muted); font-size: 11px; }
   :global(.selection-item__aside strong) { margin-top: 4px; font-size: 14px; }
-  :global(.selection-item__status) { margin: 18px 0 0; padding: 9px 10px; color: var(--muted); background: var(--canvas); border-radius: 8px; font-size: 9px; text-align: left; }
+  :global(.selection-item__status) { margin: 18px 0 0; padding: 9px 10px; color: var(--muted); background: var(--canvas); border-radius: 8px; font-size: 11px; text-align: left; }
   :global(.selection-item__status[data-state="free"]) { color: var(--positive); background: var(--positive-soft); }
   :global(.selection-item__status[data-state="partial"]) { color: var(--warning); background: var(--warning-soft); }
   :global(.selection-item__status[data-state="occupied"]) { color: var(--busy); background: var(--busy-soft); }

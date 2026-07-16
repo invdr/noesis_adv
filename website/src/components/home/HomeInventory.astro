@@ -72,7 +72,7 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center, zoom: 12 } }
   .inventory__map { position: sticky; top: calc(var(--header-height) + 18px); min-width: 0; }
   .inventory__map-head { display: flex; min-height: 62px; align-items: center; justify-content: space-between; gap: 16px; padding: 0 4px 14px; }
   .inventory__map-head > div:first-child { display: grid; gap: 2px; }
-  .inventory__map-head span { color: var(--muted); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .inventory__map-head span { color: var(--muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
   .inventory__map-head strong { font-size: 13px; }
   .inventory__legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; }
   .inventory__legend span { display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0; text-transform: none; }
@@ -87,12 +87,11 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center, zoom: 12 } }
   @media (max-width: 900px) {
     .inventory__heading { align-items: start; flex-direction: column; }
     .inventory__layout { grid-template-columns: 1fr; }
-    .inventory__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .inventory__list { grid-template-columns: 1fr; }
     .inventory__map { position: static; grid-row: 1; }
   }
   @media (max-width: 620px) {
     .inventory { padding-top: 76px; }
-    .inventory__list { grid-template-columns: 1fr; }
     .inventory__map-head { align-items: start; flex-direction: column; }
     .inventory__legend { justify-content: flex-start; }
   }
