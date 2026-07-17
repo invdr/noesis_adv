@@ -1,9 +1,16 @@
 import type { CatalogItem } from "../lib/api";
+import {
+  aggregateSides,
+  CONSTRUCTION_STATUS_TEXT,
+  sideStatusShort,
+  type OccupancyStatus,
+  type UiStatus,
+} from "./availability";
 import { onShortlistChange, readShortlist, shortlistKey, upsertShortlist } from "./shortlist";
 import { loadYandexMaps, MapUnavailableError, waitYMapsReady } from "./yandex-map";
 
-type Status = "free" | "partial" | "occupied";
-type SideStatus = "free" | "partiallyOccupied" | "occupied";
+type Status = UiStatus;
+type SideStatus = OccupancyStatus;
 
 interface AvailabilitySide {
   id: string;
@@ -30,12 +37,6 @@ interface Filters {
   onlyFree: boolean;
 }
 
-const STATUS_LABEL: Record<Status, string> = {
-  free: "Есть свободная сторона",
-  partial: "Частично занято",
-  occupied: "Все стороны заняты",
-};
-
 function parseJson<T>(id: string): T | null {
   const node = document.getElementById(id);
   try { return node?.textContent ? JSON.parse(node.textContent) as T : null; } catch { return null; }
@@ -60,12 +61,6 @@ function numberOrNull(value: FormDataEntryValue | null): number | null {
   if (typeof value !== "string" || !value.trim()) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
-}
-
-function aggregate(sides: AvailabilitySide[]): Status {
-  if (!sides.length || sides.some((side) => side.status === "free")) return "free";
-  if (sides.every((side) => side.status === "occupied")) return "occupied";
-  return "partial";
 }
 
 function escapeHtml(value: unknown): string {
@@ -202,7 +197,7 @@ function init(): void {
         node.textContent = "Проверяем…";
         node.removeAttribute("data-state");
       } else {
-        node.textContent = STATUS_LABEL[entry.status];
+        node.textContent = CONSTRUCTION_STATUS_TEXT[entry.status];
         node.dataset.state = entry.status;
       }
     });
@@ -284,7 +279,7 @@ function init(): void {
 
   const balloon = (item: CatalogItem): string => {
     const entry = availability?.get(item.id);
-    const sideText = entry?.sides.map((side) => `${side.code}: ${side.status === "free" ? "свободно" : side.status === "partiallyOccupied" ? "частично" : "занято"}`).join(" · ") || "Даты не выбраны";
+    const sideText = entry?.sides.map((side) => `${side.code}: ${sideStatusShort(side.status)}`).join(" · ") || "Даты не выбраны";
     return `${escapeHtml(item.address)}<br>${escapeHtml(item.formatLabel)} · ${escapeHtml(item.priceLabel)}<br><strong>${escapeHtml(sideText)}</strong>`;
   };
 
@@ -443,7 +438,7 @@ function init(): void {
       if (!response.ok) throw new Error(String(response.status));
       const body = await response.json() as { items?: { id: string; sides: AvailabilitySide[] }[] };
       if (request !== availabilityRequest) return;
-      availability = new Map((body.items ?? []).map((entry) => [entry.id, { sides: entry.sides, status: aggregate(entry.sides) }]));
+      availability = new Map((body.items ?? []).map((entry) => [entry.id, { sides: entry.sides, status: aggregateSides(entry.sides) }]));
       onlyFreeInput.disabled = false;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;

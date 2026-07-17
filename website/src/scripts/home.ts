@@ -1,4 +1,11 @@
 import type { CatalogItem } from "../lib/api";
+import {
+  aggregateSides,
+  CONSTRUCTION_STATUS_TEXT,
+  sideStatusShort,
+  type OccupancyStatus,
+  type UiStatus,
+} from "./availability";
 import { onShortlistChange, readShortlist, shortlistKey, upsertShortlist } from "./shortlist";
 import { loadYandexMaps, MapUnavailableError, waitYMapsReady } from "./yandex-map";
 
@@ -9,10 +16,10 @@ interface HomeData {
 
 interface AvailabilitySide {
   code: "A" | "B" | "C";
-  status: "free" | "partiallyOccupied" | "occupied";
+  status: OccupancyStatus;
 }
 
-interface AvailabilityEntry { status: "free" | "partial" | "occupied"; sides: AvailabilitySide[]; }
+interface AvailabilityEntry { status: UiStatus; sides: AvailabilitySide[]; }
 
 function parseJson<T>(id: string): T | null {
   const node = document.getElementById(id);
@@ -45,18 +52,6 @@ function escapeHtml(value: unknown): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
-function aggregate(sides: AvailabilitySide[]): AvailabilityEntry["status"] {
-  if (!sides.length || sides.some((side) => side.status === "free")) return "free";
-  if (sides.every((side) => side.status === "occupied")) return "occupied";
-  return "partial";
-}
-
-const STATUS_TEXT = {
-  free: "Есть свободная сторона",
-  partial: "Частично занято",
-  occupied: "Все стороны заняты",
-};
 
 function initDates(form: HTMLFormElement): { from: HTMLInputElement; to: HTMLInputElement } | null {
   const from = form.querySelector<HTMLInputElement>("[data-default-from]");
@@ -132,7 +127,7 @@ function init(): void {
         status.textContent = "Уточните период";
         status.removeAttribute("data-state");
       } else {
-        status.textContent = STATUS_TEXT[entry.status];
+        status.textContent = CONSTRUCTION_STATUS_TEXT[entry.status];
         status.dataset.state = entry.status;
       }
     });
@@ -165,7 +160,7 @@ function init(): void {
     data.items.forEach((item) => {
       if (typeof item.lat !== "number" || typeof item.lng !== "number") return;
       const entry = availability.get(item.id);
-      const sideText = entry?.sides.map((side) => `${side.code}: ${side.status === "free" ? "свободно" : side.status === "occupied" ? "занято" : "частично"}`).join(" · ") || "Выберите период";
+      const sideText = entry?.sides.map((side) => `${side.code}: ${sideStatusShort(side.status)}`).join(" · ") || "Выберите период";
       const placemark = new ymaps.Placemark(
         [item.lat, item.lng],
         {
@@ -238,7 +233,7 @@ function init(): void {
       if (!response.ok) throw new Error(String(response.status));
       const body = await response.json() as { items?: { id: string; sides: AvailabilitySide[] }[] };
       if (request !== availabilityRequest) return;
-      availability = new Map((body.items ?? []).map((item) => [item.id, { sides: item.sides, status: aggregate(item.sides) }]));
+      availability = new Map((body.items ?? []).map((item) => [item.id, { sides: item.sides, status: aggregateSides(item.sides) }]));
       annotateCards();
       renderMap();
       if (status) status.textContent = `Доступность на ${formatShortDate(dates.from.value)}–${formatShortDate(dates.to.value)} загружена.`;
