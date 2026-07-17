@@ -35,7 +35,6 @@ const pins = [
   { num: "047", x: 15, y: 15, status: "busy" },
   { num: "064", x: 62, y: 30, status: "busy" },
 ];
-const dot: Record<string, string> = { free: "#2e7d4e", partial: "#a0720f", busy: "#8a8478" };
 ---
 <section class="hero">
   <div class="hero__grid container">
@@ -78,13 +77,13 @@ const dot: Record<string, string> = { free: "#2e7d4e", partial: "#a0720f", busy:
         </svg>
         {pins.map((pin) => (
           <span class="hero__pin" style={`left:${pin.x}%;top:${pin.y}%`}>
-            {pin.num}<span class="hero__pin-dot" style={`background:${dot[pin.status]}`}></span>
+            {pin.num}<span class="hero__pin-dot" data-status={pin.status}></span>
           </span>
         ))}
         <div class="hero__legend">
-          <span><i style="background:#2e7d4e"></i>свободно</span>
-          <span><i style="background:#a0720f"></i>частично</span>
-          <span><i style="background:#8a8478"></i>занято</span>
+          <span><i data-status="free"></i>свободно</span>
+          <span><i data-status="partial"></i>частично</span>
+          <span><i data-status="busy"></i>занято</span>
         </div>
         <div class="hero__coord">Грозный · центр · 43.318 N, 45.698 E</div>
       </div>
@@ -210,6 +209,12 @@ const dot: Record<string, string> = { free: "#2e7d4e", partial: "#a0720f", busy:
     box-shadow: 0 2px 8px rgba(34, 32, 28, 0.3);
   }
   .hero__pin-dot { width: 8px; height: 8px; border-radius: 99px; }
+  .hero__pin-dot[data-status="free"],
+  .hero__legend i[data-status="free"] { background: var(--positive); }
+  .hero__pin-dot[data-status="partial"],
+  .hero__legend i[data-status="partial"] { background: var(--warning); }
+  .hero__pin-dot[data-status="busy"],
+  .hero__legend i[data-status="busy"] { background: var(--busy); }
   .hero__legend {
     position: absolute;
     left: 14px;

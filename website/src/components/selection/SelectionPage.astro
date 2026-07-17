@@ -80,7 +80,7 @@ import LeadForm from "../LeadForm.astro";
   .selection__toolbar { display: flex; min-height: 50px; align-items: center; justify-content: space-between; gap: 20px; }
   .selection__toolbar p { margin: 0; color: var(--muted); font-size: 12px; }
   .selection__toolbar strong { color: var(--ink); font-family: var(--font-mono); font-size: 20px; }
-  .selection__toolbar button { min-height: 40px; padding: 0 10px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 700; }
+  .selection__toolbar button { min-height: 44px; padding: 0 10px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 700; }
   .selection__toolbar button:hover { color: var(--accent); }
   .selection__list { display: grid; gap: 12px; }
 
@@ -116,7 +116,7 @@ import LeadForm from "../LeadForm.astro";
   :global(.selection-item__status[data-state="occupied"]) { color: var(--busy); background: var(--busy-soft); }
   :global(.selection-item__actions) { display: grid; gap: 6px; margin-top: auto; }
   :global(.selection-item__actions a),
-  :global(.selection-item__actions button) { display: flex; min-height: 40px; align-items: center; justify-content: center; padding: 0 8px; background: transparent; border: 1.5px solid var(--line); border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; }
+  :global(.selection-item__actions button) { display: flex; min-height: 44px; align-items: center; justify-content: center; padding: 0 8px; background: transparent; border: 1.5px solid var(--line); border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; }
   :global(.selection-item__actions button) { color: var(--accent); }
   :global(.selection-item__actions a:hover),
   :global(.selection-item__actions button:hover) { border-color: var(--accent); }
@@ -130,7 +130,7 @@ import LeadForm from "../LeadForm.astro";
   .selection__summary li:last-child { border-bottom: 1px solid var(--dark-line); }
   .selection__summary li span { color: var(--accent-light); font-family: var(--font-mono); font-size: 11px; }
   .selection__check { margin-top: 22px; padding: 12px; color: rgba(251, 250, 245, 0.7); background: rgba(251, 250, 245, 0.06); border-radius: var(--radius-sm); font-size: 12px; }
-  .selection__summary-note { margin: 14px 0 0; color: var(--faint); font-size: 11px; }
+  .selection__summary-note { margin: 14px 0 0; color: var(--muted); font-size: 11px; }
   .selection__request { margin-top: clamp(70px, 9vw, 120px); }
 
   @media (max-width: 1050px) {

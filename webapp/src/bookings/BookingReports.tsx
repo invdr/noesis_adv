@@ -60,7 +60,7 @@ export function BookingReports({
     <div style={compact ? { marginTop: 10, width: "100%" } : undefined}>
       {!compact && <h3 className="section-title">Фотоотчёты о размещении</h3>}
       {compact && items.length > 0 && (
-        <div className="subtle" style={{ marginTop: 2, fontSize: 12 }}>
+        <div className="subtle-sm" style={{ marginTop: 2 }}>
           Фотоотчёты
         </div>
       )}
@@ -155,7 +155,7 @@ function ReportRow({
   });
 
   return (
-    <div style={{ borderTop: "1px solid var(--border)", padding: "10px 0", marginTop: 6 }}>
+    <div className="divider-top">
       <div className="row wrap" style={{ gap: 8, alignItems: "center" }}>
         {canManage ? (
           <input
@@ -173,7 +173,7 @@ function ReportRow({
         ) : (
           <strong>{report.date}</strong>
         )}
-        <span className="subtle" style={{ fontSize: 12 }}>
+        <span className="subtle-sm">
           {report.photos.length} фото
         </span>
         {canManage && (
@@ -209,18 +209,17 @@ function ReportRow({
                 src={apiUrl(photo.url)}
                 alt={photo.originalName}
                 loading="lazy"
-                style={{ width: 96, height: 72, objectFit: "cover", borderRadius: 6, display: "block" }}
+                className="photo-thumb"
               />
             </a>
             {canManage && (
               <button
                 type="button"
-                className="icon-btn"
+                className="icon-btn photo-thumb-remove"
                 aria-label="Удалить фото"
                 onClick={() => {
                   if (window.confirm("Удалить фото безвозвратно?")) removePhoto.mutate(photo.id);
                 }}
-                style={{ position: "absolute", top: 2, right: 2, background: "rgba(255,255,255,.85)" }}
               >
                 ×
               </button>
@@ -284,7 +283,7 @@ function AddReport({
   });
 
   return (
-    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 8 }}>
+    <div className="divider-top">
       <div className="row wrap" style={{ gap: 8 }}>
         <input type="date" value={date} min={minDate} max={maxDate} onChange={(e) => setDate(e.target.value)} />
         <input

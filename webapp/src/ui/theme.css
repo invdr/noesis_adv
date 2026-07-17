@@ -1,6 +1,6 @@
 /*
  * Дизайн-система мини-CRM. Светлая, «воздушная» админка в эстетике shadcn/ui:
- * нейтральная палитра slate + синий primary, мягкие границы и тени, скруглённые
+ * нейтральная палитра slate + тёмно-красный primary, мягкие границы и тени, скруглённые
  * углы, единая типографика Inter. Базовые стили навешиваются прямо на нативные
  * элементы (button/input/select/table…), поэтому экраны выглядят опрятно даже без
  * классов; служебные классы ниже добавляют структуру (карточки, бейджи, тулбары).
@@ -702,6 +702,41 @@ td select {
 .hint {
   font-size: 13px;
   color: var(--fg-muted);
+}
+.subtle-sm {
+  font-size: 12px;
+  color: var(--fg-subtle);
+}
+/* Секция, отбитая сверху линией (фото-альбомы, формы внутри карточек). */
+.divider-top {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding-top: 12px;
+}
+/* Миниатюра фото в альбомах (прогресс строительства, фотоотчёты броней). */
+.photo-thumb {
+  display: block;
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.photo-thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(255, 255, 255, 0.85);
+}
+/* Отрицательные суммы в финансовых таблицах. */
+.amount-negative {
+  color: var(--primary);
+}
+/* Кликабельная строка таблицы с выбранным состоянием. */
+.tr-clickable {
+  cursor: pointer;
+}
+.tr-clickable.is-selected {
+  background: var(--surface-muted);
 }
 .section-title {
   font-size: 12px;

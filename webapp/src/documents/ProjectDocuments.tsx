@@ -168,7 +168,7 @@ function AddDocument({
     (kind === "link" ? name.trim() !== "" && url.trim() !== "" : file !== null);
 
   return (
-    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 8 }}>
+    <div className="divider-top">
       <div className="row wrap" style={{ gap: 8 }}>
         <select value={kind} onChange={(e) => setKind(e.target.value as DocumentKind)}>
           <option value="file">Файл</option>

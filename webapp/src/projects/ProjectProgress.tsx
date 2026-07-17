@@ -123,10 +123,10 @@ function AlbumRow({
   });
 
   return (
-    <div style={{ borderTop: "1px solid var(--border)", padding: "10px 0", marginTop: 6 }}>
+    <div className="divider-top">
       <div className="row" style={{ gap: 8, alignItems: "center" }}>
         <strong>{progressPeriodLabel(album.year, album.month)}</strong>
-        <span className="subtle" style={{ fontSize: 12 }}>
+        <span className="subtle-sm">
           {album.photos.length} фото
         </span>
         <span style={{ flex: 1 }} />
@@ -151,18 +151,17 @@ function AlbumRow({
               <img
                 src={photo.renditions?.thumbnailUrl ?? photo.url}
                 alt={photo.originalName}
-                style={{ width: 96, height: 72, objectFit: "cover", borderRadius: 6, display: "block" }}
+                className="photo-thumb"
               />
             </a>
             <button
-              className="icon-btn"
+              className="icon-btn photo-thumb-remove"
               aria-label="Удалить фото"
               onClick={() => {
                 if (window.confirm("Удалить фото безвозвратно?")) {
                   removePhoto.mutate(photo.id);
                 }
               }}
-              style={{ position: "absolute", top: 2, right: 2, background: "rgba(255,255,255,.85)" }}
             >
               ✕
             </button>
@@ -227,7 +226,7 @@ function AddAlbum({
   const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() + 1 - i);
 
   return (
-    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 8 }}>
+    <div className="divider-top">
       <div className="row wrap" style={{ gap: 8 }}>
         <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
           {PROGRESS_MONTHS.map((name, i) => (

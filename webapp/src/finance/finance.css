@@ -1,5 +1,5 @@
 /* Раздел «Финансы» (Этап 4.5). Стили scoped под .finance, чтобы не влиять на
-   общие классы (form-grid/cards-grid используются и в других разделах). */
+   общие классы темы; KPI-карточки используют общие .kpi-grid/.kpi из theme.css. */
 
 .finance .fin-tabs {
   display: flex;

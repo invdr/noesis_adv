@@ -78,13 +78,11 @@ export function InventoryAnalyticsView() {
       )}
       {analytics.data && (
         <>
-          <div className="cards-grid" style={{ marginTop: "1rem" }}>
+          <div className="kpi-grid" style={{ marginTop: "1rem" }}>
             {statCards(analytics.data).map((card) => (
-              <div key={card.label} className="card">
-                <div className="card-body">
-                  <div className="subtle">{card.label}</div>
-                  <strong style={{ fontSize: 24 }}>{card.value}</strong>
-                </div>
+              <div key={card.label} className="kpi">
+                <div className="kpi-label">{card.label}</div>
+                <div className="kpi-value">{card.value}</div>
               </div>
             ))}
           </div>

@@ -21,11 +21,12 @@
   --dark: #22201c; /* тёмные секции */
   --dark-surface: #2e2b26; /* поля на тёмном */
   --dark-line: #4a463f;
-  --positive: #2e7d4e;
+  /* Статусные тона затемнены до WCAG AA (≥4.5:1) на своих soft-фонах и бумаге. */
+  --positive: #27713f;
   --positive-soft: #e6f0e9;
-  --warning: #a0720f;
+  --warning: #8a620c;
   --warning-soft: #f5edda;
-  --busy: #77716a; /* статус «занято» */
+  --busy: #6b655d; /* статус «занято» */
   --busy-soft: #ece8df;
   --danger: #b3432e;
   --danger-soft: #f7ece9;

@@ -100,7 +100,7 @@ export function NewsView({ isAdmin }: { isAdmin: boolean }) {
               <tr key={n.id} style={{ opacity: n.isArchived ? 0.55 : 1 }}>
                 <td>
                   <button onClick={() => setEditing(n.id)} className="link-btn">{n.title}</button>
-                  <div className="subtle" style={{ fontSize: 12 }}>/news/{n.slug}</div>
+                  <div className="subtle-sm">/news/{n.slug}</div>
                 </td>
                 <td>{n.label?.name ?? <span className="subtle">нет</span>}</td>
                 <td className="tnum">{formatDate(n.date)}</td>

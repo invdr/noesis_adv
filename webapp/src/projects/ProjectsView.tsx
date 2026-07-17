@@ -128,7 +128,7 @@ export function ProjectsView({ isAdmin }: { isAdmin: boolean }) {
                   <button onClick={() => setEditing(p.id)} className="link-btn">
                     {p.name}
                   </button>
-                  <div className="subtle" style={{ fontSize: 12 }}>/construction/{p.slug}</div>
+                  <div className="subtle-sm">/construction/{p.slug}</div>
                 </td>
                 <td>{CONSTRUCTION_FORMAT_LABEL[p.format]}</td>
                 <td>{p.owner?.name ?? <span className="subtle">нет</span>}</td>

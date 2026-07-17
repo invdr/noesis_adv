@@ -32,18 +32,16 @@ export function FinanceSummaryTab() {
 
       {s && (
         <>
-          <div className="cards-grid" style={{ marginTop: "1rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          <div className="kpi-grid" style={{ marginTop: "1rem" }}>
             {[
               { label: "Поступления", value: rub(s.totalIncome) },
               { label: "Подтверждённые расходы", value: rub(s.totalExpenseConfirmed) },
               { label: "Чистый доход", value: rub(s.netIncome) },
               { label: "Разнесено (закрыто)", value: rub(s.distributedNet) },
             ].map((c) => (
-              <div key={c.label} className="card" style={{ flex: "1 1 180px" }}>
-                <div className="card-body">
-                  <div className="subtle">{c.label}</div>
-                  <strong style={{ fontSize: 24 }}>{c.value}</strong>
-                </div>
+              <div key={c.label} className="kpi">
+                <div className="kpi-label">{c.label}</div>
+                <div className="kpi-value">{c.value}</div>
               </div>
             ))}
           </div>
@@ -87,7 +85,7 @@ export function FinanceSummaryTab() {
                     <td>{rub(p.allocated)}</td>
                     <td>{rub(p.paidOut)}</td>
                     <td>
-                      <strong style={{ color: p.outstanding < 0 ? "var(--primary)" : undefined }}>
+                      <strong className={p.outstanding < 0 ? "amount-negative" : undefined}>
                         {rub(p.outstanding)}
                       </strong>
                     </td>
@@ -121,7 +119,7 @@ export function FinanceSummaryTab() {
                     <td>{c.construction ? c.construction.code ?? c.construction.name : "— без привязки —"}</td>
                     <td>{rub(c.income)}</td>
                     <td>{rub(c.expense)}</td>
-                    <td style={{ color: c.net < 0 ? "var(--primary)" : undefined }}>{rub(c.net)}</td>
+                    <td className={c.net < 0 ? "amount-negative" : undefined}>{rub(c.net)}</td>
                   </tr>
                 ))}
                 {s.constructions.length === 0 && (

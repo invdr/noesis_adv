@@ -78,12 +78,12 @@ export function FinanceDistributionsTab() {
               <tr
                 key={d.month}
                 onClick={() => setSelected(d.month === selected ? null : d.month)}
-                style={{ cursor: "pointer", ...(d.month === selected ? { background: "var(--surface-muted)" } : {}) }}
+                className={`tr-clickable${d.month === selected ? " is-selected" : ""}`}
               >
                 <td><strong>{monthLabel(d.month)}</strong></td>
                 <td>{rub(d.totalIncome)}</td>
                 <td>{rub(d.totalExpense)}</td>
-                <td style={{ color: d.netIncome < 0 ? "var(--primary)" : undefined }}>{rub(d.netIncome)}</td>
+                <td className={d.netIncome < 0 ? "amount-negative" : undefined}>{rub(d.netIncome)}</td>
                 <td className={d.shareBpsTotal === 10000 ? "" : "subtle"}>{percentLabel(d.shareBpsTotal)}</td>
                 <td>
                   <span className={`badge ${d.status === "closed" ? "badge-success" : "badge-warn"}`}>

@@ -269,7 +269,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__facts dl { display: grid; margin: 0; }
   .detail__facts dl > div { display: flex; min-height: 56px; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--dark-line); }
   .detail__facts dl > div:last-child { border-bottom: 1px solid var(--dark-line); }
-  .detail__facts dt { color: var(--faint); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .detail__facts dt { color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
   .detail__facts dd { margin: 0; text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 500; }
 
   .detail__availability { padding-top: clamp(80px, 10vw, 140px); }
@@ -292,7 +292,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   :global(.availability-month h3) { margin: 0 0 12px; font-size: 15px; text-transform: capitalize; }
   :global(.availability-weekdays),
   :global(.availability-days) { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  :global(.availability-weekdays span) { padding: 4px 0; color: var(--muted); font-family: var(--font-mono); font-size: 8px; text-align: center; }
+  :global(.availability-weekdays span) { padding: 4px 0; color: var(--muted); font-family: var(--font-mono); font-size: 10px; text-align: center; }
   :global(.availability-day) { display: grid; min-width: 28px; min-height: 30px; place-items: center; padding: 0; color: var(--ink); background: var(--positive-soft); border: 1px solid transparent; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; }
   :global(.availability-day[data-state="busy"]) { color: var(--busy); background: var(--busy-soft); text-decoration: line-through; }
   :global(.availability-day[data-today="true"]) { color: #fbfaf5; background: var(--ink); border-radius: 50%; }

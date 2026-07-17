@@ -8,10 +8,10 @@
   </g>
   <path d="M90 490C260 420 360 500 510 400S760 230 1110 135" fill="none" stroke="#22201c" stroke-width="12" stroke-linecap="round"/>
   <g stroke="#f2efe8" stroke-width="8">
-    <circle cx="245" cy="438" r="22" fill="#2e7d4e"/>
-    <circle cx="520" cy="393" r="22" fill="#a0720f"/>
+    <circle cx="245" cy="438" r="22" fill="#27713f"/>
+    <circle cx="520" cy="393" r="22" fill="#8a620c"/>
     <circle cx="760" cy="257" r="22" fill="#8b0000"/>
-    <circle cx="1020" cy="168" r="22" fill="#77716a"/>
+    <circle cx="1020" cy="168" r="22" fill="#6b655d"/>
   </g>
   <g font-family="'Oswald', 'Arial Narrow', Arial, sans-serif">
     <text x="80" y="118" fill="#22201c" font-size="72" font-weight="600" letter-spacing="3">NOESIS</text>

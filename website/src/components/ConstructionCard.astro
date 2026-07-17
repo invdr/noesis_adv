@@ -136,8 +136,7 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
     gap: 10px;
   }
   .card__topline span,
-  .card__topline strong,
-  .card__availability {
+  .card__topline strong {
     display: inline-flex;
     min-height: 28px;
     align-items: center;
@@ -146,7 +145,7 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
     background: rgba(34, 32, 28, 0.86);
     border-radius: var(--radius-sm);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.04em;
   }
@@ -156,13 +155,17 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
     z-index: 2;
     right: 14px;
     bottom: 14px;
+    display: inline-flex;
+    min-height: 28px;
     max-width: calc(100% - 24px);
+    align-items: center;
     margin: 0;
+    padding: 0 10px;
     color: var(--ink);
     background: rgba(251, 250, 245, 0.94);
-    font-family: var(--font-sans);
+    border-radius: var(--radius-sm);
     font-size: 12px;
-    letter-spacing: 0;
+    font-weight: 600;
   }
   .card__availability[data-state]::before { margin-right: 6px; }
   .card__availability[data-state="free"]::before { content: "●"; color: var(--positive); }
@@ -199,7 +202,7 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
   }
   .card__facts div { min-width: 0; }
   .card__facts dt {
-    color: var(--faint);
+    color: var(--muted);
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.06em;
