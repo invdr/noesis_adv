@@ -80,7 +80,7 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
         <span></span><p>Проверяем доступность по датам…</p>
       </div>
       <div class="catalog-page__cards" data-catalog-cards>
-        {items.map((item) => <ConstructionCard item={item} mapAction />)}
+        {items.map((item) => <ConstructionCard item={item} mapAction variant="compact" />)}
       </div>
       <div class="catalog-page__empty" data-catalog-empty hidden>
         <span aria-hidden="true">∅</span>
@@ -174,7 +174,8 @@ const data = jsonForHtml({ items, map: { apiKey: mapApiKey, center: [43.318, 45.
 
   .catalog-page__layout { display: grid; grid-template-columns: minmax(380px, 0.78fr) minmax(520px, 1.22fr); align-items: start; gap: 20px; }
   .catalog-page__list { position: relative; min-width: 0; }
-  .catalog-page__cards { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  /* Компактные горизонтальные карточки — плотный список. */
+  .catalog-page__cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
   .catalog-page__loading {
     display: flex;
     min-height: 48px;

@@ -36,4 +36,26 @@ describe("parseHash", () => {
   test("лишние сегменты у раздела без карточек игнорируются", () => {
     expect(parseHash("#/analytics/extra")).toEqual({ view: "analytics" });
   });
+
+  test("новая бронь из заявки: #/bookings/new с префиллом", () => {
+    expect(parseHash("#/bookings/new?constructionId=c1&leadId=l1&clientId=k1")).toEqual({
+      view: "bookings",
+      bookingDraft: { constructionId: "c1", leadId: "l1", clientId: "k1" },
+    });
+  });
+
+  test("частичный префилл брони: только заявка", () => {
+    expect(parseHash("#/bookings/new?leadId=l1")).toEqual({
+      view: "bookings",
+      bookingDraft: { leadId: "l1" },
+    });
+  });
+
+  test("#/bookings/new без параметров — пустой префилл", () => {
+    expect(parseHash("#/bookings/new")).toEqual({ view: "bookings", bookingDraft: {} });
+  });
+
+  test("список броней без префилла", () => {
+    expect(parseHash("#/bookings")).toEqual({ view: "bookings" });
+  });
 });

@@ -6,7 +6,8 @@ import {
   type OccupancyStatus,
   type UiStatus,
 } from "./availability";
-import { onShortlistChange, readShortlist, shortlistKey, upsertShortlist } from "./shortlist";
+import { addDays, minPeriodEnd, todayLocal } from "./dates";
+import { onShortlistChange, readShortlist, shortlistKey, sortSideCodes, upsertShortlist } from "./shortlist";
 import { loadYandexMaps, MapUnavailableError, waitYMapsReady } from "./yandex-map";
 
 interface HomeData {
@@ -26,19 +27,6 @@ function parseJson<T>(id: string): T | null {
   try { return node?.textContent ? JSON.parse(node.textContent) as T : null; } catch { return null; }
 }
 
-function localDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(value: string, days: number): string {
-  const date = new Date(`${value}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return localDate(date);
-}
-
 function formatShortDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   return match ? `${match[3]}.${match[2]}` : value;
@@ -53,18 +41,20 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
+/* Автозаполнение: начало = сегодня, окончание = +1 месяц; окончание меньше
+   месяца от начала недоступно (минимальный период размещения). */
 function initDates(form: HTMLFormElement): { from: HTMLInputElement; to: HTMLInputElement } | null {
   const from = form.querySelector<HTMLInputElement>("[data-default-from]");
   const to = form.querySelector<HTMLInputElement>("[data-default-to]");
   if (!from || !to) return null;
-  const today = localDate(new Date());
+  const today = todayLocal();
   from.min = today;
-  to.min = today;
-  if (!from.value) from.value = addDays(today, 7);
-  if (!to.value) to.value = addDays(from.value, 30);
+  if (!from.value) from.value = today;
+  to.min = minPeriodEnd(from.value);
+  if (!to.value || to.value < to.min) to.value = to.min;
   from.addEventListener("change", () => {
-    to.min = from.value || today;
-    if (to.value && from.value && to.value < from.value) to.value = addDays(from.value, 30);
+    to.min = minPeriodEnd(from.value || today);
+    if (!to.value || to.value < to.min) to.value = to.min;
   });
   return { from, to };
 }
@@ -84,18 +74,18 @@ function init(): void {
     const keys = new Set(readShortlist().map(shortlistKey));
     document.querySelectorAll<HTMLButtonElement>("[data-card-add]").forEach((button) => {
       const item = data.items.find((entry) => entry.id === button.dataset.cardAdd);
-      const side = item?.sides[0]?.code as "A" | "B" | "C" | undefined;
-      const added = !!item && !!side && keys.has(`${item.id}:${side}`);
+      const added = !!item && keys.has(item.id);
       button.classList.toggle("is-added", added);
       const label = button.querySelector<HTMLElement>("[data-card-add-label]");
       if (label && !item?.isSoon) label.textContent = added ? "Добавлено" : "В подборку";
     });
   };
 
+  // С карточки конструкция добавляется со всеми сторонами — лишние стороны
+  // пользователь снимает чекбоксами на странице подборки.
   const addFromCard = (id: string) => {
     const item = data.items.find((entry) => entry.id === id);
-    const side = item?.sides[0];
-    if (!item || !side || item.isSoon) return;
+    if (!item || !item.sides.length || item.isSoon) return;
     upsertShortlist({
       constructionId: item.id,
       slug: item.slug,
@@ -103,11 +93,11 @@ function init(): void {
       code: item.code,
       address: item.address,
       image: item.img,
-      sideCode: side.code as "A" | "B" | "C",
+      sideCodes: sortSideCodes(item.sides.map((entry) => entry.code as "A" | "B" | "C")),
       sides: item.sides.map((entry) => ({ code: entry.code as "A" | "B" | "C", label: `Сторона ${entry.code}`, priceLabel: entry.priceLabel })),
       from: dates?.from.value ?? "",
       to: dates?.to.value ?? "",
-      priceLabel: side.priceLabel,
+      priceLabel: item.sides[0]?.priceLabel ?? "Цена по запросу",
     });
   };
 

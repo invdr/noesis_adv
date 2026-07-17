@@ -3,7 +3,12 @@ import type { CatalogItem } from "../lib/api";
 
 interface Props {
   item: CatalogItem;
-  variant?: "catalog" | "featured";
+  /**
+   * catalog/featured — вертикальная карточка; horizontal — фото слева,
+   * контент справа (лента главной); compact — уменьшенная горизонтальная
+   * для плотного списка каталога.
+   */
+  variant?: "catalog" | "featured" | "horizontal" | "compact";
   mapAction?: boolean;
 }
 
@@ -246,6 +251,29 @@ const sideCodes = item.sides.map((side) => side.code).join(" / ");
   }
   .card__map:hover { border-color: var(--accent); }
   .card__no-coordinates { margin: 0; color: var(--muted); font-size: 11px; }
+
+  /* Горизонтальная карточка: фото слева, контент справа (лента главной). */
+  .card--horizontal { grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); }
+  .card--horizontal .card__media { min-height: 240px; }
+
+  /* Компактная горизонтальная карточка каталога: меньше фото, плотнее контент. */
+  .card--compact { grid-template-columns: minmax(150px, 190px) minmax(0, 1fr); }
+  .card--compact .card__media { min-height: 170px; }
+  .card--compact .card__body { gap: 8px; padding: 12px; }
+  .card--compact h3 { font-size: 16px; }
+  .card--compact .card__address { min-height: 0; font-size: 12px; }
+  .card--compact .card__facts { gap: 6px 8px; padding-block: 8px; }
+  .card--compact .card__facts dd { margin-top: 2px; font-size: 11.5px; }
+  .card--compact .card__price strong { font-size: 15px; }
+  .card--compact .card__topline { top: 10px; right: 10px; left: 10px; }
+  .card--compact .card__availability { right: 10px; bottom: 10px; font-size: 11px; }
+
+  @media (max-width: 680px) {
+    .card--horizontal,
+    .card--compact { grid-template-columns: 1fr; }
+    .card--horizontal .card__media,
+    .card--compact .card__media { min-height: 190px; }
+  }
 
   @media (max-width: 420px) {
     .card__actions { grid-template-columns: 1fr; }

@@ -17,6 +17,7 @@ import {
   type UpsertBookingInput,
 } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
+import { navigate, type BookingDraft } from "../router";
 import { BookingReports } from "./BookingReports";
 import {
   DAY_MS,
@@ -82,9 +83,19 @@ function sideRows(constructions: Construction[]): InventoryRow[] {
   return rows;
 }
 
-export function BookingsView({ user }: { user: SessionUser }) {
+export function BookingsView({ user, draft }: { user: SessionUser; draft?: BookingDraft }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Booking | null | undefined>(undefined);
+
+  // Маршрут «Создать бронь из заявки» (#/bookings/new?…) открывает форму новой
+  // брони с префиллом. Ключ-строка вместо объекта: parseHash пересоздаёт draft
+  // на каждом рендере, а перескакивать в форму нужно только по смене маршрута.
+  const draftKey = draft
+    ? `${draft.constructionId ?? ""}|${draft.leadId ?? ""}|${draft.clientId ?? ""}`
+    : "";
+  useEffect(() => {
+    if (draftKey) setEditing(null);
+  }, [draftKey]);
   const [from, setFrom] = useState(monthStart(productToday()));
   const [toInclusive, setToInclusive] = useState(previousDateOnly(addBookingMonths(monthStart(productToday()), 6)));
   const [status, setStatus] = useState("");
@@ -164,7 +175,9 @@ export function BookingsView({ user }: { user: SessionUser }) {
   if (editing !== undefined) {
     return (
       <BookingForm
+        key={editing === null ? `new-${draftKey}` : editing.id}
         booking={editing}
+        draft={editing === null ? draft : undefined}
         user={user}
         constructions={allConstructions}
         clients={clients.data ?? []}
@@ -175,6 +188,8 @@ export function BookingsView({ user }: { user: SessionUser }) {
         onClose={() => {
           setEditing(undefined);
           refresh();
+          // Сбрасываем маршрут префилла, чтобы «← к сетке» не возвращал в форму.
+          navigate("/bookings");
         }}
       />
     );
@@ -335,6 +350,7 @@ function bookingTitle(b: Booking): string {
 
 function BookingForm({
   booking,
+  draft,
   user,
   constructions,
   clients,
@@ -345,6 +361,8 @@ function BookingForm({
   onClose,
 }: {
   booking: Booking | null;
+  /** Префилл новой брони из карточки заявки (#/bookings/new?…). */
+  draft?: BookingDraft;
   user: SessionUser;
   constructions: Construction[];
   clients: Contact[];
@@ -357,12 +375,14 @@ function BookingForm({
   const qc = useQueryClient();
   const [kind, setKind] = useState<BookingKind>(booking?.kind ?? "commercial");
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "booked");
-  const [constructionId, setConstructionId] = useState(booking?.construction.id ?? constructions[0]?.id ?? "");
+  const [constructionId, setConstructionId] = useState(
+    booking?.construction.id ?? draft?.constructionId ?? constructions[0]?.id ?? "",
+  );
   const selectedConstruction = constructions.find((c) => c.id === constructionId) ?? null;
   const [constructionSideId, setConstructionSideId] = useState(booking?.side.id ?? "");
   const selectedSide = selectedBookingSide(selectedConstruction, constructionSideId);
-  const [clientId, setClientId] = useState(booking?.client?.id ?? "");
-  const [leadId, setLeadId] = useState(booking?.lead?.id ?? "");
+  const [clientId, setClientId] = useState(booking?.client?.id ?? draft?.clientId ?? "");
+  const [leadId, setLeadId] = useState(booking?.lead?.id ?? draft?.leadId ?? "");
   const [serviceReasonId, setServiceReasonId] = useState(booking?.serviceReason?.id ?? "");
   const [brandId, setBrandId] = useState(booking?.brand?.id ?? "");
   const [campaignNote, setCampaignNote] = useState(booking?.campaignNote ?? "");

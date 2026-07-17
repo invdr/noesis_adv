@@ -1,36 +1,37 @@
+import { sideStatusShort, toUiStatus, type OccupancyStatus, type UiStatus } from "./availability";
+import { addDays, minPeriodEnd, todayLocal } from "./dates";
 import {
   clearShortlist,
   onShortlistChange,
   readShortlist,
   removeShortlistItem,
-  replaceShortlistItem,
   shortlistKey,
+  sortSideCodes,
+  upsertShortlist,
   type ShortlistItem,
 } from "./shortlist";
 
-type Status = "free" | "partial" | "occupied";
-interface AvailabilitySide { code: "A" | "B" | "C"; status: "free" | "partiallyOccupied" | "occupied"; }
+interface AvailabilitySide { code: "A" | "B" | "C"; status: OccupancyStatus; }
+
+const SIDE_STATUS_TEXT: Record<UiStatus, string> = {
+  free: "Свободно на выбранный период",
+  partial: "Частично занято — менеджер уточнит даты",
+  occupied: "Занято на весь выбранный период",
+};
 
 function parseJson<T>(id: string): T | null {
   const node = document.getElementById(id);
   try { return node?.textContent ? JSON.parse(node.textContent) as T : null; } catch { return null; }
 }
 
-function localDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function addDays(value: string, days: number): string {
-  const date = new Date(`${value}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return localDate(date);
-}
-
-function aggregate(status: AvailabilitySide["status"] | undefined): Status | null {
-  if (status === "free") return "free";
-  if (status === "partiallyOccupied") return "partial";
-  if (status === "occupied") return "occupied";
-  return null;
+/* Агрегат по выбранным сторонам позиции: все свободны → free, все заняты →
+   occupied, иначе partial (в отличие от правила конструкции «есть свободная
+   сторона → свободна» — тут пользователь просит именно эти стороны). */
+function selectedAggregate(statuses: UiStatus[]): UiStatus | null {
+  if (!statuses.length) return null;
+  if (statuses.every((status) => status === "free")) return "free";
+  if (statuses.every((status) => status === "occupied")) return "occupied";
+  return "partial";
 }
 
 function plural(count: number): string {
@@ -57,7 +58,7 @@ function itemNode(item: ShortlistItem): HTMLElement {
   if (item.image) {
     const image = element("img");
     image.src = item.image;
-    image.alt = `Конструкция ${item.name}, сторона ${item.sideCode}`;
+    image.alt = `Конструкция ${item.name}, стороны ${item.sideCodes.join(", ")}`;
     image.loading = "lazy";
     media.append(image);
   } else media.append(element("span", "", item.code || "Фото готовится"));
@@ -68,20 +69,24 @@ function itemNode(item: ShortlistItem): HTMLElement {
   body.append(element("p", "selection-item__address", item.address));
   const edit = element("div", "selection-item__edit");
 
-  const sideLabel = element("label");
-  sideLabel.append(element("span", "", "Сторона"));
-  const sideSelect = element("select");
-  sideSelect.dataset.selectionSide = key;
+  const sidesBox = element("div", "selection-item__sides");
+  sidesBox.setAttribute("role", "group");
+  sidesBox.setAttribute("aria-label", "Выбранные стороны");
+  sidesBox.append(element("span", "selection-item__sides-label", "Стороны"));
   item.sides.forEach((side) => {
-    const option = element("option");
-    option.value = side.code;
-    option.textContent = side.code;
-    option.selected = side.code === item.sideCode;
-    sideSelect.append(option);
+    const label = element("label", "selection-item__side");
+    label.title = side.label;
+    const input = element("input");
+    input.type = "checkbox";
+    input.value = side.code;
+    input.checked = item.sideCodes.includes(side.code);
+    input.dataset.selectionSideToggle = key;
+    label.append(input, element("span", "", side.code));
+    sidesBox.append(label);
   });
-  sideLabel.append(sideSelect);
 
-  const today = localDate(new Date());
+  const today = todayLocal();
+  const dates = element("div", "selection-item__dates");
   const fromLabel = element("label");
   fromLabel.append(element("span", "", "Начало"));
   const from = element("input");
@@ -96,16 +101,23 @@ function itemNode(item: ShortlistItem): HTMLElement {
   const to = element("input");
   to.type = "date";
   to.value = item.to;
-  to.min = item.from || today;
+  to.min = minPeriodEnd(item.from || today);
   to.dataset.selectionTo = key;
   toLabel.append(to);
-  edit.append(sideLabel, fromLabel, toLabel);
+  dates.append(fromLabel, toLabel);
+  edit.append(sidesBox, dates);
   body.append(edit);
 
   const aside = element("div", "selection-item__aside");
-  aside.append(element("span", "", "Цена стороны"));
-  aside.append(element("strong", "", item.priceLabel));
-  const status = element("p", "selection-item__status", item.from && item.to ? "Проверяем доступность…" : "Укажите период");
+  aside.append(element("span", "", item.sideCodes.length > 1 ? "Цена сторон" : "Цена стороны"));
+  const prices = element("div", "selection-item__prices");
+  item.sideCodes.forEach((code) => {
+    const side = item.sides.find((entry) => entry.code === code);
+    const label = side?.priceLabel ?? item.priceLabel;
+    prices.append(element("strong", "", item.sideCodes.length > 1 ? `${code}: ${label}` : label));
+  });
+  aside.append(prices);
+  const status = element("div", "selection-item__status", "Проверяем доступность…");
   status.dataset.selectionStatus = key;
   aside.append(status);
   const actions = element("div", "selection-item__actions");
@@ -152,12 +164,19 @@ function init(): void {
     const item = readShortlist().find((entry) => shortlistKey(entry) === key);
     const row = list.querySelector<HTMLElement>(`[data-selection-key="${CSS.escape(key)}"]`);
     if (!item || !row) return;
-    const sideCode = row.querySelector<HTMLSelectElement>("[data-selection-side]")?.value as ShortlistItem["sideCode"] | undefined;
+    const checked = Array.from(row.querySelectorAll<HTMLInputElement>("[data-selection-side-toggle]"))
+      .filter((input) => input.checked)
+      .map((input) => input.value)
+      .filter((value): value is ShortlistItem["sideCodes"][number] => value === "A" || value === "B" || value === "C");
+    const sideCodes = sortSideCodes(checked);
+    if (!sideCodes.length) {
+      // Последнюю сторону снять нельзя — для удаления позиции есть «Удалить».
+      render();
+      return;
+    }
     const from = row.querySelector<HTMLInputElement>("[data-selection-from]")?.value ?? item.from;
     const to = row.querySelector<HTMLInputElement>("[data-selection-to]")?.value ?? item.to;
-    const selected = item.sides.find((side) => side.code === sideCode) ?? item.sides[0];
-    if (!selected) return;
-    replaceShortlistItem(key, { ...item, sideCode: selected.code, from, to, priceLabel: selected.priceLabel });
+    upsertShortlist({ ...item, sideCodes, from, to });
   };
 
   list.addEventListener("change", (event) => {
@@ -167,8 +186,9 @@ function init(): void {
     if (control.matches("[data-selection-from]")) {
       const to = row.querySelector<HTMLInputElement>("[data-selection-to]");
       if (to) {
-        to.min = control.value || localDate(new Date());
-        if (to.value && to.value < control.value) to.value = addDays(control.value, 30);
+        const minEnd = minPeriodEnd(control.value || todayLocal());
+        to.min = minEnd;
+        if (!to.value || to.value < minEnd) to.value = minEnd;
       }
     }
     update(row.dataset.selectionKey);
@@ -211,23 +231,44 @@ function init(): void {
         if (currentGeneration !== generation) return;
         group.forEach((item) => {
           const construction = body.items?.find((entry) => entry.id === item.constructionId);
-          const side = construction?.sides.find((entry) => entry.code === item.sideCode);
-          const state = aggregate(side?.status);
           const node = list.querySelector<HTMLElement>(`[data-selection-status="${CSS.escape(shortlistKey(item))}"]`);
           if (!node) return;
-          if (state === "free") { available += 1; node.textContent = "Свободно на выбранный период"; }
-          else if (state === "partial") { partial += 1; node.textContent = "Частично занято — менеджер уточнит даты"; }
-          else if (state === "occupied") { occupied += 1; node.textContent = "Занято на весь выбранный период"; }
-          else { failed += 1; node.textContent = "Статус не получен"; }
-          if (state) node.dataset.state = state;
+          const states = item.sideCodes.map((code) => {
+            const side = construction?.sides.find((entry) => entry.code === code);
+            return { code, status: side?.status ?? null };
+          });
+          states.forEach(({ status }) => {
+            const state = status && toUiStatus(status);
+            if (state === "free") available += 1;
+            else if (state === "partial") partial += 1;
+            else if (state === "occupied") occupied += 1;
+            else failed += 1;
+          });
+          const known = states.flatMap(({ status }) => (status ? [toUiStatus(status)] : []));
+          const aggregate = known.length === states.length ? selectedAggregate(known) : null;
+          if (states.length === 1) {
+            const only = states[0]!;
+            node.textContent = only.status ? SIDE_STATUS_TEXT[toUiStatus(only.status)] : "Статус не получен";
+          } else {
+            node.replaceChildren(...states.map(({ code, status }) => {
+              const line = element("div", "selection-item__status-line", `${code} — ${status ? sideStatusShort(status) : "статус не получен"}`);
+              if (status) line.dataset.state = toUiStatus(status);
+              return line;
+            }));
+          }
+          if (aggregate) node.dataset.state = aggregate;
+          else node.removeAttribute("data-state");
         });
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         if (currentGeneration !== generation) return;
-        failed += group.length;
         group.forEach((item) => {
+          failed += item.sideCodes.length;
           const node = list.querySelector<HTMLElement>(`[data-selection-status="${CSS.escape(shortlistKey(item))}"]`);
-          if (node) node.textContent = "Не удалось проверить доступность";
+          if (node) {
+            node.textContent = "Не удалось проверить доступность";
+            node.removeAttribute("data-state");
+          }
         });
       }
     }));
@@ -239,7 +280,7 @@ function init(): void {
       occupied ? `${occupied} занято` : "",
       failed ? `${failed} без статуса` : "",
     ].filter(Boolean);
-    check.textContent = parts.length ? `Проверка завершена: ${parts.join(" · ")}.` : "Проверка завершена.";
+    check.textContent = parts.length ? `Проверка завершена (по сторонам): ${parts.join(" · ")}.` : "Проверка завершена.";
   }
 
   render();

@@ -8,6 +8,7 @@ import {
   type LeadDetail,
 } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
+import { navigate } from "../router";
 import { BookingReports } from "../bookings/BookingReports";
 
 const DOC_TYPES = Object.keys(DEAL_DOCUMENT_TYPE_LABEL) as DealDocumentType[];
@@ -62,6 +63,15 @@ export function DealSection({
     onSuccess: onDeal,
   });
 
+  // Переход в форму новой брони с префиллом: конструкция и клиент заявки
+  // подставляются, привязка к заявке уже выбрана (см. #/bookings/new в router).
+  const createBooking = () => {
+    const params = new URLSearchParams({ leadId });
+    if (detail.constructionId) params.set("constructionId", detail.constructionId);
+    if (detail.contactId) params.set("clientId", detail.contactId);
+    navigate(`/bookings/new?${params.toString()}`);
+  };
+
   return (
     <section className="card">
       <div className="card-body">
@@ -69,9 +79,7 @@ export function DealSection({
 
         <h4 className="deal-subtitle">Брони</h4>
         {detail.bookings.length === 0 ? (
-          <p className="empty">
-            Броней не привязано. Создайте бронь в разделе «Брони» и укажите эту заявку.
-          </p>
+          <p className="empty">Броней не привязано.</p>
         ) : (
           <ul className="deal-bookings">
             {detail.bookings.map((b) => (
@@ -90,6 +98,13 @@ export function DealSection({
               </li>
             ))}
           </ul>
+        )}
+        {editable && (
+          <p style={{ margin: "8px 0 0" }}>
+            <button type="button" className="btn-sm" onClick={createBooking}>
+              + Создать бронь по заявке
+            </button>
+          </p>
         )}
 
         {editable && (

@@ -999,6 +999,13 @@ td select {
   font-weight: 600;
   margin: 0;
 }
+/* Правый угол топбара: индикатор публикации + кнопка «Опубликовать сайт». */
+.topbar-site {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
 .content {
   padding: 1.5rem;
   flex: 1;

@@ -103,6 +103,11 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
       <button class="detail__add" type="button" data-detail-add>
         <span data-detail-add-label>Добавить сторону в подборку</span><span aria-hidden="true">+</span>
       </button>
+      {construction.sides.length > 1 && (
+        <button class="detail__add detail__add--all" type="button" data-detail-add-all>
+          <span data-detail-add-all-label>Все стороны в подборку</span><span aria-hidden="true">⧉</span>
+        </button>
+      )}
       <p class="detail__disclaimer">Добавление в подборку не бронирует поверхность.</p>
     </div>
   </section>
@@ -250,6 +255,9 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__add:hover:not(:disabled) { background: var(--accent-hover); }
   .detail__add.is-added { color: var(--accent); background: var(--accent-soft); }
   .detail__add:disabled { opacity: 0.55; }
+  .detail__add--all { margin-top: 8px; color: var(--accent); background: transparent; border: 1.5px solid var(--accent); }
+  .detail__add--all:hover:not(:disabled) { color: #fbfaf5; background: var(--accent); }
+  .detail__add--all.is-added { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-soft); }
   .detail__disclaimer { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
 
   .detail__gallery { margin-top: 20px; }

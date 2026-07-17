@@ -21,13 +21,37 @@ const construction = {
   ],
 } as any;
 
-function renderView() {
+function renderView(draft?: { constructionId?: string; leadId?: string; clientId?: string }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <BookingsView user={sessionUser("manager")} />
+      <BookingsView user={sessionUser("manager")} draft={draft} />
     </QueryClientProvider>,
   );
+}
+
+function mockLists() {
+  spyOn(api, "listAllProjects").mockResolvedValue({
+    items: [construction],
+    page: 1,
+    pageSize: 100,
+    total: 1,
+  });
+  spyOn(api, "listAllBookings").mockResolvedValue({
+    items: [],
+    page: 1,
+    pageSize: 100,
+    total: 0,
+  });
+  spyOn(api, "listContacts").mockResolvedValue([]);
+  spyOn(api, "listAllLeads").mockResolvedValue({
+    items: [lead()],
+    page: 1,
+    pageSize: 100,
+    total: 1,
+  });
+  spyOn(api, "listBookingBrands").mockResolvedValue([]);
+  spyOn(api, "listBookingServiceReasons").mockResolvedValue([]);
 }
 
 afterEach(() => {
@@ -37,27 +61,7 @@ afterEach(() => {
 
 describe("BookingsView", () => {
   test("передаёт выбранную заявку при создании брони", async () => {
-    spyOn(api, "listAllProjects").mockResolvedValue({
-      items: [construction],
-      page: 1,
-      pageSize: 100,
-      total: 1,
-    });
-    spyOn(api, "listAllBookings").mockResolvedValue({
-      items: [],
-      page: 1,
-      pageSize: 100,
-      total: 0,
-    });
-    spyOn(api, "listContacts").mockResolvedValue([]);
-    spyOn(api, "listAllLeads").mockResolvedValue({
-      items: [lead()],
-      page: 1,
-      pageSize: 100,
-      total: 1,
-    });
-    spyOn(api, "listBookingBrands").mockResolvedValue([]);
-    spyOn(api, "listBookingServiceReasons").mockResolvedValue([]);
+    mockLists();
     const create = spyOn(api, "createBooking").mockResolvedValue({} as any);
 
     renderView();
@@ -72,6 +76,24 @@ describe("BookingsView", () => {
 
     await waitFor(() => {
       expect(create).toHaveBeenCalledWith(expect.objectContaining({ leadId: "lead1" }));
+    });
+  });
+
+  test("префилл из заявки (#/bookings/new) открывает форму и подставляет связи", async () => {
+    mockLists();
+    const create = spyOn(api, "createBooking").mockResolvedValue({} as any);
+
+    renderView({ constructionId: "construction1", leadId: "lead1" });
+
+    // Форма новой брони открыта сразу, без клика по «+ Новая бронь».
+    await screen.findByText("Новая бронь");
+    await screen.findByRole("option", { name: /Иван Петров/ });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    await waitFor(() => {
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({ leadId: "lead1", constructionId: "construction1" }),
+      );
     });
   });
 });

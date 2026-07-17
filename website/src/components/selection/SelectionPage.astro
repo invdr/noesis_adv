@@ -100,20 +100,46 @@ import LeadForm from "../LeadForm.astro";
   :global(.selection-item__code) { color: var(--accent); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
   :global(.selection-item h3) { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.18; }
   :global(.selection-item__address) { margin: 0; color: var(--muted); font-size: 11px; }
-  :global(.selection-item__edit) { display: grid; grid-template-columns: 0.8fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+  :global(.selection-item__edit) { display: grid; gap: 10px; margin-top: 8px; }
+  :global(.selection-item__sides) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  :global(.selection-item__sides-label) { margin-right: 4px; color: var(--muted); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; }
+  :global(.selection-item__side) { position: relative; display: inline-flex !important; cursor: pointer; }
+  :global(.selection-item__side input) { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  :global(.selection-item__side span) {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    background: var(--canvas);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  :global(.selection-item__side input:checked + span) { color: #fbfaf5; background: var(--accent); border-color: var(--accent); }
+  :global(.selection-item__side input:focus-visible + span) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :global(.selection-item__dates) { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   :global(.selection-item label) { display: grid; min-width: 0; gap: 5px; }
-  :global(.selection-item label span) { color: var(--muted); font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; }
+  :global(.selection-item label span) { color: var(--muted); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; }
   :global(.selection-item select),
-  :global(.selection-item input) { width: 100%; min-width: 0; min-height: 42px; padding: 0 8px; color: var(--ink); background: var(--canvas); border: 1.5px solid var(--line); border-radius: var(--radius-sm); font-size: 12px; }
+  :global(.selection-item input[type="date"]) { width: 100%; min-width: 0; min-height: 42px; padding: 0 8px; color: var(--ink); background: var(--canvas); border: 1.5px solid var(--line); border-radius: var(--radius-sm); font-size: 12px; }
   :global(.selection-item select:focus),
-  :global(.selection-item input:focus) { border-color: var(--accent); outline: none; }
+  :global(.selection-item input[type="date"]:focus) { border-color: var(--accent); outline: none; }
   :global(.selection-item__aside) { display: flex; flex-direction: column; align-items: stretch; padding: 6px 0; text-align: right; }
   :global(.selection-item__aside > span) { color: var(--muted); font-size: 11px; }
-  :global(.selection-item__aside strong) { margin-top: 4px; font-size: 14px; }
-  :global(.selection-item__status) { margin: 18px 0 0; padding: 9px 10px; color: var(--muted); background: var(--canvas); border-radius: 8px; font-size: 11px; text-align: left; }
+  :global(.selection-item__prices) { display: grid; gap: 2px; margin-top: 4px; }
+  :global(.selection-item__prices strong) { font-size: 13px; }
+  /* Статус отделён и от цены сверху, и от кнопок снизу — не сливается с действиями. */
+  :global(.selection-item__status) { margin: 18px 0 14px; padding: 9px 10px; color: var(--muted); background: var(--canvas); border-radius: 8px; font-size: 11px; text-align: left; }
   :global(.selection-item__status[data-state="free"]) { color: var(--positive); background: var(--positive-soft); }
   :global(.selection-item__status[data-state="partial"]) { color: var(--warning); background: var(--warning-soft); }
   :global(.selection-item__status[data-state="occupied"]) { color: var(--busy); background: var(--busy-soft); }
+  :global(.selection-item__status-line[data-state="free"]) { color: var(--positive); }
+  :global(.selection-item__status-line[data-state="partial"]) { color: var(--warning); }
+  :global(.selection-item__status-line[data-state="occupied"]) { color: var(--busy); }
   :global(.selection-item__actions) { display: grid; gap: 6px; margin-top: auto; }
   :global(.selection-item__actions a),
   :global(.selection-item__actions button) { display: flex; min-height: 44px; align-items: center; justify-content: center; padding: 0 8px; background: transparent; border: 1.5px solid var(--line); border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; }
@@ -152,7 +178,7 @@ import LeadForm from "../LeadForm.astro";
     .selection__empty { min-height: 420px; padding: 24px; }
     :global(.selection-item) { grid-template-columns: 1fr; padding: 12px; }
     :global(.selection-item__media) { min-height: 220px; }
-    :global(.selection-item__edit) { grid-template-columns: 1fr; }
+    :global(.selection-item__dates) { grid-template-columns: 1fr; }
     :global(.selection-item__aside) { grid-column: 1; grid-template-columns: 1fr; }
   }
 </style>

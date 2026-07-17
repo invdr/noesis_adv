@@ -17,6 +17,12 @@ export function aggregateSides(sides: readonly { status: OccupancyStatus }[]): U
   return "partial";
 }
 
+/* Статус API → UI-статус (контракт data-state). Единый источник для карточки
+   конструкции и подборки. */
+export function toUiStatus(status: OccupancyStatus): UiStatus {
+  return status === "partiallyOccupied" ? "partial" : status;
+}
+
 export const CONSTRUCTION_STATUS_TEXT: Record<UiStatus, string> = {
   free: "Есть свободная сторона",
   partial: "Частично занято",

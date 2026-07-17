@@ -1,10 +1,11 @@
 import type { Construction } from "../lib/api";
-import { onShortlistChange, readShortlist, shortlistKey, upsertShortlist } from "./shortlist";
+import { toUiStatus } from "./availability";
+import { addDays, localDate, minPeriodEnd, shortDate, todayLocal } from "./dates";
+import { onShortlistChange, readShortlist, sortSideCodes, upsertShortlist } from "./shortlist";
 import { loadYandexMaps, MapUnavailableError, waitYMapsReady } from "./yandex-map";
 
 type SideCode = "A" | "B" | "C";
 type ApiStatus = "free" | "partiallyOccupied" | "occupied";
-type UiStatus = "free" | "partial" | "occupied";
 
 interface AvailabilitySide {
   id: string;
@@ -28,25 +29,6 @@ const API_STATUS_TEXT: Record<ApiStatus, string> = {
 function parseJson<T>(id: string): T | null {
   const node = document.getElementById(id);
   try { return node?.textContent ? JSON.parse(node.textContent) as T : null; } catch { return null; }
-}
-
-function localDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function addDays(value: string, days: number): string {
-  const date = new Date(`${value}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return localDate(date);
-}
-
-function shortDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return match ? `${match[3]}.${match[2]}.${match[1]}` : value;
-}
-
-function uiStatus(status: ApiStatus): UiStatus {
-  return status === "partiallyOccupied" ? "partial" : status;
 }
 
 function reachLabel(traffic: number | null, grp: number | null): string {
@@ -78,11 +60,12 @@ function init(): void {
   let requestIndex = 0;
   let controller: AbortController | null = null;
 
-  const today = localDate(new Date());
+  // Автозаполнение: начало = сегодня, окончание = +1 месяц (минимальный срок).
+  const today = todayLocal();
   fromInput.min = today;
-  toInput.min = today;
-  fromInput.value = addDays(today, 7);
-  toInput.value = addDays(fromInput.value, 30);
+  fromInput.value = today;
+  toInput.min = minPeriodEnd(fromInput.value);
+  toInput.value = toInput.min;
 
   const side = () => construction.sides.find((entry) => entry.code === currentSide);
 
@@ -108,16 +91,26 @@ function init(): void {
     hidden.value = `Запрошенная позиция:\n${construction.code || construction.name} · ${construction.name}\nСторона: ${currentSide || "не выбрана"}\nПериод: ${period}`;
   };
 
+  const addAllButton = document.querySelector<HTMLButtonElement>("[data-detail-add-all]");
+
   const updateAddButton = () => {
     const label = addButton.querySelector<HTMLElement>("[data-detail-add-label]");
     if (!label) return;
+    const entry = readShortlist().find((item) => item.constructionId === construction.id);
+    if (addAllButton) {
+      const allAdded = !!entry && construction.sides.every((item) => entry.sideCodes.includes(item.code as SideCode));
+      addAllButton.classList.toggle("is-added", allAdded);
+      addAllButton.disabled = loading;
+      const allLabel = addAllButton.querySelector<HTMLElement>("[data-detail-add-all-label]");
+      if (allLabel) allLabel.textContent = allAdded ? "Все стороны в подборке" : "Все стороны в подборку";
+    }
     if (!currentSide) {
       addButton.disabled = true;
       label.textContent = "Стороны пока не опубликованы";
       return;
     }
     const status = selectedStatus()?.status;
-    const added = new Set(readShortlist().map(shortlistKey)).has(`${construction.id}:${currentSide}`);
+    const added = !!entry?.sideCodes.includes(currentSide);
     addButton.classList.toggle("is-added", added);
     addButton.disabled = loading || status === "occupied";
     if (loading) label.textContent = "Проверяем даты…";
@@ -164,7 +157,7 @@ function init(): void {
       statusNode.removeAttribute("data-state");
     } else if (current) {
       statusNode.textContent = `${API_STATUS_TEXT[current.status]} · сторона ${current.code} · ${shortDate(fromInput.value)}–${shortDate(toInput.value)}`;
-      statusNode.dataset.state = uiStatus(current.status);
+      statusNode.dataset.state = toUiStatus(current.status);
     } else {
       statusNode.textContent = "Данные по стороне пока не опубликованы";
       statusNode.removeAttribute("data-state");
@@ -305,29 +298,38 @@ function init(): void {
   });
 
   fromInput.addEventListener("change", () => {
-    toInput.min = fromInput.value || today;
-    if (toInput.value && toInput.value < fromInput.value) toInput.value = addDays(fromInput.value, 30);
+    toInput.min = minPeriodEnd(fromInput.value || today);
+    if (!toInput.value || toInput.value < toInput.min) toInput.value = toInput.min;
     updateFormSummary();
     void fetchAvailability();
   });
   toInput.addEventListener("change", () => { updateFormSummary(); void fetchAvailability(); });
 
-  addButton.addEventListener("click", () => {
-    const current = side();
-    if (!current || !currentSide) return;
+  // Добавление объединяет коды с уже выбранными сторонами этой конструкции —
+  // позиция подборки одна на конструкцию.
+  const addToShortlist = (codes: SideCode[]) => {
+    const existing = readShortlist().find((item) => item.constructionId === construction.id);
+    const photo = side()?.photo ?? construction.cover ?? construction.images[0];
     upsertShortlist({
       constructionId: construction.id,
       slug: construction.slug,
       name: construction.name,
       code: construction.code || "",
       address: construction.address || "Грозный",
-      image: current.photo?.url || construction.cover?.url || construction.images[0]?.url || "",
-      sideCode: currentSide,
+      image: photo?.url || "",
+      sideCodes: sortSideCodes([...(existing?.sideCodes ?? []), ...codes]),
       sides: construction.sides.map((entry) => ({ code: entry.code, label: entry.description ? `Сторона ${entry.code} · ${entry.description}` : `Сторона ${entry.code}`, priceLabel: entry.priceLabel })),
       from: fromInput.value,
       to: toInput.value,
-      priceLabel: current.priceLabel,
+      priceLabel: side()?.priceLabel ?? construction.priceLabel,
     });
+  };
+
+  addButton.addEventListener("click", () => {
+    if (currentSide) addToShortlist([currentSide]);
+  });
+  addAllButton?.addEventListener("click", () => {
+    addToShortlist(construction.sides.map((entry) => entry.code as SideCode));
   });
   onShortlistChange(updateAddButton);
 

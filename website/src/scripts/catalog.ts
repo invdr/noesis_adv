@@ -6,7 +6,8 @@ import {
   type OccupancyStatus,
   type UiStatus,
 } from "./availability";
-import { onShortlistChange, readShortlist, shortlistKey, upsertShortlist } from "./shortlist";
+import { addDays, minPeriodEnd, shortDate, todayLocal } from "./dates";
+import { onShortlistChange, readShortlist, shortlistKey, sortSideCodes, upsertShortlist } from "./shortlist";
 import { loadYandexMaps, MapUnavailableError, waitYMapsReady } from "./yandex-map";
 
 type Status = UiStatus;
@@ -40,21 +41,6 @@ interface Filters {
 function parseJson<T>(id: string): T | null {
   const node = document.getElementById(id);
   try { return node?.textContent ? JSON.parse(node.textContent) as T : null; } catch { return null; }
-}
-
-function localDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function addDays(value: string, days: number): string {
-  const date = new Date(`${value}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return localDate(date);
-}
-
-function shortDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return match ? `${match[3]}.${match[2]}.${match[1]}` : value;
 }
 
 function numberOrNull(value: FormDataEntryValue | null): number | null {
@@ -104,16 +90,23 @@ function init(): void {
     priceTo: form.elements.namedItem("priceTo") as HTMLInputElement,
   };
 
-  const today = localDate(new Date());
+  const today = todayLocal();
   controls.from.min = today;
-  controls.to.min = today;
   const query = new URLSearchParams(location.search);
   (["from", "to", "format", "district", "lighting", "sideCount", "priceFrom", "priceTo"] as const).forEach((name) => {
     const value = query.get(name);
     if (value != null) controls[name].value = value;
   });
   onlyFreeInput.checked = query.get("onlyFree") === "1";
-  if (controls.from.value) controls.to.min = controls.from.value;
+
+  // Автозаполнение периода: начало = сегодня, окончание = +1 месяц; период
+  // короче месяца недоступен (минимальный срок размещения).
+  const applyDefaultDates = () => {
+    if (!controls.from.value) controls.from.value = today;
+    controls.to.min = minPeriodEnd(controls.from.value);
+    if (!controls.to.value || controls.to.value < controls.to.min) controls.to.value = controls.to.min;
+  };
+  applyDefaultDates();
 
   let availability: Map<string, AvailabilityEntry> | null = null;
   let availabilityError = false;
@@ -207,9 +200,7 @@ function init(): void {
     const keys = new Set(readShortlist().map(shortlistKey));
     document.querySelectorAll<HTMLButtonElement>("[data-card-add]").forEach((button) => {
       const item = data.items.find((entry) => entry.id === button.dataset.cardAdd);
-      const freeSide = availability?.get(item?.id || "")?.sides.find((side) => side.status === "free")?.code;
-      const sideCode = freeSide ?? item?.sides[0]?.code;
-      const added = !!item && !!sideCode && keys.has(`${item.id}:${sideCode}`);
+      const added = !!item && keys.has(item.id);
       button.classList.toggle("is-added", added);
       const label = button.querySelector<HTMLElement>("[data-card-add-label]");
       if (label && !item?.isSoon) label.textContent = added ? "Добавлено" : "В подборку";
@@ -218,12 +209,11 @@ function init(): void {
   renderButtons();
   onShortlistChange(renderButtons);
 
+  // С карточки конструкция добавляется со всеми сторонами — лишние стороны
+  // пользователь снимает чекбоксами на странице подборки.
   const addItem = (id: string) => {
     const item = data.items.find((entry) => entry.id === id);
-    if (!item || item.isSoon) return;
-    const freeCode = availability?.get(id)?.sides.find((side) => side.status === "free")?.code;
-    const side = item.sides.find((entry) => entry.code === freeCode) ?? item.sides[0];
-    if (!side) return;
+    if (!item || !item.sides.length || item.isSoon) return;
     upsertShortlist({
       constructionId: item.id,
       slug: item.slug,
@@ -231,11 +221,11 @@ function init(): void {
       code: item.code,
       address: item.address,
       image: item.img,
-      sideCode: side.code as "A" | "B" | "C",
+      sideCodes: sortSideCodes(item.sides.map((entry) => entry.code as "A" | "B" | "C")),
       sides: item.sides.map((entry) => ({ code: entry.code as "A" | "B" | "C", label: `Сторона ${entry.code}`, priceLabel: entry.priceLabel })),
       from: controls.from.value,
       to: controls.to.value,
-      priceLabel: side.priceLabel,
+      priceLabel: item.sides[0]?.priceLabel ?? "Цена по запросу",
     });
   };
 
@@ -334,7 +324,7 @@ function init(): void {
   };
 
   const clearFilter = (key: string) => {
-    if (key === "period") { controls.from.value = ""; controls.to.value = ""; }
+    if (key === "period") { controls.from.value = ""; controls.to.value = ""; applyDefaultDates(); }
     else if (key === "price") { controls.priceFrom.value = ""; controls.priceTo.value = ""; }
     else if (key === "onlyFree") onlyFreeInput.checked = false;
     else if (key in controls) controls[key as keyof typeof controls].value = "";
@@ -344,13 +334,8 @@ function init(): void {
 
   const reset = () => {
     form.reset();
-    controls.to.min = today;
-    availability = null;
-    availabilityError = false;
-    onlyFreeInput.disabled = true;
-    availabilityController?.abort();
-    annotateCards();
-    apply();
+    applyDefaultDates();
+    void refreshAvailability();
   };
 
   document.addEventListener("click", (event) => {
@@ -394,10 +379,7 @@ function init(): void {
   });
   form.addEventListener("change", (event) => {
     const name = (event.target as HTMLInputElement).name;
-    if (name === "from") {
-      controls.to.min = controls.from.value || today;
-      if (controls.to.value && controls.from.value && controls.to.value < controls.from.value) controls.to.value = "";
-    }
+    if (name === "from") applyDefaultDates();
     if (name === "from" || name === "to") void refreshAvailability();
     else apply();
   });

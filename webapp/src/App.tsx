@@ -445,7 +445,7 @@ function Dashboard({ user }: { user: SessionUser }) {
       <div className="main">
         <header className="topbar">
           <h1 className="topbar-title">{PAGE_TITLES[view]}</h1>
-          <SiteBuildIndicator />
+          <SiteBuildIndicator canPublish={isAdmin} />
         </header>
 
         <div className="content">
@@ -462,7 +462,7 @@ function Dashboard({ user }: { user: SessionUser }) {
                 onCloseLead={() => navigate("/leads")}
               />
             )}
-            {view === "bookings" && <BookingsView user={user} />}
+            {view === "bookings" && <BookingsView user={user} draft={route.bookingDraft} />}
             {view === "contacts" && (
               <ContactsView
                 user={user}
@@ -493,78 +493,128 @@ function Dashboard({ user }: { user: SessionUser }) {
   );
 }
 
-/** Индикатор публикации лендинга: черновые правки, очередь/сборка, успех или сбой. */
-function SiteBuildIndicator() {
+/**
+ * Индикатор публикации лендинга: черновые правки, очередь/сборка, успех или
+ * сбой. Для админа рядом — кнопка «Опубликовать сайт» (запуск публикации всех
+ * накопленных правок; раньше жила в «Настройках сайта»).
+ */
+function SiteBuildIndicator({ canPublish = false }: { canPublish?: boolean }) {
+  const qc = useQueryClient();
   const build = useQuery({
     queryKey: ["site-build"],
     queryFn: () => api.getSiteBuild(),
     refetchInterval: 20_000,
     retry: false,
   });
+  const publish = useMutation({
+    mutationFn: () => api.requestSitePublish(),
+    onSuccess: (status) => {
+      qc.setQueryData(["site-build"], status);
+      qc.invalidateQueries({ queryKey: ["site-build"] });
+    },
+  });
   const s = build.data;
   if (!s) return null;
 
-  if (s.status === "failed") {
-    return (
-      <span
-        className="status-pill is-err"
-        title={s.lastError ?? "Сборка сайта не удалась"}
-      >
-        <span className="status-pill-text">
-          <span className="status-pill-title">Публикация не удалась</span>
-          <span className="status-pill-sub">сайт на прошлой версии</span>
+  const pill = (() => {
+    if (s.status === "failed") {
+      return (
+        <span
+          className="status-pill is-err"
+          title={s.lastError ?? "Сборка сайта не удалась"}
+        >
+          <span className="status-pill-text">
+            <span className="status-pill-title">Публикация не удалась</span>
+            <span className="status-pill-sub">сайт на прошлой версии</span>
+          </span>
         </span>
-      </span>
-    );
-  }
-  if (s.status === "building") {
-    return (
-      <span className="status-pill is-warn">
-        <span className="status-pill-text">
-          <span className="status-pill-title">Сайт публикуется</span>
-          <span className="status-pill-sub">сборка идёт</span>
+      );
+    }
+    if (s.status === "building") {
+      return (
+        <span className="status-pill is-warn">
+          <span className="status-pill-text">
+            <span className="status-pill-title">Сайт публикуется</span>
+            <span className="status-pill-sub">сборка идёт</span>
+          </span>
         </span>
-      </span>
-    );
-  }
-  if (s.pending) {
-    return (
-      <span className="status-pill is-warn">
-        <span className="status-pill-text">
-          <span className="status-pill-title">Публикация в очереди</span>
-          <span className="status-pill-sub">ждёт сборщик</span>
+      );
+    }
+    if (s.pending) {
+      return (
+        <span className="status-pill is-warn">
+          <span className="status-pill-text">
+            <span className="status-pill-title">Публикация в очереди</span>
+            <span className="status-pill-sub">ждёт сборщик</span>
+          </span>
         </span>
-      </span>
-    );
-  }
-  if (s.unpublished) {
-    const since = s.unpublishedSince
-      ? new Date(s.unpublishedSince).toLocaleString("ru-RU")
+      );
+    }
+    if (s.unpublished) {
+      const since = s.unpublishedSince
+        ? new Date(s.unpublishedSince).toLocaleString("ru-RU")
+        : null;
+      return (
+        <span
+          className="status-pill is-warn"
+          title={since ? `Не опубликовано с: ${since}` : undefined}
+        >
+          <span className="status-pill-text">
+            <span className="status-pill-title">Есть изменения</span>
+            <span className="status-pill-sub">нужна публикация</span>
+          </span>
+        </span>
+      );
+    }
+    const when = s.lastSuccessAt
+      ? new Date(s.lastSuccessAt).toLocaleString("ru-RU")
       : null;
     return (
       <span
-        className="status-pill is-warn"
-        title={since ? `Не опубликовано с: ${since}` : undefined}
+        className="status-pill is-ok"
+        title={when ? `Последняя публикация: ${when}` : undefined}
       >
         <span className="status-pill-text">
-          <span className="status-pill-title">Есть изменения</span>
-          <span className="status-pill-sub">нужна публикация</span>
+          <span className="status-pill-title">Сайт опубликован</span>
+          {when && <span className="status-pill-sub">{when}</span>}
         </span>
       </span>
     );
-  }
-  const when = s.lastSuccessAt
-    ? new Date(s.lastSuccessAt).toLocaleString("ru-RU")
-    : null;
+  })();
+
   return (
-    <span
-      className="status-pill is-ok"
-      title={when ? `Последняя публикация: ${when}` : undefined}
-    >
-      <span className="status-pill-text">
-        <span className="status-pill-title">Сайт опубликован</span>
-        {when && <span className="status-pill-sub">{when}</span>}
-      </span>
-    </span>
+    <div className="topbar-site">
+      {pill}
+      {publish.isError && (
+        <span
+          className="status-pill is-err"
+          title={publish.error instanceof Error ? publish.error.message : String(publish.error)}
+        >
+          <span className="status-pill-text">
+            <span className="status-pill-title">Не удалось запустить</span>
+          </span>
+        </span>
+      )}
+      {canPublish && (
+        <button
+          type="button"
+          className="btn-sm"
+          onClick={() => publish.mutate()}
+          disabled={
+            publish.isPending ||
+            s.status === "building" ||
+            s.pending === true ||
+            s.unpublished !== true
+          }
+          title={
+            s.unpublished
+              ? "Запустить публикацию всех накопленных правок сайта"
+              : "Нет сохранённых правок для публикации"
+          }
+        >
+          {publish.isPending ? "Публикация…" : "Опубликовать сайт"}
+        </button>
+      )}
+    </div>
   );
 }

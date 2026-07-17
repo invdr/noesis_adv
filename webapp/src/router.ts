@@ -13,6 +13,15 @@ export interface HashRoute {
   leadId?: string;
   /** id контакта для маршрута `#/contacts/<id>`. */
   contactId?: string;
+  /** Префилл формы новой брони для маршрута `#/bookings/new?…`. */
+  bookingDraft?: BookingDraft;
+}
+
+/** Префилл «Создать бронь из заявки»: конструкция, заявка и клиент. */
+export interface BookingDraft {
+  constructionId?: string;
+  leadId?: string;
+  clientId?: string;
 }
 
 /** Парсит строку хэша в маршрут. Чистая функция — покрыта юнит-тестом. */
@@ -25,6 +34,15 @@ export function parseHash(hash: string): HashRoute {
   }
   if (view === "contacts" && param) {
     return { view: "contacts", contactId: decodeURIComponent(param) };
+  }
+  if (view === "bookings" && param?.startsWith("new")) {
+    const query = new URLSearchParams(param.slice(param.indexOf("?") + 1));
+    const draft: BookingDraft = {};
+    for (const key of ["constructionId", "leadId", "clientId"] as const) {
+      const value = query.get(key);
+      if (value) draft[key] = value;
+    }
+    return { view: "bookings", bookingDraft: draft };
   }
   return { view: view! };
 }

@@ -157,12 +157,6 @@ function Editor({
   const [hidden, setHidden] = useState<Set<string>>(() => new Set(initial.homepageHidden ?? []));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const buildQ = useQuery({
-    queryKey: ["site-build"],
-    queryFn: () => api.getSiteBuild(),
-    refetchInterval: 20_000,
-    retry: false,
-  });
 
   const byId = useMemo(() => new Map(published.map((p) => [p.id, p])), [published]);
 
@@ -200,7 +194,10 @@ function Editor({
     },
     onSuccess: () => {
       setFieldErrors({});
-      setBanner({ kind: "ok", text: "Сохранено в CRM. Чтобы обновить сайт, нажмите «Опубликовать сайт»." });
+      setBanner({
+        kind: "ok",
+        text: "Сохранено в CRM. Чтобы обновить сайт, нажмите «Опубликовать сайт» в правом верхнем углу.",
+      });
       qc.invalidateQueries({ queryKey: ["site-settings"] });
       qc.invalidateQueries({ queryKey: ["site-build"] });
     },
@@ -215,23 +212,6 @@ function Editor({
         setBanner({ kind: "err", text: "Проверьте отмеченные поля." });
         return;
       }
-      setBanner({ kind: "err", text: e instanceof Error ? e.message : String(e) });
-    },
-  });
-
-  const publish = useMutation({
-    mutationFn: () => api.requestSitePublish(),
-    onSuccess: (status) => {
-      qc.setQueryData(["site-build"], status);
-      qc.invalidateQueries({ queryKey: ["site-build"] });
-      setBanner({
-        kind: "ok",
-        text: status.pending
-          ? "Публикация поставлена в очередь. Сборщик обновит сайт отдельным шагом."
-          : "Публиковать нечего — новых сохранённых изменений нет.",
-      });
-    },
-    onError: (e) => {
       setBanner({ kind: "err", text: e instanceof Error ? e.message : String(e) });
     },
   });
@@ -308,7 +288,8 @@ function Editor({
       <h2>Настройки сайта</h2>
       <p className="hint">
         Тексты и контакты лендинга. Пустое поле = стандартное значение (показано серым).
-        Сохранение не запускает пересборку: внесите все правки, затем опубликуйте сайт одним действием.
+        Сохранение не запускает пересборку: внесите все правки, затем опубликуйте сайт
+        одним действием — кнопкой «Опубликовать сайт» в правом верхнем углу.
       </p>
 
       {banner && (
@@ -417,39 +398,11 @@ function Editor({
         >
           {save.isPending ? "Сохранение…" : "Сохранить в CRM"}
         </button>
-        <button
-          type="button"
-          onClick={() => publish.mutate()}
-          disabled={
-            publish.isPending ||
-            buildQ.data?.status === "building" ||
-            buildQ.data?.pending === true ||
-            buildQ.data?.unpublished !== true
-          }
-          title={
-            buildQ.data?.unpublished
-              ? "Запустить публикацию всех накопленных правок сайта"
-              : "Нет сохранённых правок для публикации"
-          }
-        >
-          {publish.isPending ? "Публикация…" : "Опубликовать сайт"}
-        </button>
       </div>
-      {buildQ.data?.unpublished && !buildQ.data.pending && buildQ.data.status !== "building" && (
-        <p className="hint" style={{ marginTop: 8 }}>
-          Есть сохранённые изменения, которых ещё нет на публичном сайте.
-        </p>
-      )}
-      {buildQ.data?.pending && buildQ.data.status !== "building" && (
-        <p className="hint" style={{ marginTop: 8 }}>
-          Публикация уже в очереди; сборщик заберёт её после короткой паузы.
-        </p>
-      )}
-      {buildQ.data?.status === "building" && (
-        <p className="hint" style={{ marginTop: 8 }}>
-          Сайт сейчас публикуется. Дождитесь завершения перед следующей публикацией.
-        </p>
-      )}
+      <p className="hint" style={{ marginTop: 8 }}>
+        Публикация запускается кнопкой «Опубликовать сайт» в правом верхнем углу —
+        рядом с индикатором состояния сайта.
+      </p>
     </section>
   );
 }
