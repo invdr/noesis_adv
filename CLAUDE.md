@@ -90,6 +90,22 @@ bun run deploy:vps
 (миграции на старте) → идемпотентный сид → сборка сайта/CRM → пересоздание nginx.
 Аварийный обход гейта — `SKIP_CHECKS=1 bun run deploy:vps`. Отката нет: roll-forward.
 
+**«Обнови деплой» (действующий прод — no-Docker, `root@77.222.32.54`,
+`/var/www/noesis_adv`).** SSH из песочницы агента нет — выдать пользователю
+команды для запуска на VPS (полный рецепт и первичная настройка git-копии —
+[docs/DEPLOYMENT_VPS.md](./docs/DEPLOYMENT_VPS.md) → «Обновление прода без Docker»):
+
+```bash
+ssh root@77.222.32.54
+cd /var/www/noesis_adv
+git fetch origin <ветка>
+git reset --hard origin/<ветка>   # tracked-файлы; no-docker.env/dist/node_modules не трогает
+bash infra/deploy-no-docker.sh    # bun install → migrate deploy → seed → сборка сайта/CRM → nginx
+```
+
+Перед этим ветка должна быть запушена, а гейт (`bun run typecheck`+`test`) —
+зелёным (сам `deploy-no-docker.sh` гейт не гоняет).
+
 Бэкапы: `bash infra/backup.sh` на VPS; восстановление —
 [docs/backup-restore.md](./docs/backup-restore.md).
 

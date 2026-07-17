@@ -209,6 +209,54 @@ bun run deploy:vps
 backend, прогоняет сид контента (идемпотентно), затем собирает фронты на данных
 API и перезапускает nginx с новой статикой.
 
+### Обновление прода без Docker (текущий прод, git → deploy-no-docker.sh)
+
+Действующий прод — **no-Docker**: `root@77.222.32.54`, каталог
+`/var/www/noesis_adv`, деплой скриптом `infra/deploy-no-docker.sh`. Каталог
+можно вести как git-рабочую копию и катить полностью на VPS. Секреты
+(`infra/no-docker.env`) в репозитории нет (в `.gitignore`), поэтому git их не
+трогает; сам `deploy-no-docker.sh` git не требует — собирает код, лежащий в
+каталоге.
+
+Первый раз (превратить каталог в git-рабочую копию):
+
+```bash
+ssh root@77.222.32.54
+cd /var/www/noesis_adv
+cp infra/no-docker.env ~/no-docker.env.bak        # страховка секретов
+git init
+git remote add origin https://github.com/invdr/noesis_adv.git
+git config --global --add safe.directory /var/www/noesis_adv
+# приватный репо: подставить креды один раз, если их нет —
+# git remote set-url origin https://<логин>:<PAT>@github.com/invdr/noesis_adv.git
+```
+
+Каждое последующее обновление (подставить нужную ветку):
+
+```bash
+ssh root@77.222.32.54
+cd /var/www/noesis_adv
+git fetch origin <ветка>
+git reset --hard origin/<ветка>                   # только tracked-файлы; env/dist/node_modules не трогает
+ls -l infra/no-docker.env                          # секреты целы; если нет — cp ~/no-docker.env.bak infra/no-docker.env
+bash infra/deploy-no-docker.sh
+```
+
+`deploy-no-docker.sh` делает: `bun install` → `prisma generate` →
+`prisma migrate deploy` (применяет пендинг-миграции) → рестарт backend →
+идемпотентный `db:seed` → сборка сайта и CRM → рендер и reload nginx. Гейт
+(`typecheck`+`test`) сам скрипт не гоняет — прогнать перед пушем ветки.
+
+Смоук после деплоя:
+
+```bash
+systemctl is-active noesis-backend noesis-site-builder nginx
+curl -fsS http://127.0.0.1:3001/health
+curl -fsSI https://noesis.catlg.ru/
+curl -fsSI https://noesis.catlg.ru/crm/
+curl -fsSI https://noesis.catlg.ru/catalog/
+```
+
 ## Замена старой версии на VPS
 
 Если на сервере уже крутится прошлая версия, перед деплоем нужно освободить
