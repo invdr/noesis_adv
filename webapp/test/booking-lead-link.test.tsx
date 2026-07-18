@@ -96,4 +96,31 @@ describe("BookingsView", () => {
       );
     });
   });
+
+  test("уход с маршрута префилла (draft очищается) возвращает к сетке, а не в пустую форму", async () => {
+    mockLists();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <BookingsView
+          user={sessionUser("manager")}
+          draft={{ constructionId: "construction1", leadId: "lead1" }}
+        />
+      </QueryClientProvider>,
+    );
+
+    // Форма префилла открыта.
+    await screen.findByRole("button", { name: "Сохранить" });
+
+    // Переход #/bookings/new?… → #/bookings: draft становится undefined.
+    rerender(
+      <QueryClientProvider client={client}>
+        <BookingsView user={sessionUser("manager")} draft={undefined} />
+      </QueryClientProvider>,
+    );
+
+    // Показана сетка (кнопка «+ Новая бронь»), а не пустая ремонтированная форма.
+    await screen.findByRole("button", { name: /Новая бронь/ });
+    expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
+  });
 });

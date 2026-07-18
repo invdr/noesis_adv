@@ -4,9 +4,6 @@ import { loadYandexMaps } from "../shared/yandexMaps";
 const MAPS_KEY = (import.meta.env.VITE_YANDEX_MAPS_API_KEY as string | undefined) ?? "";
 const GROZNY: [number, number] = [43.318, 45.698];
 
-/** Есть ли вообще карта в CRM (ключ задан на сборке). */
-export const COORDINATE_PICKER_ENABLED = MAPS_KEY !== "";
-
 function parseCoord(value: string): number | null {
   if (!value.trim()) return null;
   const n = Number(value.trim().replace(",", "."));

@@ -136,10 +136,16 @@ function writeShortlist(items: ShortlistItem[]): void {
 export function upsertShortlist(item: ShortlistItem): ShortlistItem[] {
   const clean = cleanItem(item);
   if (!clean) return readShortlist();
+  // Нормализуем период здесь же (сегодня / минимум +1 месяц), чтобы период
+  // короче месяца не попал ни в хранилище, ни в событие изменения: иначе
+  // слушатели (страница подборки, текст заявки) показали бы сырой период до
+  // следующего чтения. defaultPeriod идемпотентен для валидных периодов.
+  const period = defaultPeriod(clean.from, clean.to, todayLocal());
+  const normalized = { ...clean, from: period.from, to: period.to };
   const items = readShortlist();
-  const index = items.findIndex((entry) => entry.constructionId === clean.constructionId);
-  if (index >= 0) items[index] = clean;
-  else items.push(clean);
+  const index = items.findIndex((entry) => entry.constructionId === normalized.constructionId);
+  if (index >= 0) items[index] = normalized;
+  else items.push(normalized);
   writeShortlist(items);
   return items;
 }

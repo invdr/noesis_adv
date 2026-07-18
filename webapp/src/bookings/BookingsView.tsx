@@ -95,6 +95,12 @@ export function BookingsView({ user, draft }: { user: SessionUser; draft?: Booki
     : "";
   useEffect(() => {
     if (draftKey) setEditing(null);
+    // Уход с маршрута префилла (#/bookings/new?… → #/bookings) обнуляет draftKey.
+    // Без этого форма осталась бы открытой (editing=null) и ремонтировалась бы
+    // пустой из-за смены key — возвращаем пользователя к сетке. Кнопку «+ Новая
+    // бронь» это не трогает: там draftKey с самого начала пуст и не меняется,
+    // поэтому эффект не перезапускается и editing=null сохраняется.
+    else setEditing((cur) => (cur === null ? undefined : cur));
   }, [draftKey]);
   const [from, setFrom] = useState(monthStart(productToday()));
   const [toInclusive, setToInclusive] = useState(previousDateOnly(addBookingMonths(monthStart(productToday()), 6)));
