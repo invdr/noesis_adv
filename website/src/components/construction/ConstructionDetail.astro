@@ -132,7 +132,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
         <h2>{construction.description || "Городская рекламная конструкция с адресной привязкой и выбором стороны."}</h2>
       </div>
       <dl>
-        <div><dt>Инвентарный код</dt><dd>{construction.code || "Не указан"}</dd></div>
+        <div><dt>Код конструкции</dt><dd>{construction.code || "Не указан"}</dd></div>
         <div><dt>Формат</dt><dd>{formatLabels[construction.format]}</dd></div>
         <div><dt>Размер</dt><dd>{construction.size || "По запросу"}</dd></div>
         <div><dt>Сторон</dt><dd>{construction.sideCount} · {construction.sides.map((side) => side.code).join(" / ")}</dd></div>

@@ -491,7 +491,7 @@ function BookingForm({
 
       <div className="card">
         <div className="card-body">
-          <h3 className="section-title">Инвентарь и период</h3>
+          <h3 className="section-title">Конструкция и период</h3>
           <Field label="Конструкция">
             <select value={constructionId} onChange={(e) => setConstructionId(e.target.value)}>
               <option value="">Выберите конструкцию</option>

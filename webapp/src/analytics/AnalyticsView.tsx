@@ -16,7 +16,7 @@ import { PartnerAnalyticsView } from "./PartnerAnalyticsView";
 type AnalyticsTab = "inventory" | "leads" | "partners";
 
 /**
- * Раздел «Аналитика» с вкладками. Инвентарь и партнёры доступны всем,
+ * Раздел «Аналитика» с вкладками. Конструкции и партнёры доступны всем,
  * лидовая аналитика (`LeadAnalyticsView`) — только admin.
  */
 export function AnalyticsView({ user }: { user: SessionUser }) {
@@ -32,7 +32,7 @@ export function AnalyticsView({ user }: { user: SessionUser }) {
           className={tab === "inventory" ? "is-active" : ""}
           onClick={() => setTab("inventory")}
         >
-          Инвентарь
+          Конструкции
         </button>
         {isAdmin && (
           <button

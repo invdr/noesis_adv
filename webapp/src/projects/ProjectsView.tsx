@@ -447,7 +447,7 @@ function ProjectFormBody({
             {err("name")}
           </Field>
 
-          <Field label="Инвентарный код">
+          <Field label="Код конструкции">
             <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="напр. СФ-014" />
             {err("code")}
           </Field>

@@ -6,7 +6,7 @@ import { api } from "../src/api/client";
 import { AnalyticsView } from "../src/analytics/AnalyticsView";
 
 /**
- * Дымовой тест шелла «Аналитика» с вкладками: инвентарь доступен всем,
+ * Дымовой тест шелла «Аналитика» с вкладками: конструкции доступны всем,
  * лидовая аналитика — только admin, партнёрская — всем.
  */
 
@@ -70,9 +70,9 @@ afterEach(() => {
 });
 
 describe("AnalyticsView (вкладки)", () => {
-  test("admin: вкладки инвентаря, заявок и риелторов; по умолчанию «Инвентарь»", async () => {
+  test("admin: вкладки конструкций, заявок и риелторов; по умолчанию «Конструкции»", async () => {
     renderAnalytics("admin");
-    expect(screen.getByRole("tab", { name: "Инвентарь" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Конструкции" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Заявки" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Партнёры" })).toBeTruthy();
     expect(await screen.findByText("Плановая выручка")).toBeTruthy();
@@ -101,10 +101,10 @@ describe("AnalyticsView (вкладки)", () => {
     expect(screen.queryByText("Плановая выручка")).toBeNull();
   });
 
-  test("менеджер: «Инвентарь» и «Риелторы», без вкладки «Заявки»", async () => {
+  test("менеджер: «Конструкции» и «Риелторы», без вкладки «Заявки»", async () => {
     renderAnalytics("manager");
     expect(screen.queryByRole("tab", { name: "Заявки" })).toBeNull();
-    expect(screen.getByRole("tab", { name: "Инвентарь" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Конструкции" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Партнёры" })).toBeTruthy();
     expect(await screen.findByText("Плановая выручка")).toBeTruthy();
     expect(screen.queryByText("Всего заявок")).toBeNull();
