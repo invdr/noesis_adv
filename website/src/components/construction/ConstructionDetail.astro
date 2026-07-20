@@ -214,24 +214,24 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__breadcrumbs { display: flex; min-height: 52px; align-items: center; gap: 9px; overflow: hidden; color: var(--muted); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
   .detail__breadcrumbs a:hover { color: var(--accent); }
   .detail__breadcrumbs > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-  .detail__hero { display: grid; grid-template-columns: minmax(500px, 1.25fr) minmax(360px, 0.75fr); min-height: 720px; gap: 20px; }
-  .detail__media { position: relative; min-width: 0; min-height: 620px; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
+  .detail__hero { display: grid; grid-template-columns: minmax(500px, 1.25fr) minmax(360px, 0.75fr); min-height: 600px; gap: 20px; }
+  .detail__media { position: relative; min-width: 0; min-height: 510px; overflow: hidden; background: var(--surface); border-radius: var(--radius-lg); }
   .detail__media > img { width: 100%; height: 100%; object-fit: cover; }
   .detail__media::after { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 20, 18, 0.24), transparent 38%, rgba(20, 20, 18, 0.42)); content: ""; pointer-events: none; }
-  .detail__media-fallback { display: grid; width: 100%; height: 100%; min-height: 620px; place-items: center; color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+  .detail__media-fallback { display: grid; width: 100%; height: 100%; min-height: 510px; place-items: center; color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
   .detail__media-code { position: absolute; z-index: 2; right: 18px; bottom: 18px; left: 18px; display: flex; justify-content: space-between; gap: 16px; color: #fff; font-family: var(--font-mono); font-size: 11px; }
   .detail__badges { position: absolute; z-index: 2; top: 18px; left: 18px; display: flex; flex-wrap: wrap; gap: 7px; }
   .detail__badges span { padding: 6px 10px; color: #fbfaf5; background: var(--accent); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 10px; }
 
-  .detail__summary { display: flex; min-width: 0; flex-direction: column; padding: clamp(22px, 3vw, 38px); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+  .detail__summary { display: flex; min-width: 0; flex-direction: column; padding: clamp(18px, 2.4vw, 30px); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); }
   .detail__summary-top > p,
   .detail__side-picker > span,
   .detail__period > span { margin: 0; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-  .detail__summary h1 { margin: 15px 0 0; font-family: var(--font-display); font-size: clamp(34px, 4.2vw, 52px); font-weight: 600; letter-spacing: 0.01em; line-height: 1.04; text-transform: uppercase; }
-  .detail__summary address { margin-top: 18px; color: var(--muted); font-size: 14px; font-style: normal; }
-  .detail__side-picker { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .detail__summary h1 { margin: 12px 0 0; font-family: var(--font-display); font-size: clamp(28px, 3.4vw, 42px); font-weight: 600; letter-spacing: 0.01em; line-height: 1.04; text-transform: uppercase; }
+  .detail__summary address { margin-top: 14px; color: var(--muted); font-size: 14px; font-style: normal; }
+  .detail__side-picker { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
   .detail__side-picker > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-  .detail__side-picker button { display: grid; min-height: 62px; align-content: center; gap: 3px; padding: 8px 12px; color: var(--ink); background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius-sm); text-align: left; }
+  .detail__side-picker button { display: grid; min-height: 54px; align-content: center; gap: 3px; padding: 7px 12px; color: var(--ink); background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius-sm); text-align: left; }
   .detail__side-picker button[aria-pressed="true"] { color: #fbfaf5; background: var(--ink); border-color: var(--ink); }
   .detail__side-picker b { font-family: var(--font-mono); font-size: 16px; }
   .detail__side-picker small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -267,20 +267,20 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__gallery-strip button[aria-pressed="true"] { border-color: var(--accent); }
   .detail__gallery-strip img { width: 100%; height: 100%; object-fit: cover; }
 
-  .detail__facts { margin-top: clamp(80px, 10vw, 140px); padding: clamp(70px, 9vw, 120px) 0; color: #fbfaf5; background: var(--dark); }
-  .detail__facts-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: clamp(50px, 8vw, 120px); }
+  .detail__facts { margin-top: clamp(60px, 7.5vw, 104px); padding: clamp(52px, 6.5vw, 92px) 0; color: #fbfaf5; background: var(--dark); }
+  .detail__facts-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: clamp(36px, 5vw, 80px); }
   .detail__description > p,
   .detail__documents-head > p,
   .detail__location-copy > p,
   .detail__availability-head p { margin: 0 0 18px; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
-  .detail__description h2 { margin: 0; font-family: var(--font-display); font-size: clamp(28px, 4vw, 48px); font-weight: 600; letter-spacing: 0.01em; line-height: 1.08; text-transform: uppercase; }
+  .detail__description h2 { margin: 0; font-family: var(--font-display); font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: 0.01em; line-height: 1.08; text-transform: uppercase; }
   .detail__facts dl { display: grid; margin: 0; }
-  .detail__facts dl > div { display: flex; min-height: 56px; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--dark-line); }
+  .detail__facts dl > div { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--dark-line); }
   .detail__facts dl > div:last-child { border-bottom: 1px solid var(--dark-line); }
   .detail__facts dt { color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
   .detail__facts dd { margin: 0; text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 500; }
 
-  .detail__availability { padding-top: clamp(80px, 10vw, 140px); }
+  .detail__availability { padding-top: clamp(60px, 7.5vw, 104px); }
   .detail__availability-head { display: flex; align-items: end; justify-content: space-between; gap: 30px; }
   .detail__availability-head h2,
   .detail__location-copy h2,
@@ -293,7 +293,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__calendar-shell { display: grid; grid-template-columns: 200px 1fr; gap: 28px; margin-top: 38px; padding: 26px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md); }
   .detail__calendar-side { padding-right: 24px; border-right: 1px solid var(--line); }
   .detail__calendar-side > span { color: var(--muted); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; }
-  .detail__calendar-side > strong { display: block; margin-top: 10px; color: var(--accent); font-family: var(--font-mono); font-size: 56px; line-height: 1; }
+  .detail__calendar-side > strong { display: block; margin-top: 10px; color: var(--accent); font-family: var(--font-mono); font-size: 44px; line-height: 1; }
   .detail__calendar-side p { margin: 20px 0 0; color: var(--muted); font-size: 11px; }
   .detail__calendar { display: grid; grid-template-columns: repeat(2, minmax(250px, 1fr)); gap: 30px; min-width: 0; }
   :global(.availability-month) { min-width: 0; }
@@ -307,7 +307,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   :global(.availability-day[data-outside="true"]) { visibility: hidden; }
   :global(.availability-message) { grid-column: 1 / -1; margin: 0; padding: 28px; color: var(--muted); background: var(--canvas); border-radius: 12px; font-size: 12px; text-align: center; }
 
-  .detail__location { display: grid; grid-template-columns: minmax(300px, 0.65fr) minmax(500px, 1.35fr); align-items: stretch; gap: 22px; padding-top: clamp(80px, 10vw, 140px); }
+  .detail__location { display: grid; grid-template-columns: minmax(300px, 0.65fr) minmax(500px, 1.35fr); align-items: stretch; gap: 22px; padding-top: clamp(60px, 7.5vw, 104px); }
   .detail__location-copy { display: flex; flex-direction: column; padding: clamp(26px, 4vw, 50px); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); }
   .detail__location-copy dl { display: grid; gap: 10px; margin: 38px 0 0; }
   .detail__location-copy dl > div { display: flex; justify-content: space-between; gap: 20px; padding-top: 10px; border-top: 1px solid var(--line); }
@@ -316,7 +316,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__location-copy a { display: flex; min-height: 48px; align-items: center; justify-content: center; margin-top: auto; color: #fbfaf5; background: var(--accent); border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; }
   .detail__location-copy a:hover { background: var(--accent-hover); }
 
-  .detail__documents { margin-top: clamp(80px, 10vw, 140px); padding: clamp(70px, 9vw, 120px) 0; background: var(--paper); }
+  .detail__documents { margin-top: clamp(60px, 7.5vw, 104px); padding: clamp(52px, 6.5vw, 92px) 0; background: var(--paper); }
   .detail__documents-head { display: grid; grid-template-columns: 0.4fr 1fr; align-items: end; gap: 30px; }
   .detail__document-groups { display: grid; gap: 28px; margin-top: 48px; }
   .detail__document-groups section { display: grid; grid-template-columns: 0.4fr 1fr; gap: 30px; }
@@ -327,7 +327,7 @@ const data = jsonForHtml({ construction: visualConstruction, map: { apiKey: mapA
   .detail__document-groups a > span { font-size: 13px; font-weight: 650; }
   .detail__document-groups small { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
   .detail__document-groups a:hover > span { color: var(--accent); }
-  .detail__form { padding-top: clamp(80px, 10vw, 140px); }
+  .detail__form { padding-top: clamp(60px, 7.5vw, 104px); }
 
   @media (max-width: 1050px) {
     .detail__hero { grid-template-columns: 1fr; }
