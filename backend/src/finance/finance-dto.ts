@@ -10,6 +10,7 @@ import type {
   FinanceShare as PrismaFinanceShare,
 } from "@prisma/client";
 import type {
+  ConstructionSide,
   FinanceExpense,
   FinanceExpenseCategory,
   FinanceExpenseStatus,
@@ -103,7 +104,9 @@ function bookingRef(b: BookingWithSide | null) {
   return b
     ? {
         id: b.id,
-        sideCode: b.constructionSide?.code ?? null,
+        // Prisma хранит код стороны строкой (валидирует Zod на записи),
+        // поэтому наружу приводим к union контракта.
+        sideCode: (b.constructionSide?.code as ConstructionSide | undefined) ?? null,
         startDate: dateToDateOnly(b.startDate),
         endDate: dateToDateOnly(b.endDate),
       }
@@ -161,7 +164,7 @@ export function toExpenseDto(row: ExpenseRow): FinanceExpense {
     construction: constructionRef(row.construction),
     booking: bookingRef(row.booking),
     constructionSideId: row.constructionSideId ?? null,
-    sideCode: row.constructionSide?.code ?? null,
+    sideCode: (row.constructionSide?.code as ConstructionSide | undefined) ?? null,
     comment: row.comment,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

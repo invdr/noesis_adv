@@ -1,11 +1,18 @@
 import { z } from "zod";
+import { dateOnlySchema } from "./booking";
 import { crmContactPhoneSchema, leadSourceSchema, leadStageRefSchema } from "./lead";
 
 const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
+/**
+ * Дата паспорта/рождения. Раньше здесь была своя регулярка без календарной
+ * проверки, поэтому «2026-02-31» проходило и доезжало до `String?` в БД —
+ * а поля заведены под генератор договорных документов, где такая дата стала бы
+ * Invalid Date. Берём общий `dateOnlySchema`, у которого проверка есть.
+ */
 const optionalDateText = z
   .string()
   .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Укажите дату в формате ГГГГ-ММ-ДД")
+  .pipe(dateOnlySchema)
   .nullable()
   .optional();
 

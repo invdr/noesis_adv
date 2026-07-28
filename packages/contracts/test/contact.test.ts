@@ -89,3 +89,42 @@ describe("upsertContactSchema: роли и компания", () => {
     ).toBe(false);
   });
 });
+
+describe("upsertContactSchema: паспортные даты", () => {
+  /**
+   * Поля заведены под будущий генератор договорных документов и лежат в БД как
+   * `String?`, поэтому невалидная дата не отсеивалась нигде дальше по пути.
+   * Своя регулярка проверяла только форму, но не календарь.
+   */
+  test("несуществующий календарный день отклоняется", () => {
+    const res = upsertContactSchema.safeParse({
+      ...base,
+      birthDate: "2026-02-31",
+    });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues[0]?.path).toEqual(["birthDate"]);
+  });
+
+  test("заведомо невозможный месяц отклоняется", () => {
+    expect(
+      upsertContactSchema.safeParse({ ...base, passportIssuedAt: "2026-99-99" })
+        .success,
+    ).toBe(false);
+  });
+
+  test("реальная дата и отсутствие даты допустимы", () => {
+    const parsed = upsertContactSchema.parse({
+      ...base,
+      birthDate: "1990-02-28",
+      passportIssuedAt: null,
+    });
+    expect(parsed.birthDate).toBe("1990-02-28");
+    expect(parsed.passportIssuedAt).toBeNull();
+  });
+
+  test("високосный день проходит", () => {
+    expect(
+      upsertContactSchema.safeParse({ ...base, birthDate: "2024-02-29" }).success,
+    ).toBe(true);
+  });
+});

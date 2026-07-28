@@ -165,3 +165,47 @@ describe("upsertConstructionSchema — обязательность по сос�
     );
   });
 });
+
+describe("upsertConstructionSchema: потолки числовых полей", () => {
+  /**
+   * Как и у брони: `pricePerMonth`, `trafficPerDay` и `grp` ложатся в `Int`
+   * (и `Float` у grp), поэтому переполнение должно отсекаться схемой с
+   * привязкой к полю, а не превращаться в 500 из БД. У `grp` дополнительно
+   * важна `.finite()`: Infinity проходил проверки и сериализовался в null.
+   */
+  const draft = { name: "СФ-014", status: "draft" as const };
+
+  test("цена выше потолка Int отклоняется по своему полю", () => {
+    const res = upsertConstructionSchema.safeParse({
+      ...draft,
+      pricePerMonth: 9_000_000_000,
+    });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues[0]?.path).toEqual(["pricePerMonth"]);
+  });
+
+  test("трафик выше потолка Int отклоняется", () => {
+    expect(
+      upsertConstructionSchema.safeParse({ ...draft, trafficPerDay: 3_000_000_000 })
+        .success,
+    ).toBe(false);
+  });
+
+  test("Infinity в grp отклоняется", () => {
+    expect(
+      upsertConstructionSchema.safeParse({ ...draft, grp: Number.POSITIVE_INFINITY })
+        .success,
+    ).toBe(false);
+  });
+
+  test("реалистичные значения проходят", () => {
+    expect(
+      upsertConstructionSchema.safeParse({
+        ...draft,
+        pricePerMonth: 30_000,
+        trafficPerDay: 12_000,
+        grp: 4.5,
+      }).success,
+    ).toBe(true);
+  });
+});

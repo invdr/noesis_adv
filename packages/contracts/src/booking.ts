@@ -1,6 +1,10 @@
 import { z } from "zod";
-import { paginationQuerySchema } from "./common";
-import { constructionSideDetailsSchema, constructionSideSchema } from "./construction";
+import { MAX_INT4_VALUE, paginationQuerySchema } from "./common";
+import {
+  constructionSideCountSchema,
+  constructionSideDetailsSchema,
+  constructionSideSchema,
+} from "./construction";
 
 // --- Справочники бронирования ---
 
@@ -125,7 +129,7 @@ const BOOKING_CONSTRUCTION_SUMMARY = z.object({
   name: z.string(),
   code: z.string().nullable(),
   address: z.string().nullable(),
-  sideCount: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  sideCount: constructionSideCountSchema,
   pricePerMonth: z.number().int().nullable(),
 });
 
@@ -188,12 +192,14 @@ export const upsertBookingSchema = z
       .number()
       .int()
       .positive("Цена должна быть больше 0")
+      .max(MAX_INT4_VALUE, "Цена слишком большая")
       .nullable()
       .optional(),
     totalPrice: z
       .number()
       .int()
       .nonnegative("Сумма не может быть отрицательной")
+      .max(MAX_INT4_VALUE, "Сумма слишком большая")
       .nullable()
       .optional(),
     priceNote: z.string().trim().max(500).nullable().optional(),

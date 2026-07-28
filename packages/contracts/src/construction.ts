@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { paginationQuerySchema, SLUG_RE } from "./common";
+import { MAX_INT4_VALUE, paginationQuerySchema, SLUG_RE } from "./common";
 import { assetSchema, IMAGE_MAX_BYTES } from "./file";
 import { developerSchema, publicDeveloperSchema } from "./developer";
 
@@ -240,10 +240,17 @@ export const constructionSideInputSchema = z.object({
     .number()
     .int()
     .positive("Цена должна быть больше 0")
+    .max(MAX_INT4_VALUE, "Цена слишком большая")
     .nullable()
     .optional(),
-  trafficPerDay: z.number().int().nonnegative().nullable().optional(),
-  grp: z.number().nonnegative().nullable().optional(),
+  trafficPerDay: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(MAX_INT4_VALUE, "Слишком большое значение")
+    .nullable()
+    .optional(),
+  grp: z.number().finite().nonnegative().max(MAX_INT4_VALUE).nullable().optional(),
   /** Индекс фото в итоговом массиве `images`; `null` — без отдельного фото стороны. */
   photoIndex: z.number().int().nonnegative().nullable().optional(),
 });
@@ -277,12 +284,19 @@ export const upsertConstructionSchema = z
     sideCount: constructionSideCountSchema.default(1),
     sides: z.array(constructionSideInputSchema).max(3).optional(),
     lighting: constructionLightingSchema.default("none"),
-    grp: z.number().nonnegative().nullable().optional(),
-    trafficPerDay: z.number().int().nonnegative().nullable().optional(),
+    grp: z.number().finite().nonnegative().max(MAX_INT4_VALUE).nullable().optional(),
+    trafficPerDay: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(MAX_INT4_VALUE, "Слишком большое значение")
+      .nullable()
+      .optional(),
     pricePerMonth: z
       .number()
       .int()
       .positive("Цена должна быть больше 0")
+      .max(MAX_INT4_VALUE, "Цена слишком большая")
       .nullable()
       .optional(),
     description: z.string().trim().max(20000).optional(),

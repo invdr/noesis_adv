@@ -97,3 +97,46 @@ describe("upsertBookingSchema", () => {
     ).toBe(true);
   });
 });
+
+describe("upsertBookingSchema: потолок сумм", () => {
+  /**
+   * Колонки цен в Postgres — `Int` (2^31−1). Без верхней границы лишний ноль
+   * при вводе проходил схему и падал уже в БД, то есть менеджер получал
+   * «Внутреннюю ошибку сервера» вместо подсказки у поля.
+   */
+  // Полный валидный набор: иначе негативные проверки ниже проходили бы из-за
+  // недостающего clientId, а не из-за потолка.
+  const base = {
+    kind: "commercial" as const,
+    status: "booked" as const,
+    constructionId: "c1",
+    clientId: "ct1",
+    startDate: "2026-08-01",
+    durationMonths: 1,
+  };
+
+  test("цена выше потолка Int отклоняется по своему полю", () => {
+    const res = upsertBookingSchema.safeParse({
+      ...base,
+      basePricePerMonth: 2_000_000_000,
+    });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues[0]?.path).toEqual(["basePricePerMonth"]);
+  });
+
+  test("итоговая сумма выше потолка Int отклоняется", () => {
+    const res = upsertBookingSchema.safeParse({
+      ...base,
+      totalPrice: 2_000_000_000,
+    });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues[0]?.path).toEqual(["totalPrice"]);
+  });
+
+  test("реалистичная цена сити-формата проходит", () => {
+    expect(
+      upsertBookingSchema.safeParse({ ...base, basePricePerMonth: 45_000 })
+        .success,
+    ).toBe(true);
+  });
+});

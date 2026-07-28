@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { paginationQuerySchema } from "./common";
+import { MAX_INT4_VALUE, paginationQuerySchema } from "./common";
 import { dateOnlySchema } from "./booking";
+import { constructionSideSchema } from "./construction";
 
 // --- Общие примитивы ---
 
@@ -21,12 +22,11 @@ export const shareBpsSchema = z
   .max(FINANCE_TOTAL_BPS, "Доля не может превышать 100%");
 
 /**
- * Верхний предел ОДНОЙ суммы в рублях. Ниже 2^31−1 (диапазон Postgres `Int`),
- * так что одиночное значение-переполнение отклоняется схемой как 422, а не падает
- * в БД как 500. Агрегаты (месячные итоги) кап не гарантирует — но при бизнесе
- * сити-форматов реальные суммы на порядки меньше потолка.
+ * Верхний предел ОДНОЙ суммы в рублях. Тот же кап, что у остальных денежных и
+ * счётных полей (`MAX_INT4_VALUE` в common) — исторически он появился здесь,
+ * имя сохранено ради читаемости финансовых сообщений.
  */
-export const FINANCE_MAX_AMOUNT = 1_000_000_000;
+export const FINANCE_MAX_AMOUNT = MAX_INT4_VALUE;
 
 /** Сумма денег в рублях (целое, положительное — для поступлений/расходов/выплат). */
 const positiveAmountSchema = z
@@ -163,7 +163,7 @@ const FINANCE_CONSTRUCTION_REF = z.object({
 
 const FINANCE_BOOKING_REF = z.object({
   id: z.string(),
-  sideCode: z.string().nullable(),
+  sideCode: constructionSideSchema.nullable(),
   startDate: dateOnlySchema,
   endDate: dateOnlySchema,
 });
@@ -227,7 +227,7 @@ export const financeExpenseSchema = z.object({
   /** Id выбранной стороны (для повторного редактирования). */
   constructionSideId: z.string().nullable(),
   /** Код стороны для показа. */
-  sideCode: z.string().nullable(),
+  sideCode: constructionSideSchema.nullable(),
   comment: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),

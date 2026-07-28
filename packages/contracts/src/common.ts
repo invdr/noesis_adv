@@ -11,6 +11,15 @@ export const apiErrorSchema = z.object({
 });
 export type ApiError = z.infer<typeof apiErrorSchema>;
 
+/**
+ * Верхний предел ОДНОГО денежного значения в рублях и любого счётчика,
+ * который ложится в Postgres `Int` (2^31−1). Без него лишний ноль при вводе
+ * проходил схему и падал уже в БД — то есть отдавал 500 вместо 422 с указанием
+ * поля. Агрегаты (месячные итоги) кап не гарантирует, но при бизнесе
+ * сити-форматов реальные значения на порядки меньше потолка.
+ */
+export const MAX_INT4_VALUE = 1_000_000_000;
+
 /** Параметры постраничной выборки. */
 export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
