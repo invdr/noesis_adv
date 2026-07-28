@@ -10,6 +10,7 @@ import type { AppEnv } from "../http/context";
 import { requirePasswordChanged } from "../http/auth";
 import { HttpError } from "../http/errors";
 import { parseMultipart } from "../http/multipart";
+import { readJsonBody } from "../http/body";
 import {
   addProgressPhotos,
   createProgressAlbum,
@@ -40,7 +41,7 @@ export function progressRoutes(rt: Runtime): Hono<AppEnv> {
   );
 
   app.post("/:constructionId/progress", auth, async (c) => {
-    const input = upsertProgressAlbumSchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertProgressAlbumSchema.parse(await readJsonBody(c));
     const album = await createProgressAlbum(
       rt,
       c.req.param("constructionId"),
@@ -51,7 +52,7 @@ export function progressRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.patch("/:constructionId/progress/:albumId", auth, async (c) => {
-    const input = upsertProgressAlbumSchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertProgressAlbumSchema.parse(await readJsonBody(c));
     const album = await updateProgressAlbum(
       rt,
       c.req.param("constructionId"),

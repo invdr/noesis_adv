@@ -11,6 +11,7 @@ import { requirePasswordChanged } from "../http/auth";
 import { HttpError } from "../http/errors";
 import { parseMultipart } from "../http/multipart";
 import { readAssetBytes } from "../files/file-service";
+import { readJsonBody } from "../http/body";
 import {
   addBookingReportPhotos,
   createBookingReport,
@@ -36,12 +37,12 @@ export function bookingReportRoutes(rt: Runtime): Hono<AppEnv> {
   );
 
   app.post("/:id/reports", auth, async (c) => {
-    const input = upsertBookingReportSchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertBookingReportSchema.parse(await readJsonBody(c));
     return c.json(await createBookingReport(rt, c.get("user"), c.req.param("id"), input), 201);
   });
 
   app.patch("/:id/reports/:reportId", auth, async (c) => {
-    const input = upsertBookingReportSchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertBookingReportSchema.parse(await readJsonBody(c));
     return c.json(await updateBookingReport(rt, c.req.param("id"), c.req.param("reportId"), input));
   });
 

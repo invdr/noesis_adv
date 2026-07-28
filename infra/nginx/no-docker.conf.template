@@ -16,8 +16,11 @@ server {
   include /etc/letsencrypt/options-ssl-nginx.conf;
   ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-  # HTTP/2 — как в Docker-конфиге; в директиве listen он устарел с nginx 1.25.
-  http2 on;
+  # HTTP/2 намеренно НЕ включаем. Отдельная директива `http2 on;` появилась
+  # только в nginx 1.25.1, а на хосте (Debian 12 — 1.22, Ubuntu 22.04 — 1.18)
+  # она валит `nginx -t` и обрывает деплой. Версия сервера в репозитории не
+  # зафиксирована, поэтому включать вслепую нельзя: проверьте `nginx -v` на
+  # VPS и, если 1.25.1+, добавьте директиву сюда.
 
   # Заголовки безопасности. Главное здесь — clickjacking: CRM за логином лежит
   # на /crm/ того же origin, и без frame-ancestors её можно было встроить в

@@ -713,7 +713,7 @@
   wildcard TLS `catlg.ru-0001` есть.
 - Решение для подселения Noesis: не использовать Docker Compose напрямую, а
   запускать backend systemd-сервисом на `127.0.0.1:3001`, использовать отдельную
-  БД/роль PostgreSQL, отдавать `website/web/current`, `webapp/dist` и `/files`
+  БД/роль PostgreSQL, отдавать `website/web/current`, `webapp/web/current` и `/files`
   через существующий host-nginx.
 - Добавлена no-Docker дорожка:
   - `infra/no-docker.env.example`;

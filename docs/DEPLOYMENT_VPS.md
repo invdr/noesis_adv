@@ -290,13 +290,18 @@ curl -fsSI https://noesis.catlg.ru/catalog/
   показывает fallback-сообщение.
 - CRM (`webapp`): `VITE_API_URL` — аналогично; пусто → относительный `/api`.
 
-## Бэкапы БД
+## Бэкапы
 
-Том `postgres_data` хранит данные. Регулярный дамп:
+Действующий прод — no-Docker, поэтому и бэкап снимается с host PostgreSQL:
+
 ```bash
-docker compose -f infra/docker-compose.prod.yml exec -T postgres \
-  pg_dump -U noesis noesis > backup_$(date +%F).sql
+cd /var/www/noesis_adv
+bash infra/backup.sh          # от root; БД + загруженные файлы
 ```
+
+Расписание, офсайт-копия и **процедура восстановления** —
+[docs/backup-restore.md](./backup-restore.md). Не заводите здесь второй рецепт:
+в день аварии первым найдут именно его.
 
 ## Напоминания о сроке брони (Telegram по cron)
 

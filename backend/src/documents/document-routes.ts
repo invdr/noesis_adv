@@ -9,6 +9,7 @@ import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged } from "../http/auth";
 import { parseMultipart } from "../http/multipart";
+import { readJsonBody } from "../http/body";
 import {
   addDocument,
   deleteDocument,
@@ -50,7 +51,7 @@ export function documentRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.patch("/:constructionId/documents/:id", auth, async (c) => {
-    const input = updateDocumentSchema.parse(await c.req.json().catch(() => ({})));
+    const input = updateDocumentSchema.parse(await readJsonBody(c));
     const doc = await updateDocument(
       rt,
       c.req.param("constructionId"),

@@ -7,6 +7,7 @@ import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged, requireRole } from "../http/auth";
 import { includeArchivedForAdmin } from "../http/request";
+import { readJsonBody } from "../http/body";
 import {
   archiveDocumentCategory,
   createDocumentCategory,
@@ -30,17 +31,17 @@ export function documentCategoryRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.post("/", requireRole(rt, "admin"), async (c) => {
-    const input = upsertDocumentCategorySchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertDocumentCategorySchema.parse(await readJsonBody(c));
     return c.json(await createDocumentCategory(rt, input), 201);
   });
 
   app.patch("/reorder", requireRole(rt, "admin"), async (c) => {
-    const input = reorderDocumentCategoriesSchema.parse(await c.req.json().catch(() => ({})));
+    const input = reorderDocumentCategoriesSchema.parse(await readJsonBody(c));
     return c.json(await reorderDocumentCategories(rt, input));
   });
 
   app.patch("/:id", requireRole(rt, "admin"), async (c) => {
-    const input = upsertDocumentCategorySchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertDocumentCategorySchema.parse(await readJsonBody(c));
     return c.json(await updateDocumentCategory(rt, c.req.param("id"), input));
   });
 

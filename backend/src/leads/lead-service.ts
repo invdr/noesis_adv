@@ -20,7 +20,8 @@ import type {
   UpdateNextContactInput,
   UpdateNoteInput,
 } from "@noesis/contracts";
-import type { Lead as PrismaLead, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { Lead as PrismaLead } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import { mskDay } from "../http/msk";
@@ -138,8 +139,52 @@ export async function createLead(
   // 5. Ссылка на конструкцию: исчезнувшая не должна стоить заявки (см. хелпер).
   const constructionId = await resolvePublicConstructionId(rt, input.constructionId);
 
-  // 6. Создание заявки + контакт-покупатель + стартовое событие истории — атомарно.
-  const lead = await rt.prisma.$transaction(async (tx) => {
+  // 6. Создание заявки + контакт-покупатель + стартовое событие истории —
+  //    атомарно. Ссылку на конструкцию проверили выше, но между проверкой и
+  //    вставкой её всё ещё могут удалить: PostgreSQL сообщит об этом как об
+  //    ошибке FK. Гонка узкая, однако смысл всей ветки — не терять обращение,
+  //    поэтому на такой отказ повторяем попытку уже без привязки.
+  const lead = await createLeadRow(rt, input, meta, {
+    stageId,
+    constructionId,
+    isRepeat,
+    assigneeId,
+  }).catch(async (err) => {
+    if (!isConstructionRelationConflict(err) || constructionId === null) throw err;
+    console.warn(
+      `[leads] конструкция ${constructionId} исчезла во время приёма заявки — сохраняем без привязки`,
+    );
+    return createLeadRow(rt, input, meta, {
+      stageId,
+      constructionId: null,
+      isRepeat,
+      assigneeId,
+    });
+  });
+
+  // 6. Уведомления в Telegram — «выстрелил-и-забыл», сбой не ломает заявку:
+  //    в чат отдела продаж (новая заявка) и лично прошлому менеджеру, если
+  //    повторная авто-назначена ему (инициатор — система, actorId = null).
+  void notifyNewLead(rt, lead);
+  void notifyAssignment(rt, lead, assigneeId, null);
+
+  return toLeadDto(lead);
+}
+
+/** Строка заявки создаётся вместе с контактом и стартовым событием истории. */
+function createLeadRow(
+  rt: Runtime,
+  input: CreateLeadInput,
+  meta: { ip: string },
+  ctx: {
+    stageId: string;
+    constructionId: string | null;
+    isRepeat: boolean;
+    assigneeId: string | null;
+  },
+): Promise<LeadRow> {
+  const { stageId, constructionId, isRepeat, assigneeId } = ctx;
+  return rt.prisma.$transaction(async (tx) => {
     // Контакт-покупатель: дедуп по телефону (существующему имя не перезаписываем).
     const contactId = await findOrCreateClientByPhone(tx, input.phone, input.name);
     const created = await tx.lead.create({
@@ -170,14 +215,14 @@ export async function createLead(
     }
     return created;
   });
+}
 
-  // 6. Уведомления в Telegram — «выстрелил-и-забыл», сбой не ломает заявку:
-  //    в чат отдела продаж (новая заявка) и лично прошлому менеджеру, если
-  //    повторная авто-назначена ему (инициатор — система, actorId = null).
-  void notifyNewLead(rt, lead);
-  void notifyAssignment(rt, lead, assigneeId, null);
-
-  return toLeadDto(lead);
+/**
+ * Конструкцию удалили между проверкой и вставкой — PostgreSQL сообщает об этом
+ * как о нарушении внешнего ключа. Тот же приём, что в booking-service.
+ */
+function isConstructionRelationConflict(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003";
 }
 
 /**

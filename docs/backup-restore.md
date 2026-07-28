@@ -114,7 +114,7 @@ gunzip -c /root/noesis-backups/<дата>/db.sql.gz \
 #    Осторожно: сносит текущие файлы.
 find "$FILES_DIR" -mindepth 1 -delete
 tar -C "$FILES_DIR" -xzf /root/noesis-backups/<дата>/files.tar.gz
-chown -R noesis:noesis "$FILES_DIR"
+chown -R "${NOESIS_RUN_USER:-noesis}:${NOESIS_RUN_GROUP:-${NOESIS_RUN_USER:-noesis}}" "$FILES_DIR"
 # (гибче: восстановить во временный каталог и разложить вручную)
 
 # 4) Поднять backend обратно.

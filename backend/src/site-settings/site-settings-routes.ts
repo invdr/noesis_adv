@@ -4,6 +4,7 @@ import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requireRole } from "../http/auth";
 import { getRawSettings, updateSettings } from "./site-settings-service";
+import { readJsonBody } from "../http/body";
 
 /**
  * CRM-роуты настроек «обвязки» сайта (Веха 4.3). Только admin: GET отдаёт сырые
@@ -17,7 +18,7 @@ export function siteSettingsRoutes(rt: Runtime): Hono<AppEnv> {
   app.get("/", requireRole(rt, "admin"), async (c) => c.json(await getRawSettings(rt)));
 
   app.put("/", requireRole(rt, "admin"), async (c) => {
-    const input = updateSiteSettingsSchema.parse(await c.req.json().catch(() => ({})));
+    const input = updateSiteSettingsSchema.parse(await readJsonBody(c));
     return c.json(await updateSettings(rt, input));
   });
 

@@ -258,7 +258,11 @@ export function BookingsView({ user, draft }: { user: SessionUser; draft?: Booki
         <p className="subtle" role="status">Загружаем занятость…</p>
       )}
 
-      {!loadFailed && !loading && (
+      {/* hasValidWindow обязателен и здесь: при некорректном периоде запрос
+          броней отключён (enabled), loading остаётся false, и сетка
+          отрисовалась бы на пустом списке — то есть снова показала бы каждую
+          сторону свободной. */}
+      {!loadFailed && !loading && hasValidWindow && (
       <div className="card">
         <table className="table-flush table-hover">
           <thead>

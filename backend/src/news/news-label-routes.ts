@@ -7,6 +7,7 @@ import type { Runtime } from "../runtime";
 import type { AppEnv } from "../http/context";
 import { requirePasswordChanged, requireRole } from "../http/auth";
 import { includeArchivedForAdmin } from "../http/request";
+import { readJsonBody } from "../http/body";
 import {
   archiveNewsLabel,
   createNewsLabel,
@@ -30,17 +31,17 @@ export function newsLabelRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.post("/", requireRole(rt, "admin"), async (c) => {
-    const input = upsertNewsLabelSchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertNewsLabelSchema.parse(await readJsonBody(c));
     return c.json(await createNewsLabel(rt, input), 201);
   });
 
   app.patch("/reorder", requireRole(rt, "admin"), async (c) => {
-    const input = reorderNewsLabelsSchema.parse(await c.req.json().catch(() => ({})));
+    const input = reorderNewsLabelsSchema.parse(await readJsonBody(c));
     return c.json(await reorderNewsLabels(rt, input));
   });
 
   app.patch("/:id", requireRole(rt, "admin"), async (c) => {
-    const input = upsertNewsLabelSchema.parse(await c.req.json().catch(() => ({})));
+    const input = upsertNewsLabelSchema.parse(await readJsonBody(c));
     return c.json(await updateNewsLabel(rt, c.req.param("id"), input));
   });
 

@@ -354,8 +354,14 @@ main() {
   wait_for_backend
 
   "$BUN_BIN" run --cwd backend db:seed
-  build_frontends
+  # Конфиг nginx ставим ДО сборки фронтов. Сборка CRM переносит webapp/dist в
+  # релиз, а прежний конфиг раздавал именно webapp/dist — между переносом и
+  # перезагрузкой nginx /crm/ отдавал 404, и, если бы nginx -t отверг конфиг,
+  # деплой прерывался бы с уже исчезнувшим каталогом: CRM оставалась бы лежать
+  # до ручного вмешательства. В этом порядке nginx уже смотрит на
+  # webapp/web/current и во время сборки продолжает отдавать ПРЕДЫДУЩИЙ релиз.
   install_nginx_site
+  build_frontends
   notify_published
 
   systemctl enable "$NOESIS_SITE_BUILDER_SERVICE"

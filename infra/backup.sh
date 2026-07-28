@@ -38,7 +38,6 @@ set -a
 set +a
 
 PG_DB="${POSTGRES_DB:-noesis}"
-PG_USER="${POSTGRES_USER:-noesis}"
 FILES_DIR="${NOESIS_FILES_DIR:-/var/lib/noesis/files}"
 
 BACKUP_DIR="${BACKUP_DIR:-/root/noesis-backups}"
@@ -95,7 +94,22 @@ gunzip -c "$DEST_TMP/db.sql.gz" | tail -n 5 | grep -q "PostgreSQL database dump 
   || { echo "В дампе БД нет финального маркера pg_dump — прерываем." >&2; exit 1; }
 
 echo "==> Архив загруженных файлов ($FILES_DIR) в $DEST/files.tar.gz"
-tar -C "$FILES_DIR" -czf "$DEST_TMP/files.tar.gz" .
+# Бэкап снимается с живого сервера: загрузка или удаление файла ровно во время
+# чтения даёт у tar предупреждение и код возврата 1. Под `set -e` это обрывало
+# бы весь скрипт, а trap удалял бы каталог — из-за одной параллельной загрузки
+# в 03:00 не осталось бы НИКАКОЙ копии за ночь. Предупреждения глушим и терпим
+# код 1; код 2 (настоящая ошибка) по-прежнему прерывает. Целостность архива
+# всё равно проверяется ниже.
+tar_status=0
+tar --warning=no-file-changed --warning=no-file-removed \
+  -C "$FILES_DIR" -czf "$DEST_TMP/files.tar.gz" . || tar_status=$?
+if [ "$tar_status" -gt 1 ]; then
+  echo "tar завершился с кодом $tar_status — прерываем." >&2
+  exit 1
+fi
+if [ "$tar_status" -eq 1 ]; then
+  echo "tar: часть файлов изменилась во время архивации (параллельная загрузка) — архив снят." >&2
+fi
 # Проверяем не только целостность gzip, но и структуру tar внутри.
 tar -tzf "$DEST_TMP/files.tar.gz" >/dev/null
 

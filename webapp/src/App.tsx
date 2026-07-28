@@ -522,16 +522,31 @@ function SiteBuildIndicator({ canPublish = false }: { canPublish?: boolean }) {
   });
   const s = build.data;
   // Раньше любой отказ /api/site-build прятал и статус, и кнопку публикации:
-  // админ просто терял возможность опубликовать сайт и не понимал почему.
+  // админ терял возможность опубликовать сайт и не понимал почему. Кнопку
+  // оставляем: публикация — отдельная ручка, она может работать и тогда, когда
+  // не читается статус.
   if (!s) {
     if (build.isPending) return null;
     return (
-      <span className="status-pill is-err" title={(build.error as Error)?.message}>
-        <span className="status-pill-text">
-          <span className="status-pill-title">Статус сайта недоступен</span>
-          <span className="status-pill-sub">не удалось получить</span>
+      <div className="topbar-site">
+        <span className="status-pill is-err" title={(build.error as Error)?.message}>
+          <span className="status-pill-text">
+            <span className="status-pill-title">Статус сайта недоступен</span>
+            <span className="status-pill-sub">не удалось получить</span>
+          </span>
         </span>
-      </span>
+        {canPublish && (
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={() => publish.mutate()}
+            disabled={publish.isPending}
+            title="Запустить публикацию накопленных правок сайта"
+          >
+            {publish.isPending ? "Публикация…" : "Опубликовать сайт"}
+          </button>
+        )}
+      </div>
     );
   }
 

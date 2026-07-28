@@ -116,7 +116,9 @@ describe("бэкап нацелен на действующий прод (no-doc
     expect(backup).toContain("infra/no-docker.env");
     expect(backup).toContain("as_postgres pg_dump");
     // Каталог файлов архивируем напрямую — тома контейнера backend нет.
-    expect(backup).toContain('tar -C "$FILES_DIR" -czf');
+    expect(backup).toContain('-C "$FILES_DIR" -czf "$DEST_TMP/files.tar.gz"');
+    // Параллельная загрузка во время архивации не должна оставлять ночь без копии.
+    expect(backup).toContain("--warning=no-file-changed");
     expect(backup).toContain("NOESIS_FILES_DIR");
   });
 
@@ -131,13 +133,20 @@ describe("бэкап нацелен на действующий прод (no-doc
 });
 
 describe("публичные заголовки и гейт публикации сайта", () => {
-  test("nginx закрывает CRM от встраивания и включает HTTP/2", async () => {
+  test("nginx закрывает CRM от встраивания", async () => {
     const nginx = await readFile(
       resolve(root, "infra/nginx/no-docker.conf.template"),
       "utf8",
     );
 
-    expect(nginx).toContain("http2 on;");
+    // http2 намеренно не включён: директива требует nginx 1.25.1+, а версия на
+    // хосте не зафиксирована — на 1.22/1.18 она обрывает деплой. Проверяем
+    // именно действующие директивы: в комментарии эта строка присутствует.
+    const directives = nginx
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("#"))
+      .join("\n");
+    expect(directives).not.toContain("http2");
     expect(nginx).toContain('add_header X-Frame-Options "SAMEORIGIN" always;');
     expect(nginx).toContain(
       "add_header Content-Security-Policy \"frame-ancestors 'self'\" always;",
