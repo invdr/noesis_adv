@@ -166,6 +166,10 @@ export function LeadsView({
   if (selectedLeadId) {
     return (
       <LeadCard
+        // key по заявке: без него открытие связанной заявки переиспользует тот
+        // же инстанс, а состояние ошибок мутаций живёт в инстансе — неудачная
+        // запись по заявке A показывалась бы в шапке заявки B.
+        key={selectedLeadId}
         leadId={selectedLeadId}
         stages={stages}
         funnels={funnels}

@@ -535,6 +535,20 @@ function SiteBuildIndicator({ canPublish = false }: { canPublish?: boolean }) {
             <span className="status-pill-sub">не удалось получить</span>
           </span>
         </span>
+        {/* Эта ветка и существует для случая «backend недоступен», когда сама
+            публикация тоже с большой вероятностью не пройдёт. Без отчёта об
+            отказе админ увидел бы «Публикация…» и затем ничего — тот же
+            молчаливый сбой, который здесь и лечится. */}
+        {publish.isError && (
+          <span
+            className="status-pill is-err"
+            title={publish.error instanceof Error ? publish.error.message : String(publish.error)}
+          >
+            <span className="status-pill-text">
+              <span className="status-pill-title">Не удалось запустить</span>
+            </span>
+          </span>
+        )}
         {canPublish && (
           <button
             type="button"

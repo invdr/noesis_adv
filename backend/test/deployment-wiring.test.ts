@@ -119,6 +119,8 @@ describe("бэкап нацелен на действующий прод (no-doc
     expect(backup).toContain('-C "$FILES_DIR" -czf "$DEST_TMP/files.tar.gz"');
     // Параллельная загрузка во время архивации не должна оставлять ночь без копии.
     expect(backup).toContain("--warning=no-file-changed");
+    // Суть правки — разбор кода возврата, а не сам флаг: код 1 терпим, 2 нет.
+    expect(backup).toContain('if [ "$tar_status" -gt 1 ]; then');
     expect(backup).toContain("NOESIS_FILES_DIR");
   });
 
@@ -146,7 +148,10 @@ describe("публичные заголовки и гейт публикации
       .split("\n")
       .filter((line) => !line.trim().startsWith("#"))
       .join("\n");
-    expect(directives).not.toContain("http2");
+    // Запрещаем именно отдельную директиву (1.25.1+), а не корректный для
+    // 1.18/1.22 вариант `listen 443 ssl http2;` — если версию проверят и HTTP/2
+    // включат правильно, тест не должен этому мешать.
+    expect(directives).not.toMatch(/^\s*http2\s/m);
     expect(nginx).toContain('add_header X-Frame-Options "SAMEORIGIN" always;');
     expect(nginx).toContain(
       "add_header Content-Security-Policy \"frame-ancestors 'self'\" always;",
@@ -165,7 +170,12 @@ describe("публичные заголовки и гейт публикации
     const build = await readFile(resolve(root, "infra/build-website.sh"), "utf8");
 
     // Потеря SITE_URL закрывала сайт через robots.txt, и это молча публиковалось.
+    // Пиним и сам grep, и прерывание: гейт, ослабленный до предупреждения,
+    // прошёл бы проверку только на наличие grep.
     expect(build).toContain('grep -q "^Disallow: /$" "$DIST/robots.txt"');
+    const gateStart = build.indexOf('grep -q "^Disallow: /$"');
+    const robotsGate = build.slice(gateStart, build.indexOf("fi", gateStart));
+    expect(robotsGate).toContain("exit 1");
   });
 
   test("гейт публикации не пропускает сайт с дефолтными контактами", async () => {
@@ -180,8 +190,9 @@ describe("публичные заголовки и гейт публикации
       'export const SITE_SETTINGS_FALLBACK_MARKER = "[site-settings] ОТКАТ НА ДЕФОЛТЫ";',
     );
     expect(build).toContain('grep -qF "[site-settings] ОТКАТ НА ДЕФОЛТЫ" "$BUILD_LOG"');
-    // Маркер ищется в логе сборки, поэтому пайп обязан пробрасывать код возврата.
-    expect(build).toContain("set -o pipefail");
+    // Маркер ищется в логе сборки через tee, поэтому код возврата сборки не
+    // должен теряться в пайпе.
+    expect(build).toMatch(/set -[a-z]*e[a-z]*o pipefail|set -o pipefail/);
   });
 
   test("настройки сайта запрашиваются один раз на сборку", async () => {

@@ -236,6 +236,23 @@ install_systemd_units() {
   systemctl enable "$NOESIS_BACKEND_SERVICE"
 }
 
+# Переносит уже собранную CRM из webapp/dist в релиз, если релизов ещё нет.
+# Нужен ровно один раз — при первом деплое после перехода на схему
+# «релиз + симлинк current». Дальше релизы делает build-webapp.sh.
+seed_webapp_release() {
+  local web="$ROOT/webapp/web"
+  if [ -e "$web/current" ] || [ ! -s "$ROOT/webapp/dist/index.html" ]; then
+    return
+  fi
+  local ts dest
+  ts="$(date +%Y%m%d%H%M%S)-migrated"
+  dest="$web/releases/$ts"
+  install -d -m 0755 "$web/releases"
+  cp -a "$ROOT/webapp/dist" "$dest"
+  ln -sfn "releases/$ts" "$web/current"
+  echo "Перенёс существующую сборку CRM в $dest и включил current."
+}
+
 install_nginx_site() {
   export NOESIS_SERVER_NAMES NOESIS_SSL_CERT NOESIS_SSL_KEY NOESIS_BACKEND_PORT
   export NOESIS_FILES_DIR NOESIS_DEPLOY_DIR
@@ -360,6 +377,11 @@ main() {
   # деплой прерывался бы с уже исчезнувшим каталогом: CRM оставалась бы лежать
   # до ручного вмешательства. В этом порядке nginx уже смотрит на
   # webapp/web/current и во время сборки продолжает отдавать ПРЕДЫДУЩИЙ релиз.
+  # Разовый мост при переезде со старой схемы раздачи: конфиг уже смотрит на
+  # webapp/web/current, а на сервере пока лежит только webapp/dist от прошлого
+  # деплоя. Без этого /crm/ отдавал бы 404 всю сборку (Astro по всем
+  # конструкциям — небыстро), а не секунды.
+  seed_webapp_release
   install_nginx_site
   build_frontends
   notify_published
