@@ -159,6 +159,30 @@ describe("публичные заголовки и гейт публикации
     expect(build).toContain('grep -q "^Disallow: /$" "$DIST/robots.txt"');
   });
 
+  test("гейт публикации не пропускает сайт с дефолтными контактами", async () => {
+    const [build, api] = await Promise.all([
+      readFile(resolve(root, "infra/build-website.sh"), "utf8"),
+      readFile(resolve(root, "website/src/lib/api.ts"), "utf8"),
+    ]);
+
+    // Недоступность настроек сознательно не роняет сборку, но публиковать сайт
+    // с зашитым телефоном и без Метрики нельзя — по виду это неотличимо от нормы.
+    expect(api).toContain(
+      'export const SITE_SETTINGS_FALLBACK_MARKER = "[site-settings] ОТКАТ НА ДЕФОЛТЫ";',
+    );
+    expect(build).toContain('grep -qF "[site-settings] ОТКАТ НА ДЕФОЛТЫ" "$BUILD_LOG"');
+    // Маркер ищется в логе сборки, поэтому пайп обязан пробрасывать код возврата.
+    expect(build).toContain("set -o pipefail");
+  });
+
+  test("настройки сайта запрашиваются один раз на сборку", async () => {
+    const api = await readFile(resolve(root, "website/src/lib/api.ts"), "utf8");
+
+    // Функция зовётся из фронтматтера каждой страницы и на каждую конструкцию:
+    // без кэша частичный отказ API давал сайт со смешанными контактами.
+    expect(api).toContain("siteSettingsPromise ??=");
+  });
+
   test("зависимости прода ставятся строго по lockfile", async () => {
     const [deploy, noDockerDeploy] = await Promise.all([
       readFile(resolve(root, "infra/deploy.sh"), "utf8"),

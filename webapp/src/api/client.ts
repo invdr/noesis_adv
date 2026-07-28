@@ -17,6 +17,7 @@ import type {
   InventoryAnalyticsResponse,
   ListContactsQuery,
   UpsertContactInput,
+  LeadStats,
   SetLeadReferrerInput,
   PartnerAnalyticsResponse,
   PartnerAnalyticsQuery,
@@ -205,12 +206,6 @@ export interface PaginatedLeads {
   page: number;
   pageSize: number;
   total: number;
-}
-
-export interface LeadStats {
-  total: number;
-  byStage: Record<string, number>;
-  bySource: Record<string, number>;
 }
 
 export interface PaginatedProjects {

@@ -11,9 +11,16 @@ import {
   pricePerMonthLabel,
   resolveSiteSettings,
   SITE_SETTINGS_DEFAULTS,
+  type Asset as ContractAsset,
   type Badge,
   type PublicConstruction as ContractConstruction,
   type ConstructionFormat,
+  type Document as ContractDocument,
+  type DocumentCategory as ContractDocumentCategory,
+  type DocumentCategoryConstructions as ContractDocumentCategoryConstructions,
+  type DocumentGroup as ContractDocumentGroup,
+  type News as ContractNews,
+  type ProgressAlbum as ContractProgressAlbum,
   type PublicSiteStats,
   type ResolvedSiteSettings,
 } from "@noesis/contracts";
@@ -28,45 +35,38 @@ const API_BASE = (
 /** Единый визуал для публичных карточек: реальные фото конструкций не выводим в лендинге. */
 export const CITY_FORMAT_IMAGE = "/assets/city-format-noesis-wide-v3.png";
 
-/** Подмножество DTO ассета, нужное лендингу. */
-export interface Asset {
+// Ниже — псевдонимы контрактных типов, а не собственные объявления. Раньше
+// лендинг описывал эти DTO руками и приводил ответы через `as T`, поэтому
+// расхождение с бэкендом не ломало сборку, а отдавало пустой HTML. Одно такое
+// расхождение уже было: `mimeType`/`size` у ассета документа считались
+// необязательными, хотя контракт требует их всегда.
+
+/** DTO ассета из публичного API. */
+export type Asset = ContractAsset;
+
+/**
+ * Картинка для вывода. Лендинг подставляет вместо реальных фото единый
+ * статичный визуал (CITY_FORMAT_IMAGE), у которого нет ни id, ни mimeType, ни
+ * размера — то есть это не `Asset`. Отдельный узкий тип честнее, чем
+ * притворяться ассетом: раньше это скрывалось приведением через `as`.
+ */
+export interface DisplayImage {
   url: string;
-  renditions?: { srcset: string; thumbnailUrl: string };
+  renditions?: Asset["renditions"];
 }
 
 /** DTO конструкции из публичного API. */
 export type Construction = ContractConstruction;
 
-/** Подмножество DTO новости. */
-export interface News {
-  id: string;
-  slug: string;
-  title: string;
-  label?: { name: string; slug: string };
-  date: string;
-  excerpt: string | null;
-  body: string;
-  cover?: Asset;
-}
+/** DTO новости из публичного API. */
+export type News = ContractNews;
 
 /** Документ (файл или ссылка) — для страницы материалов конструкции. */
-export type Document =
-  | { kind: "file"; id: string; name: string; asset: Asset & { mimeType?: string; size?: number } }
-  | { kind: "link"; id: string; name: string; url: string; caption: string | null };
+export type Document = ContractDocument;
 
-export interface DocumentCategory {
-  id: string;
-  name: string;
-  slug: string;
-}
-export interface DocumentGroup {
-  category: DocumentCategory;
-  documents: Document[];
-}
-export interface DocumentCategoryConstructions {
-  category: DocumentCategory;
-  constructions: { id: string; slug: string; name: string; address: string | null; cover?: Asset }[];
-}
+export type DocumentCategory = ContractDocumentCategory;
+export type DocumentGroup = ContractDocumentGroup;
+export type DocumentCategoryConstructions = ContractDocumentCategoryConstructions;
 
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`);
@@ -83,20 +83,43 @@ async function getJsonOrNull<T>(path: string): Promise<T | null> {
 }
 
 /**
- * Настройки «обвязки» (Веха 4.3) на этапе сборки. В отличие от контента, сбой
- * НЕ роняет билд — обвязка не должна мешать публикации: при недоступности API
- * берём дефолты (текущие тексты 1:1). `resolveSiteSettings` мёржит ответ с
- * дефолтами (устойчиво к частичному/старому формату).
+ * Маркер отката настроек сайта на дефолты. Ищется гейтом публикации в
+ * build-website.sh: откат означает, что сайт уходит с зашитым телефоном,
+ * почтой и БЕЗ счётчика Метрики — на глаз это не отличить от нормальной
+ * сборки, поэтому публикацию прерываем.
  */
-export async function fetchSiteSettings(): Promise<ResolvedSiteSettings> {
-  try {
-    const res = await fetch(`${API_BASE}/api/public/site-settings`);
-    if (!res.ok) throw new Error(`API /api/public/site-settings → ${res.status}`);
-    return resolveSiteSettings((await res.json()) as Partial<ResolvedSiteSettings>);
-  } catch (err) {
-    console.warn("[site-settings] недоступны, использую дефолты:", err);
-    return SITE_SETTINGS_DEFAULTS;
-  }
+export const SITE_SETTINGS_FALLBACK_MARKER = "[site-settings] ОТКАТ НА ДЕФОЛТЫ";
+
+/**
+ * Настройки «обвязки» (Веха 4.3) на этапе сборки. В отличие от контента, сбой
+ * НЕ роняет билд сам по себе — обвязка не должна мешать сборке: при
+ * недоступности API берём дефолты (текущие тексты 1:1). `resolveSiteSettings`
+ * мёржит ответ с дефолтами (устойчиво к частичному/старому формату).
+ *
+ * Результат кэшируется на весь процесс сборки. Функция зовётся из фронтматтера
+ * каждой страницы и ещё раз на каждую конструкцию и новость: без кэша частичный
+ * отказ API давал СМЕШАННЫЙ сайт, где часть страниц несёт контакты из CRM, а
+ * часть — дефолтные. Один запрос на сборку означает один и тот же результат
+ * везде.
+ */
+let siteSettingsPromise: Promise<ResolvedSiteSettings> | null = null;
+
+export function fetchSiteSettings(): Promise<ResolvedSiteSettings> {
+  siteSettingsPromise ??= (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/public/site-settings`);
+      if (!res.ok) throw new Error(`API /api/public/site-settings → ${res.status}`);
+      return resolveSiteSettings((await res.json()) as Partial<ResolvedSiteSettings>);
+    } catch (err) {
+      // Не warn: гейт публикации ищет этот маркер, и он должен быть заметным.
+      console.error(
+        `${SITE_SETTINGS_FALLBACK_MARKER}: телефон, почта и счётчик Метрики будут не из CRM. Причина:`,
+        err,
+      );
+      return SITE_SETTINGS_DEFAULTS;
+    }
+  })();
+  return siteSettingsPromise;
 }
 
 export const fetchConstructions = () =>
@@ -117,13 +140,7 @@ export async function fetchConstructionDocuments(slug: string): Promise<Document
 }
 
 /** Альбом хода строительства (месяц → фото); альбомы без фото API не отдаёт. */
-export interface ProgressAlbum {
-  id: string;
-  year: number;
-  month: number;
-  note: string | null;
-  photos: Asset[];
-}
+export type ProgressAlbum = ContractProgressAlbum;
 
 /** Фотоотчёты конструкции по slug, от новых месяцев к старым (пусто, если нет). */
 export async function fetchConstructionProgress(slug: string): Promise<ProgressAlbum[]> {
@@ -219,7 +236,7 @@ export interface CatalogItem {
     description: string | null;
     trafficPerDay: number | null;
     grp: number | null;
-    photo?: Asset;
+    photo?: DisplayImage;
   }[];
 }
 

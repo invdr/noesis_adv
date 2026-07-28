@@ -405,3 +405,18 @@ export const leadAgendaResponseSchema = z.object({
   noTask: z.array(leadAgendaItemSchema),
 });
 export type LeadAgendaResponse = z.infer<typeof leadAgendaResponseSchema>;
+
+/**
+ * Сводка по заявкам для плиток CRM: `GET /api/leads/stats`. Живёт здесь, а не
+ * в сервисе бэкенда: раньше форма ответа объявлялась в бэкенде и независимо
+ * переобъявлялась в API-клиенте CRM, поэтому переименование поля прошло бы
+ * компиляцию с обеих сторон и всплыло бы как `undefined` в интерфейсе.
+ */
+export const leadStatsSchema = z.object({
+  total: z.number().int(),
+  /** Количество заявок по id этапа. */
+  byStage: z.record(z.string(), z.number().int()),
+  /** Количество заявок по слагу источника. */
+  bySource: z.record(z.string(), z.number().int()),
+});
+export type LeadStats = z.infer<typeof leadStatsSchema>;

@@ -1,5 +1,5 @@
 ---
-import type { Asset, Construction, DocumentGroup } from "../../lib/api";
+import type { Construction, DisplayImage, DocumentGroup } from "../../lib/api";
 import { documentHref, documentMeta } from "../../lib/api";
 import { jsonForHtml } from "../../lib/json";
 import LeadForm from "../LeadForm.astro";
@@ -12,7 +12,7 @@ interface Props {
 }
 const { construction, documents, mapApiKey } = Astro.props;
 const firstSide = construction.sides[0];
-const cityFormatImage: Asset = { url: "/assets/city-format-noesis-wide-v3.png" };
+const cityFormatImage: DisplayImage = { url: "/assets/city-format-noesis-wide-v3.png" };
 const visualConstruction = {
   ...construction,
   cover: cityFormatImage,

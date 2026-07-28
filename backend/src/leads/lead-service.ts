@@ -10,6 +10,7 @@ import type {
   LeadAgendaResponse,
   LeadDetail,
   LeadNote,
+  LeadStats,
   ListLeadsQuery,
   SessionUser,
   SetLeadReferrerInput,
@@ -1115,12 +1116,6 @@ async function requireOwnNote(rt: Runtime, user: SessionUser, noteId: string) {
     throw new HttpError(403, "forbidden", "Можно редактировать только свои заметки");
   }
   return note;
-}
-
-export interface LeadStats {
-  total: number;
-  byStage: Record<string, number>;
-  bySource: Record<string, number>;
 }
 
 /** Сводная аналитика заявок (основа сервиса аналитики Вехи 5). */
