@@ -17,7 +17,7 @@ export function siteSettingsRoutes(rt: Runtime): Hono<AppEnv> {
   app.get("/", requireRole(rt, "admin"), async (c) => c.json(await getRawSettings(rt)));
 
   app.put("/", requireRole(rt, "admin"), async (c) => {
-    const input = updateSiteSettingsSchema.parse(await c.req.json());
+    const input = updateSiteSettingsSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await updateSettings(rt, input));
   });
 

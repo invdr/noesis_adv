@@ -30,17 +30,17 @@ export function newsLabelRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.post("/", requireRole(rt, "admin"), async (c) => {
-    const input = upsertNewsLabelSchema.parse(await c.req.json());
+    const input = upsertNewsLabelSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await createNewsLabel(rt, input), 201);
   });
 
   app.patch("/reorder", requireRole(rt, "admin"), async (c) => {
-    const input = reorderNewsLabelsSchema.parse(await c.req.json());
+    const input = reorderNewsLabelsSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await reorderNewsLabels(rt, input));
   });
 
   app.patch("/:id", requireRole(rt, "admin"), async (c) => {
-    const input = upsertNewsLabelSchema.parse(await c.req.json());
+    const input = upsertNewsLabelSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await updateNewsLabel(rt, c.req.param("id"), input));
   });
 

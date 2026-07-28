@@ -6,6 +6,7 @@ import type {
   UserRole,
 } from "@noesis/contracts";
 import type { User } from "@prisma/client";
+import type { CookieOptions } from "hono/utils/cookie";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import { toSessionUser } from "./user-dto";
@@ -130,6 +131,12 @@ export interface ResolvedSession {
   user: SessionUser;
   /** Id текущей сессии — нужен, например, чтобы сохранить её при смене пароля. */
   sessionId: string;
+  /**
+   * Сессия была продлена в этом запросе. Guard по этому флагу перевыставляет
+   * cookie: без этого скользящий TTL жил только в БД, а браузер всё равно
+   * выбрасывал пользователя через `SESSION_TTL_HOURS` после входа.
+   */
+  refreshed: boolean;
 }
 
 /**
@@ -163,13 +170,32 @@ export async function resolveSession(
 
   // Скользящий TTL: продлеваем только если с последней активности прошёл
   // заметный интервал — иначе писали бы в БД на каждый запрос.
+  let refreshed = false;
   if (Date.now() - session.lastSeenAt.getTime() > SESSION_REFRESH_INTERVAL_MS) {
     await rt.prisma.session.update({
       where: { id: session.id },
       data: { lastSeenAt: new Date(), expiresAt: ttlExpiry(rt) },
     });
+    refreshed = true;
   }
-  return { user: toSessionUser(session.user), sessionId: session.id };
+  return { user: toSessionUser(session.user), sessionId: session.id, refreshed };
+}
+
+/**
+ * Параметры cookie сессии. Живут в сервисе, а не в роутах, потому что их
+ * ставит и guard при продлении скользящего TTL: разъехавшиеся наборы флагов
+ * означали бы, что продление втихую меняет, например, `secure` или `sameSite`.
+ */
+export function sessionCookieOptions(rt: Runtime): CookieOptions {
+  return {
+    httpOnly: true,
+    // Strict: cookie не уходит при cross-site переходах — анти-CSRF для входа
+    // в CRM (навигация снаружи допускает повторный вход, это приемлемо).
+    sameSite: "Strict",
+    secure: rt.env.COOKIE_SECURE,
+    path: "/",
+    maxAge: rt.env.SESSION_TTL_HOURS * 60 * 60,
+  };
 }
 
 /**

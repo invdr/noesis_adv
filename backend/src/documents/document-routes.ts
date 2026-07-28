@@ -50,7 +50,7 @@ export function documentRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.patch("/:constructionId/documents/:id", auth, async (c) => {
-    const input = updateDocumentSchema.parse(await c.req.json());
+    const input = updateDocumentSchema.parse(await c.req.json().catch(() => ({})));
     const doc = await updateDocument(
       rt,
       c.req.param("constructionId"),

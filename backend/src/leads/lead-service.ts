@@ -41,6 +41,52 @@ import { dealBookingInclude, dealDocumentInclude } from "./deal-dto";
 /** Окно, в пределах которого повторная заявка с того же телефона помечается. */
 const REPEAT_WINDOW_DAYS = 30;
 
+/**
+ * Ссылка на конструкцию с публичного лендинга. `constructionId` — обычный FK,
+ * и запись несуществующего id роняла бы create ошибкой Prisma P2003, которую
+ * никто не маппит, то есть отдавала бы 500 на публичном приёме заявок.
+ *
+ * Реальный сценарий: конструкцию удалили, а у клиента в кэше (или в поиске)
+ * осталась её страница. Терять из-за этого обращение нельзя, поэтому ссылку
+ * молча обнуляем и пишем заявку — текст сообщения обычно и так называет
+ * конструкцию. Архивную ссылку сохраняем: строка существует, привязка верна.
+ */
+async function resolvePublicConstructionId(
+  rt: Runtime,
+  constructionId: string | null | undefined,
+): Promise<string | null> {
+  if (!constructionId) return null;
+  const exists = await rt.prisma.construction.count({
+    where: { id: constructionId },
+  });
+  if (exists) return constructionId;
+  console.warn(
+    `[leads] заявка с лендинга ссылается на несуществующую конструкцию ${constructionId} — сохраняем без привязки`,
+  );
+  return null;
+}
+
+/**
+ * Ссылка на конструкцию при ручном приёме. Здесь оператор выбирает из списка,
+ * поэтому неизвестный или архивный id — настоящая ошибка ввода, и о ней нужно
+ * сказать полем формы, а не терять привязку. Правило то же, что в
+ * `updateLeadConstruction`.
+ */
+async function requireSelectableConstruction(
+  rt: Runtime,
+  constructionId: string | null | undefined,
+): Promise<string | null> {
+  if (!constructionId) return null;
+  const construction = await rt.prisma.construction.findUnique({
+    where: { id: constructionId },
+    select: { archivedAt: true },
+  });
+  if (!construction || construction.archivedAt) {
+    throw new HttpError(422, "invalid_construction", "Конструкция не найдена");
+  }
+  return constructionId;
+}
+
 /** Этап с развёрнутыми полями для DTO. */
 const stageSelect = {
   select: { id: true, name: true, kind: true, funnelId: true },
@@ -88,7 +134,10 @@ export async function createLead(
   // 4. Входной этап воронки.
   const stageId = await getEntryStageId(rt);
 
-  // 5. Создание заявки + контакт-покупатель + стартовое событие истории — атомарно.
+  // 5. Ссылка на конструкцию: исчезнувшая не должна стоить заявки (см. хелпер).
+  const constructionId = await resolvePublicConstructionId(rt, input.constructionId);
+
+  // 6. Создание заявки + контакт-покупатель + стартовое событие истории — атомарно.
   const lead = await rt.prisma.$transaction(async (tx) => {
     // Контакт-покупатель: дедуп по телефону (существующему имя не перезаписываем).
     const contactId = await findOrCreateClientByPhone(tx, input.phone, input.name);
@@ -98,7 +147,7 @@ export async function createLead(
         phone: input.phone,
         source: input.source,
         stageId,
-        constructionId: input.constructionId ?? null,
+        constructionId,
         message: input.message ?? null,
         contactId,
         assigneeId,
@@ -208,6 +257,9 @@ export async function createManualLead(
   // Входной этап выбранной оператором воронки (не задана — воронка по умолчанию).
   const stageId = await getEntryStageId(rt, input.funnelId);
 
+  // Конструкция выбрана оператором из списка — неизвестную не проглатываем.
+  const constructionId = await requireSelectableConstruction(rt, input.constructionId);
+
   const lead = await rt.prisma.$transaction(async (tx) => {
     const contactId =
       selectedClient?.id ?? (await findOrCreateClientByPhone(tx, leadPhone, leadName, user.id));
@@ -232,7 +284,7 @@ export async function createManualLead(
         phone: leadPhone,
         source: input.source,
         stageId,
-        constructionId: input.constructionId ?? null,
+        constructionId,
         message: input.message ?? null,
         contactId,
         referrerId,

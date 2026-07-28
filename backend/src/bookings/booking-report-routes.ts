@@ -36,12 +36,12 @@ export function bookingReportRoutes(rt: Runtime): Hono<AppEnv> {
   );
 
   app.post("/:id/reports", auth, async (c) => {
-    const input = upsertBookingReportSchema.parse(await c.req.json());
+    const input = upsertBookingReportSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await createBookingReport(rt, c.get("user"), c.req.param("id"), input), 201);
   });
 
   app.patch("/:id/reports/:reportId", auth, async (c) => {
-    const input = upsertBookingReportSchema.parse(await c.req.json());
+    const input = upsertBookingReportSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await updateBookingReport(rt, c.req.param("id"), c.req.param("reportId"), input));
   });
 

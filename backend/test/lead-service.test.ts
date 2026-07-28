@@ -3,6 +3,7 @@ import type { SessionUser } from "@noesis/contracts";
 import type { Runtime } from "../src/runtime";
 import {
   assignLead,
+  createLead,
   createManualLead,
   csvCell,
   exportLeadsCsv,
@@ -425,6 +426,133 @@ describe("setLeadReferrer", () => {
     const res = await setLeadReferrer(runtimeWith(prisma), admin, "lead1", { referrerId: null });
     expect(updateData.referrerId).toBeNull();
     expect(res?.referrerId).toBeNull();
+  });
+});
+
+describe("ссылка на конструкцию при приёме заявки", () => {
+  /**
+   * `constructionId` — FK. Запись несуществующего id роняла create ошибкой
+   * Prisma P2003, которую никто не маппит, то есть публичный приём отдавал 500
+   * и заявка терялась. Сценарий бытовой: конструкцию удалили, а страница у
+   * клиента осталась в кэше или в выдаче поиска.
+   */
+  const publicTx = (capture: (d: any) => void) => async (fn: any) =>
+    fn({
+      contact: {
+        findFirst: async () => ({ id: "c1", archivedAt: null }),
+        update: async () => ({}),
+        create: async () => ({ id: "c_new" }),
+      },
+      lead: {
+        create: async ({ data }: any) => {
+          capture(data);
+          return leadRow({ ...data, stage });
+        },
+      },
+      leadStatusEvent: { create: async () => ({}) },
+      leadAssignEvent: { create: async () => ({}) },
+    });
+
+  test("публичный приём сохраняет заявку, обнулив ссылку на исчезнувшую конструкцию", async () => {
+    let data: any;
+    const prisma = {
+      lead: { findFirst: async () => null },
+      stage: { findFirst: async () => ({ id: "s_new" }) },
+      construction: { count: async () => 0 }, // конструкции больше нет
+      $transaction: publicTx((d) => (data = d)),
+    };
+
+    const res = await createLead(
+      runtimeWith(prisma),
+      {
+        name: "Иван",
+        phone: "+79280000001",
+        consent: true,
+        source: "hero_form",
+        constructionId: "удалённая",
+        message: "Интересует СФ-014",
+      } as any,
+      { ip: "10.0.0.1" },
+    );
+
+    // Главное: заявка есть. Привязки нет, но текст обращения сохранён.
+    expect(res).not.toBeNull();
+    expect(data.constructionId).toBeNull();
+    expect(data.message).toBe("Интересует СФ-014");
+  });
+
+  test("публичный приём сохраняет существующую ссылку как есть", async () => {
+    let data: any;
+    const prisma = {
+      lead: { findFirst: async () => null },
+      stage: { findFirst: async () => ({ id: "s_new" }) },
+      construction: { count: async () => 1 },
+      $transaction: publicTx((d) => (data = d)),
+    };
+
+    await createLead(
+      runtimeWith(prisma),
+      {
+        name: "Иван",
+        phone: "+79280000002",
+        consent: true,
+        source: "hero_form",
+        constructionId: "c_live",
+      } as any,
+      { ip: "10.0.0.2" },
+    );
+
+    expect(data.constructionId).toBe("c_live");
+  });
+
+  test("ручной приём отвергает неизвестную конструкцию полем формы, а не 500", async () => {
+    const prisma = {
+      leadSource: {
+        findUnique: async () => ({ id: "offline", isWeb: false, archivedAt: null }),
+      },
+      lead: { findFirst: async () => null },
+      stage: { findFirst: async () => ({ id: "s_new" }) },
+      construction: { findUnique: async () => null },
+      $transaction: async () => {
+        throw new Error("не должно дойти до транзакции");
+      },
+    };
+
+    // Оператор выбирает конструкцию из списка — неизвестный id здесь настоящая
+    // ошибка ввода, а не устаревшая страница у клиента.
+    await expect(
+      createManualLead(runtimeWith(prisma), admin, {
+        name: "Иван",
+        phone: "+79280000003",
+        consent: true,
+        source: "offline",
+        constructionId: "нет-такой",
+      } as any),
+    ).rejects.toMatchObject({ status: 422, code: "invalid_construction" });
+  });
+
+  test("ручной приём отвергает архивную конструкцию — как updateLeadConstruction", async () => {
+    const prisma = {
+      leadSource: {
+        findUnique: async () => ({ id: "offline", isWeb: false, archivedAt: null }),
+      },
+      lead: { findFirst: async () => null },
+      stage: { findFirst: async () => ({ id: "s_new" }) },
+      construction: { findUnique: async () => ({ archivedAt: new Date() }) },
+      $transaction: async () => {
+        throw new Error("не должно дойти до транзакции");
+      },
+    };
+
+    await expect(
+      createManualLead(runtimeWith(prisma), admin, {
+        name: "Иван",
+        phone: "+79280000004",
+        consent: true,
+        source: "offline",
+        constructionId: "архивная",
+      } as any),
+    ).rejects.toMatchObject({ status: 422, code: "invalid_construction" });
   });
 });
 

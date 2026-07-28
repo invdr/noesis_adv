@@ -1,10 +1,14 @@
 import type { Context, MiddlewareHandler } from "hono";
-import { getCookie } from "hono/cookie";
+import { getCookie, setCookie } from "hono/cookie";
 import type { SessionUser, UserRole } from "@noesis/contracts";
 import type { Runtime } from "../runtime";
 import { HttpError } from "./errors";
 import type { AppEnv } from "./context";
-import { SESSION_COOKIE, resolveSession } from "../auth/auth-service";
+import {
+  SESSION_COOKIE,
+  resolveSession,
+  sessionCookieOptions,
+} from "../auth/auth-service";
 
 /**
  * Резолвит сессию из cookie один раз и кладёт пользователя + id сессии в
@@ -15,9 +19,16 @@ async function authenticate(
   rt: Runtime,
   c: Context<AppEnv>,
 ): Promise<SessionUser> {
-  const resolved = await resolveSession(rt, getCookie(c, SESSION_COOKIE));
+  const token = getCookie(c, SESSION_COOKIE);
+  const resolved = await resolveSession(rt, token);
   if (!resolved) {
     throw new HttpError(401, "unauthorized", "Требуется авторизация");
+  }
+  // Скользящий TTL продлевается в БД, но cookie ставилась только при входе —
+  // браузер выбрасывал активного пользователя ровно через SESSION_TTL_HOURS
+  // после логина. Перевыставляем cookie тем же токеном, когда сессия продлена.
+  if (resolved.refreshed && token) {
+    setCookie(c, SESSION_COOKIE, token, sessionCookieOptions(rt));
   }
   c.set("user", resolved.user);
   c.set("sessionId", resolved.sessionId);

@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import type { CookieOptions } from "hono/utils/cookie";
 import {
   changePasswordRequestSchema,
   loginRequestSchema,
@@ -20,19 +19,8 @@ import {
   changePassword,
   login,
   logout,
+  sessionCookieOptions,
 } from "./auth-service";
-
-function cookieOptions(rt: Runtime): CookieOptions {
-  return {
-    httpOnly: true,
-    // Strict: cookie не уходит при cross-site переходах — анти-CSRF для входа
-    // в CRM (навигация снаружи допускает повторный вход, это приемлемо).
-    sameSite: "Strict",
-    secure: rt.env.COOKIE_SECURE,
-    path: "/",
-    maxAge: rt.env.SESSION_TTL_HOURS * 60 * 60,
-  };
-}
 
 /** Роуты аутентификации. Хендлеры тонкие — логика в auth-service. */
 export function authRoutes(rt: Runtime): Hono<AppEnv> {
@@ -47,7 +35,7 @@ export function authRoutes(rt: Runtime): Hono<AppEnv> {
     try {
       const { user, token } = await login(rt, input);
       recordLoginSuccess(throttleKey);
-      setCookie(c, SESSION_COOKIE, token, cookieOptions(rt));
+      setCookie(c, SESSION_COOKIE, token, sessionCookieOptions(rt));
       return c.json(user);
     } catch (err) {
       if (err instanceof HttpError && err.code === "invalid_credentials") {

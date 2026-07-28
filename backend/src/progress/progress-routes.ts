@@ -40,7 +40,7 @@ export function progressRoutes(rt: Runtime): Hono<AppEnv> {
   );
 
   app.post("/:constructionId/progress", auth, async (c) => {
-    const input = upsertProgressAlbumSchema.parse(await c.req.json());
+    const input = upsertProgressAlbumSchema.parse(await c.req.json().catch(() => ({})));
     const album = await createProgressAlbum(
       rt,
       c.req.param("constructionId"),
@@ -51,7 +51,7 @@ export function progressRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.patch("/:constructionId/progress/:albumId", auth, async (c) => {
-    const input = upsertProgressAlbumSchema.parse(await c.req.json());
+    const input = upsertProgressAlbumSchema.parse(await c.req.json().catch(() => ({})));
     const album = await updateProgressAlbum(
       rt,
       c.req.param("constructionId"),

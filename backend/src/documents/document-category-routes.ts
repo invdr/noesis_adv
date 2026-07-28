@@ -30,17 +30,17 @@ export function documentCategoryRoutes(rt: Runtime): Hono<AppEnv> {
   });
 
   app.post("/", requireRole(rt, "admin"), async (c) => {
-    const input = upsertDocumentCategorySchema.parse(await c.req.json());
+    const input = upsertDocumentCategorySchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await createDocumentCategory(rt, input), 201);
   });
 
   app.patch("/reorder", requireRole(rt, "admin"), async (c) => {
-    const input = reorderDocumentCategoriesSchema.parse(await c.req.json());
+    const input = reorderDocumentCategoriesSchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await reorderDocumentCategories(rt, input));
   });
 
   app.patch("/:id", requireRole(rt, "admin"), async (c) => {
-    const input = upsertDocumentCategorySchema.parse(await c.req.json());
+    const input = upsertDocumentCategorySchema.parse(await c.req.json().catch(() => ({})));
     return c.json(await updateDocumentCategory(rt, c.req.param("id"), input));
   });
 
