@@ -26,8 +26,9 @@ const {
   title,
   description,
   path,
-  // Новая нейтральная OG-обложка дизайн-системы.
-  image = "/assets/og-noesis.svg",
+  // Растровая обложка 1200×630: SVG в og:image не рендерят ни Telegram, ни
+  // WhatsApp, ни VK, ни Facebook — превью ссылки получалось пустым.
+  image = "/assets/og-default.jpg",
   type = "website",
   jsonLd,
   siteName = SITE_SETTINGS_DEFAULTS.siteName,
@@ -67,6 +68,8 @@ const metrikaScript = metrikaId
 <meta property="og:description" content={description} />
 <meta property="og:url" content={canonical} />
 <meta property="og:image" content={ogImage} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 <meta property="og:locale" content="ru_RU" />
 
 <meta name="twitter:card" content="summary_large_image" />

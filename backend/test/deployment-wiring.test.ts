@@ -129,3 +129,46 @@ describe("бэкап нацелен на действующий прод (no-doc
     expect(runbook).toContain("infra/no-docker.env");
   });
 });
+
+describe("публичные заголовки и гейт публикации сайта", () => {
+  test("nginx закрывает CRM от встраивания и включает HTTP/2", async () => {
+    const nginx = await readFile(
+      resolve(root, "infra/nginx/no-docker.conf.template"),
+      "utf8",
+    );
+
+    expect(nginx).toContain("http2 on;");
+    expect(nginx).toContain('add_header X-Frame-Options "SAMEORIGIN" always;');
+    expect(nginx).toContain(
+      "add_header Content-Security-Policy \"frame-ancestors 'self'\" always;",
+    );
+    expect(nginx).toContain('add_header Strict-Transport-Security');
+    // add_header в location заменяет весь набор с server-уровня, поэтому в
+    // /files/ заголовки обязаны быть повторены явно.
+    const filesBlock = nginx.slice(
+      nginx.indexOf("location /files/ {"),
+      nginx.indexOf("location /crm/ {"),
+    );
+    expect(filesBlock).toContain('add_header X-Content-Type-Options "nosniff" always;');
+  });
+
+  test("гейт публикации не пропускает де-индексированный сайт", async () => {
+    const build = await readFile(resolve(root, "infra/build-website.sh"), "utf8");
+
+    // Потеря SITE_URL закрывала сайт через robots.txt, и это молча публиковалось.
+    expect(build).toContain('grep -q "^Disallow: /$" "$DIST/robots.txt"');
+  });
+
+  test("зависимости прода ставятся строго по lockfile", async () => {
+    const [deploy, noDockerDeploy] = await Promise.all([
+      readFile(resolve(root, "infra/deploy.sh"), "utf8"),
+      readFile(resolve(root, "infra/deploy-no-docker.sh"), "utf8"),
+    ]);
+
+    for (const script of [deploy, noDockerDeploy]) {
+      // Тихий откат на `|| bun install` резолвил версии, которых не видел гейт.
+      expect(script).not.toContain("--frozen-lockfile || ");
+      expect(script).toContain('if [ "${ALLOW_LOCKFILE_DRIFT:-}" = "1" ]; then');
+    }
+  });
+});

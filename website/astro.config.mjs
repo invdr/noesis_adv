@@ -5,7 +5,7 @@ import { defineConfig } from "astro/config";
 // `site` — рабочий origin для canonical/OG/sitemap (на сборке задаётся SITE_URL,
 // см. infra/deploy.sh); по умолчанию — текущий адрес выдачи по голому IP.
 export default defineConfig({
-  site: process.env.SITE_URL || "http://168.222.140.78",
+  site: process.env.SITE_URL || "https://noesis.catlg.ru",
   output: "static",
   server: {
     port: 4321,

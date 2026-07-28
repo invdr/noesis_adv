@@ -16,6 +16,18 @@ server {
   include /etc/letsencrypt/options-ssl-nginx.conf;
   ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
+  # HTTP/2 — как в Docker-конфиге; в директиве listen он устарел с nginx 1.25.
+  http2 on;
+
+  # Заголовки безопасности. Главное здесь — clickjacking: CRM за логином лежит
+  # на /crm/ того же origin, и без frame-ancestors её можно было встроить в
+  # чужую страницу. HSTS сужает окно downgrade-фишинга формы входа.
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header Content-Security-Policy "frame-ancestors 'self'" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
   client_max_body_size 20m;
 
   # Внутренние server-to-server ручки дёргаются напрямую по backend-порту на
@@ -95,7 +107,11 @@ server {
     alias {{NOESIS_FILES_DIR}}/;
     try_files $uri =404;
     expires 30d;
+    # add_header в location заменяет весь набор с server-уровня, поэтому
+    # заголовки безопасности здесь повторены явно.
     add_header Cache-Control "public, immutable";
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
     access_log off;
   }
 
@@ -122,7 +138,7 @@ server {
   }
 
   location @noesis_stale {
-    return 301 /#catalog;
+    return 301 /catalog;
   }
 
   location / {

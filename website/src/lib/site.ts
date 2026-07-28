@@ -1,9 +1,11 @@
 // Общие константы сайта для SEO (канонические URL, Open Graph, sitemap).
-// Сайт пока открыт по голому IP — это и есть рабочий origin для абсолютных
-// ссылок. Домен в текстах (Политика ПДн) — `noesis-grozny.ru`, но canonical/OG
-// должны указывать на реальный адрес выдачи. Переопределяется `SITE_URL`.
+// Запасной origin — рабочий домен прода. Раньше здесь стоял IP, которого нет
+// ни у одного сервера: при потере SITE_URL из окружения сборщика canonical, OG
+// и sitemap уводили на мёртвый адрес, а INDEXABLE (голый хост) заодно закрывал
+// сайт от индексации через robots.txt — и всё это молча проходило гейт
+// публикации. Переопределяется `SITE_URL`.
 export const SITE_URL = (
-  process.env.SITE_URL || "http://168.222.140.78"
+  process.env.SITE_URL || "https://noesis.catlg.ru"
 ).replace(/\/+$/, "");
 
 /** Публичное написание бренда. Не зависит от исторических настроек лендинга. */
@@ -24,15 +26,22 @@ function isBareHost(host: string): boolean {
 }
 
 /**
+ * Можно ли индексировать сайт с таким origin. Вынесено из `INDEXABLE` отдельной
+ * чистой функцией, чтобы правило можно было проверить тестом: регрессия здесь
+ * закрывает от поиска весь сайт и никак не проявляется на глаз.
+ */
+export function isIndexableOrigin(siteUrl: string): boolean {
+  try {
+    return !isBareHost(new URL(siteUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Открываем сайт для индексации только когда `SITE_URL` указывает на настоящий
  * домен. Пока выдача идёт по голому IP — robots держим закрытым: индексировать
  * IP бессмысленно, а при запуске домена это дало бы дубли в индексе и возню с
  * редиректами. Переключение происходит само, как только в `.env` появится домен.
  */
-export const INDEXABLE: boolean = (() => {
-  try {
-    return !isBareHost(new URL(SITE_URL).hostname);
-  } catch {
-    return false;
-  }
-})();
+export const INDEXABLE: boolean = isIndexableOrigin(SITE_URL);

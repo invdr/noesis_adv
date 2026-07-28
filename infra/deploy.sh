@@ -20,7 +20,17 @@ if [ ! -f infra/.env ]; then
 fi
 
 echo "==> Установка зависимостей"
-bun install --frozen-lockfile || bun install
+# Зависимости ставим строго по lockfile: иначе прод резолвил бы версии, которых
+# не видел ни typecheck, ни тесты, а на no-Docker хосте ещё и переписывал бы
+# закоммиченный bun.lock — рабочая копия становилась грязной, и документированный
+# `git reset --hard` начинал конфликтовать. Аварийный обход остаётся, но теперь
+# он явный.
+if [ "${ALLOW_LOCKFILE_DRIFT:-}" = "1" ]; then
+  echo "ALLOW_LOCKFILE_DRIFT=1 — ставим без --frozen-lockfile." >&2
+  bun install
+else
+  bun install --frozen-lockfile
+fi
 
 # Предохранитель перед деплоем (Веха 6): typecheck + тесты ДО любых docker-шагов.
 # Если красное — прерываемся здесь, прод остаётся на рабочей версии (контейнеры
@@ -66,7 +76,7 @@ BUILD_TOKEN_VAL="$(get_env BUILD_WORKER_TOKEN)"
 
 # Лендинг — через общий скрипт сборки (релиз + атомарный свап current). Тот же
 # flock, что у автосборщика: одновременно не больше одной сборки.
-SITE_URL="${SITE_URL_VAL:-${SITE_URL:-http://168.222.140.78}}" \
+SITE_URL="${SITE_URL_VAL:-${SITE_URL:-https://noesis.catlg.ru}}" \
 PUBLIC_YANDEX_MAPS_API_KEY="${PUBLIC_YANDEX_MAPS_API_KEY_VAL:-${PUBLIC_YANDEX_MAPS_API_KEY:-}}" \
   bash infra/build-website.sh
 # CRM (webapp) собирается как раньше (раздаётся nginx с ../webapp/dist). Тот же

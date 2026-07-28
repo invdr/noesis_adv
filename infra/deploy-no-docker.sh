@@ -335,7 +335,17 @@ main() {
   write_runtime_env
   load_runtime_env
 
-  "$BUN_BIN" install --frozen-lockfile || "$BUN_BIN" install
+  # Зависимости ставим строго по lockfile: иначе прод резолвил бы версии, которых
+  # не видел ни typecheck, ни тесты, а на no-Docker хосте ещё и переписывал бы
+  # закоммиченный bun.lock — рабочая копия становилась грязной, и документированный
+  # `git reset --hard` начинал конфликтовать. Аварийный обход остаётся, но теперь
+  # он явный.
+  if [ "${ALLOW_LOCKFILE_DRIFT:-}" = "1" ]; then
+    echo "ALLOW_LOCKFILE_DRIFT=1 — ставим без --frozen-lockfile." >&2
+    "$BUN_BIN" install
+  else
+    "$BUN_BIN" install --frozen-lockfile
+  fi
   "$BUN_BIN" run --cwd backend prisma:generate
   "$BUN_BIN" run --cwd backend prisma:deploy
 

@@ -4,10 +4,16 @@
 </a>
 
 <style>
+  /* На десктопе панели нет вовсе. */
   .selection-bar { display: none; }
 
   @media (max-width: 760px) {
+    /* Медиа-блок обязан вернуть display: одной специфичности с базовым
+       правилом, поэтому раньше выигрывало `none` и панель не появлялась
+       никогда — при этом скрипт снимал hidden и резервировал под неё 76px
+       внизу каждой страницы. */
     .selection-bar {
+      display: flex;
       position: fixed;
       z-index: 150;
       right: 10px;
@@ -25,6 +31,12 @@
       box-shadow: 0 16px 36px rgba(85, 0, 0, 0.28);
       font-size: 14px;
       font-weight: 600;
+    }
+
+    /* Скрипт управляет видимостью через hidden: пустая подборка — нет панели.
+       Специфичность атрибута выше, чем у класса, поэтому правило работает. */
+    .selection-bar[hidden] {
+      display: none;
     }
 
     .selection-bar__meta {

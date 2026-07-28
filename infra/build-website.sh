@@ -31,7 +31,7 @@ dest="$RELEASES/$ts"
 # рабочий origin для canonical/OG/sitemap (при появлении домена задаётся в .env).
 BUILD_API_URL="${BUILD_API_URL:-http://127.0.0.1:3000}" \
 PUBLIC_API_URL="${PUBLIC_API_URL:-}" \
-SITE_URL="${SITE_URL:-http://168.222.140.78}" \
+SITE_URL="${SITE_URL:-https://noesis.catlg.ru}" \
   bun run build:website
 
 # Санити контента (Веха 6): не публикуем заведомо пустой сайт. Каталог конструкций на
@@ -50,6 +50,14 @@ else
   construction_count="$(grep -c "/constructions/" "$DIST/sitemap.xml" 2>/dev/null || true)"
   if [ -z "$construction_count" ] || [ "$construction_count" -lt 1 ]; then
     echo "build-website: в sitemap нет ни одной конструкции (/constructions/) — похоже, API отдал пусто. Не публикуем." >&2
+    exit 1
+  fi
+  # Индексация: robots.txt закрывает сайт целиком, когда SITE_URL не резолвится
+  # в настоящий домен (голый IP или пусто). Это ровно тот отказ, который никак
+  # не виден глазами — публикуем де-индексированный сайт и узнаём об этом из
+  # падения трафика. Гейт ловит его до переключения current.
+  if grep -q "^Disallow: /$" "$DIST/robots.txt" 2>/dev/null; then
+    echo "build-website: robots.txt закрывает индексацию — проверьте SITE_URL (сейчас «${SITE_URL:-не задан}»). Не публикуем." >&2
     exit 1
   fi
   echo "build-website: санити ок (конструкций в sitemap: $construction_count)."
