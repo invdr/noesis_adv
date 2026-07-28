@@ -7,6 +7,7 @@ import {
   type ConstructionSide,
   type ConstructionSideInput,
   type ListConstructionsQuery,
+  type PublicConstruction,
   type UpsertConstructionInput,
 } from "@noesis/contracts";
 import { z } from "zod";
@@ -17,8 +18,11 @@ import { fileBytes } from "../http/multipart";
 import { deleteAsset, storeUpload } from "../files/file-service";
 import {
   constructionInclude,
+  publicConstructionInclude,
   toConstructionDto,
+  toPublicConstructionDto,
   type ConstructionRow,
+  type PublicConstructionRow,
 } from "./construction-dto";
 
 const paginatedConstructions = paginatedSchema(constructionSchema);
@@ -66,28 +70,32 @@ export async function getConstruction(
   return dto(rt, construction);
 }
 
-/** Публичный список: только опубликованные и не архивные. */
+/**
+ * Публичный список: только опубликованные и не архивные. Идёт через
+ * `publicConstructionInclude` — договорные реквизиты владельца анонимному
+ * клиенту не отдаются.
+ */
 export async function listPublicConstructions(
   rt: Runtime,
-): Promise<Construction[]> {
+): Promise<PublicConstruction[]> {
   const rows = await rt.prisma.construction.findMany({
     where: { status: "published", archivedAt: null },
-    include: constructionInclude,
+    include: publicConstructionInclude,
     orderBy: { createdAt: "asc" },
   });
-  return rows.map((c) => dto(rt, c));
+  return rows.map((c) => publicDto(rt, c));
 }
 
 /** Публичная страница по slug — только опубликованная не-архивная конструкция. */
 export async function getPublicConstructionBySlug(
   rt: Runtime,
   slug: string,
-): Promise<Construction | null> {
+): Promise<PublicConstruction | null> {
   const construction = await rt.prisma.construction.findFirst({
     where: { slug, status: "published", archivedAt: null },
-    include: constructionInclude,
+    include: publicConstructionInclude,
   });
-  return construction ? dto(rt, construction) : null;
+  return construction ? publicDto(rt, construction) : null;
 }
 
 /** Создать конструкцию. */
@@ -200,6 +208,15 @@ export async function deleteConstruction(rt: Runtime, id: string): Promise<void>
 
 function dto(rt: Runtime, construction: ConstructionRow): Construction {
   return toConstructionDto(construction, { publicBase: rt.env.FILES_PUBLIC_BASE });
+}
+
+function publicDto(
+  rt: Runtime,
+  construction: PublicConstructionRow,
+): PublicConstruction {
+  return toPublicConstructionDto(construction, {
+    publicBase: rt.env.FILES_PUBLIC_BASE,
+  });
 }
 
 async function requireConstruction(rt: Runtime, id: string): Promise<void> {

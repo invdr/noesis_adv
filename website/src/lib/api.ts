@@ -12,7 +12,7 @@ import {
   resolveSiteSettings,
   SITE_SETTINGS_DEFAULTS,
   type Badge,
-  type Construction as ContractConstruction,
+  type PublicConstruction as ContractConstruction,
   type ConstructionFormat,
   type PublicSiteStats,
   type ResolvedSiteSettings,

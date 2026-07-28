@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { paginationQuerySchema, SLUG_RE } from "./common";
 import { assetSchema, IMAGE_MAX_BYTES } from "./file";
-import { developerSchema } from "./developer";
+import { developerSchema, publicDeveloperSchema } from "./developer";
 
 // --- Справочные значения и константы ---
 
@@ -202,6 +202,17 @@ export const constructionSchema = z.object({
   updatedAt: z.string(),
 });
 export type Construction = z.infer<typeof constructionSchema>;
+
+/**
+ * Карточка конструкции для анонимных `/api/public/constructions*`. Отличается
+ * от CRM-варианта только владельцем: наружу уходит `publicDeveloperSchema`
+ * без договорных реквизитов. Лендинг типизируется именно этой схемой, чтобы
+ * реквизиты нельзя было прочитать даже случайно.
+ */
+export const publicConstructionSchema = constructionSchema.extend({
+  owner: publicDeveloperSchema.optional(),
+});
+export type PublicConstruction = z.infer<typeof publicConstructionSchema>;
 
 // --- Вход на создание/обновление (multipart: `data` + файлы `image_N`) ---
 

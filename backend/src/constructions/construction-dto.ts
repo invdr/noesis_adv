@@ -13,6 +13,7 @@ import {
   type ConstructionLighting,
   type ConstructionSide,
   type ConstructionSideDetails,
+  type PublicConstruction,
 } from "@noesis/contracts";
 import { toAssetDto } from "../files/file-dto";
 import { toDeveloperDto } from "../developers/developer-dto";
@@ -25,12 +26,32 @@ export type ConstructionRow = PrismaConstruction & {
   sides: (PrismaConstructionSide & { photo: PrismaAsset | null })[];
 };
 
-/** Подключение связей конструкции — единый include для всех выборок. */
+/** Подключение связей конструкции — include для выборок CRM (за логином). */
 export const constructionInclude = {
   owner: { include: { logo: true } },
   cover: true,
   images: { include: { asset: true }, orderBy: { position: "asc" as const } },
   sides: { include: { photo: true }, orderBy: { code: "asc" as const } },
+};
+
+/**
+ * Include для анонимных `/api/public/constructions*`: у владельца выбираем
+ * только витринные поля, чтобы договорные реквизиты (ИНН/ОГРН, банк, р/с и
+ * к/с, директор) не покидали БД. Отдельный include, а не фильтрация в DTO, —
+ * тогда добавленное в `Developer` поле не утечёт само собой.
+ */
+export const publicConstructionInclude = {
+  owner: { select: { id: true, name: true, slug: true, logo: true } },
+  cover: true,
+  images: { include: { asset: true }, orderBy: { position: "asc" as const } },
+  sides: { include: { photo: true }, orderBy: { code: "asc" as const } },
+};
+
+/** Строка конструкции для публичной выдачи — владелец без реквизитов. */
+export type PublicConstructionRow = Omit<ConstructionRow, "owner"> & {
+  owner: (Pick<PrismaDeveloper, "id" | "name" | "slug"> & {
+    logo: PrismaAsset | null;
+  }) | null;
 };
 
 /** Что нужно DTO помимо строки БД. */
@@ -58,11 +79,11 @@ export function toConstructionSideDto(
   };
 }
 
-/** Маппинг строки БД в DTO: связи → Asset/владелец, цена → готовая подпись. */
-export function toConstructionDto(
-  c: ConstructionRow,
+/** Общая часть маппинга — всё, кроме владельца (он различается по аудитории). */
+function toConstructionBase(
+  c: Omit<ConstructionRow, "owner">,
   cfg: ConstructionDtoConfig,
-): Construction {
+): Omit<Construction, "owner"> {
   const images = [...c.images]
     .sort((a, b) => a.position - b.position)
     .map((i) => toAssetDto(i.asset, cfg));
@@ -72,7 +93,6 @@ export function toConstructionDto(
     slug: c.slug,
     name: c.name,
     code: c.code,
-    owner: c.owner ? toDeveloperDto(c.owner, cfg) : undefined,
     address: c.address,
     district: c.district,
     lat: c.lat,
@@ -94,5 +114,34 @@ export function toConstructionDto(
     isArchived: c.archivedAt !== null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
+  };
+}
+
+/** Маппинг строки БД в DTO для CRM: владелец отдаётся целиком, с реквизитами. */
+export function toConstructionDto(
+  c: ConstructionRow,
+  cfg: ConstructionDtoConfig,
+): Construction {
+  return {
+    ...toConstructionBase(c, cfg),
+    owner: c.owner ? toDeveloperDto(c.owner, cfg) : undefined,
+  };
+}
+
+/** Маппинг для анонимной выдачи: владелец — только витринные поля. */
+export function toPublicConstructionDto(
+  c: PublicConstructionRow,
+  cfg: ConstructionDtoConfig,
+): PublicConstruction {
+  return {
+    ...toConstructionBase(c, cfg),
+    owner: c.owner
+      ? {
+          id: c.owner.id,
+          name: c.owner.name,
+          slug: c.owner.slug,
+          logo: c.owner.logo ? toAssetDto(c.owner.logo, cfg) : undefined,
+        }
+      : undefined,
   };
 }

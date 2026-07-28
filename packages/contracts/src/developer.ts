@@ -39,6 +39,20 @@ export const developerSchema = z.object({
 export type Developer = z.infer<typeof developerSchema>;
 
 /**
+ * Публичная проекция владельца сети. Реквизиты (ИНН/КПП/ОГРН, адреса, банк,
+ * р/с и к/с, директор) заведены только под будущие договорные документы и
+ * наружу не отдаются — на анонимных `/api/public/*` разрешено лишь то, что
+ * нужно для витрины. Расширять эту проекцию можно только осознанно.
+ */
+export const publicDeveloperSchema = developerSchema.pick({
+  id: true,
+  name: true,
+  slug: true,
+  logo: true,
+});
+export type PublicDeveloper = z.infer<typeof publicDeveloperSchema>;
+
+/**
  * Создание/обновление владельца сети (admin). Логотип передаётся отдельным файлом
  * в multipart (поле `logo`); `removeLogo` снимает текущий логотип.
  */
