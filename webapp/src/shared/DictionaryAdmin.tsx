@@ -49,7 +49,14 @@ export function DictionaryAdmin<T extends DictEntry>({
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
 
-  const items = useQuery({ queryKey: d.queryKey, queryFn: () => d.list(true) });
+  // Флаг архивных — часть ключа, как в DevelopersView. Экран справочника
+  // просит list(true), а рабочие экраны — list(false) под тем же голым ключом:
+  // после захода сюда в пикерах заявок и броней из кэша появлялись архивные
+  // записи. Инвалидация по базовому ключу задевает оба варианта по префиксу.
+  const items = useQuery({
+    queryKey: [...d.queryKey, { includeArchived: true }],
+    queryFn: () => d.list(true),
+  });
   const refresh = () => qc.invalidateQueries({ queryKey: d.queryKey });
   const onError = (e: unknown) => setError(e instanceof Error ? e.message : String(e));
   const ok = () => {

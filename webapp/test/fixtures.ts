@@ -1,4 +1,6 @@
 import {
+  type BookingReminderItem,
+  type BookingRemindersResponse,
   type Contact,
   type ContactDetail,
   type Lead,
@@ -174,4 +176,34 @@ export function contactDetail(over: Partial<ContactDetail> = {}): ContactDetail 
     referredLeads: [],
     ...over,
   };
+}
+
+// --- Брони: напоминания о сроке размещения («Мой день») ---
+
+export function bookingReminderItem(
+  over: Partial<BookingReminderItem> = {},
+): BookingReminderItem {
+  return {
+    id: "b1",
+    kind: "commercial",
+    status: "onAir",
+    constructionName: "Сити-формат на Путина",
+    constructionCode: "СФ-014",
+    sideCode: "A",
+    clientName: "ООО «Клиент»",
+    brandName: null,
+    campaignNote: null,
+    serviceReasonName: null,
+    startDate: "2026-07-01",
+    endDate: "2026-07-31",
+    reminderAt: "2026-07-25",
+    managerName: "Менеджер",
+    ...over,
+  };
+}
+
+export function bookingReminders(
+  over: Partial<BookingRemindersResponse> = {},
+): BookingRemindersResponse {
+  return { overdue: [], today: [], upcoming: [], ...over };
 }

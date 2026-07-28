@@ -73,6 +73,8 @@ export function LeadsView({
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [moveError, setMoveError] = useState("");
+  const [exportError, setExportError] = useState("");
 
   const assigneeParam =
     user.role === "admin" ? assigneeFilter || undefined : onlyMine ? user.id : undefined;
@@ -134,9 +136,23 @@ export function LeadsView({
     mutationFn: ({ id, next }: { id: string; next: string }) =>
       api.updateLeadStage(id, { stageId: next }),
     onSuccess: () => {
+      setMoveError("");
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
     },
+    // Без этого 403/409/422 возвращали select к прежнему значению молча —
+    // неотличимо от «клик не сработал». Смена этапа — самая частая запись в CRM.
+    onError: (e: unknown) =>
+      setMoveError(e instanceof Error ? e.message : String(e)),
+  });
+
+  // Раньше это был «плавающий» промис: истёкшая сессия или 500 давали
+  // необработанный reject и полное отсутствие реакции — кнопка просто молчала.
+  const exportCsv = useMutation({
+    mutationFn: () => api.exportLeads(params),
+    onSuccess: () => setExportError(""),
+    onError: (e: unknown) =>
+      setExportError(e instanceof Error ? e.message : String(e)),
   });
 
   const stageName = (id: string) => stages.find((s) => s.id === id)?.name ?? id;
@@ -358,7 +374,9 @@ export function LeadsView({
         >
           {adding ? "Закрыть форму" : "Принять заявку"}
         </button>
-        <button onClick={() => api.exportLeads(params)}>Экспорт CSV</button>
+        <button onClick={() => exportCsv.mutate()} disabled={exportCsv.isPending}>
+          {exportCsv.isPending ? "Готовим CSV…" : "Экспорт CSV"}
+        </button>
       </section>
 
       {adding && (
@@ -383,6 +401,17 @@ export function LeadsView({
             return u ? u.name || u.email : undefined;
           }}
         />
+      )}
+
+      {moveError && (
+        <p className="alert alert-error" role="alert">
+          Не удалось сменить этап: {moveError}
+        </p>
+      )}
+      {exportError && (
+        <p className="alert alert-error" role="alert">
+          Не удалось выгрузить CSV: {exportError}
+        </p>
       )}
 
       {mode === "list" && leads.isLoading && <p className="hint">Загрузка…</p>}

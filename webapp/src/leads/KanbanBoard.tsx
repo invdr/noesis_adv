@@ -51,6 +51,7 @@ export function KanbanBoard({
 
   const q = useQuery({ queryKey: key, queryFn: () => api.listLeads(params), retry: false });
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [moveError, setMoveError] = useState("");
   // Терминальные колонки (won/lost) по умолчанию свёрнуты — они длинные и редко
   // нужны в потоке работы; admin/менеджер разворачивает их кликом.
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -96,9 +97,13 @@ export function KanbanBoard({
       );
       return { prev };
     },
-    onError: (_e, _v, ctx) => {
+    onError: (e, _v, ctx) => {
+      // Откат оптимистичного переноса без сообщения выглядел как «карточка
+      // сама уехала назад»: пользователь не знал, что запись не прошла.
       if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+      setMoveError(e instanceof Error ? e.message : String(e));
     },
+    onSuccess: () => setMoveError(""),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
@@ -142,6 +147,11 @@ export function KanbanBoard({
 
   return (
     <>
+      {moveError && (
+        <p className="alert alert-error" role="alert" style={{ marginBottom: "0.75rem" }}>
+          Не удалось перенести заявку: {moveError}
+        </p>
+      )}
       {truncated && (
         <p className="hint" style={{ marginBottom: "0.75rem" }}>
           Показаны последние {items.length} из {q.data?.total} заявок по фильтрам — уточните

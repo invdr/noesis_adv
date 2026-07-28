@@ -28,6 +28,7 @@ import {
   productToday,
   shiftDateOnly,
 } from "../shared/date";
+import { parseOptionalNumberInput } from "../shared/number";
 
 const KEY = ["bookings"];
 
@@ -162,6 +163,18 @@ export function BookingsView({ user, draft }: { user: SessionUser; draft?: Booki
 
   const allConstructions = constructions.data?.items ?? [];
   const allBookings = bookings.data?.items ?? [];
+
+  // Сетка занятости существует ради недопущения двойной брони, поэтому её
+  // нельзя показывать на неполных данных: упавший запрос давал пустой список,
+  // и каждая сторона печаталась как «свободно» — неотличимо от реально
+  // свободной. Пока данные не загружены или загрузка упала, сетку не рисуем.
+  const loadFailed = bookings.isError || constructions.isError;
+  const loading =
+    constructions.isPending || (hasValidWindow && bookings.isPending);
+  const retryLoad = () => {
+    if (constructions.isError) void constructions.refetch();
+    if (bookings.isError) void bookings.refetch();
+  };
   const rows = sideRows(
     constructionId
       ? allConstructions.filter((c) => c.id === constructionId)
@@ -231,6 +244,21 @@ export function BookingsView({ user, draft }: { user: SessionUser; draft?: Booki
       {error && <p className="alert alert-error" role="alert">{error}</p>}
       {!hasValidWindow && <p className="alert alert-error">Укажите корректный период.</p>}
 
+      {loadFailed && (
+        <p className="alert alert-error" role="alert">
+          Не удалось загрузить занятость. Сетка скрыта: пустые строки можно
+          принять за свободные места и продать сторону дважды.{" "}
+          <button className="link-btn" onClick={retryLoad}>
+            Повторить
+          </button>
+        </p>
+      )}
+
+      {!loadFailed && loading && hasValidWindow && (
+        <p className="subtle" role="status">Загружаем занятость…</p>
+      )}
+
+      {!loadFailed && !loading && (
       <div className="card">
         <table className="table-flush table-hover">
           <thead>
@@ -339,6 +367,7 @@ export function BookingsView({ user, draft }: { user: SessionUser; draft?: Booki
           </tbody>
         </table>
       </div>
+      )}
     </section>
   );
 }
@@ -429,8 +458,23 @@ function BookingForm({
 
   const save = useMutation({
     mutationFn: () => {
-      const base = basePricePerMonth.trim() ? Number(basePricePerMonth) : null;
-      const total = totalPrice.trim() ? Number(totalPrice) : null;
+      // Поля цены — свободный ввод, и «50 000» или «50 000 ₽» давали через
+      // Number() значение NaN, которое JSON.stringify сериализует как null.
+      // Схема null принимает, поэтому бронь молча сохранялась БЕЗ цены и
+      // выпадала из плановой выручки. parseOptionalNumberInput отличает
+      // пустое поле от нечислового и понимает пробелы с запятой.
+      const parseErrors: Record<string, string> = {};
+      const priceValue = (field: string, value: string): number | null => {
+        const parsed = parseOptionalNumberInput(value);
+        if (parsed.error) parseErrors[field] = parsed.error;
+        return parsed.value;
+      };
+      const base = priceValue("basePricePerMonth", basePricePerMonth);
+      const total = priceValue("totalPrice", totalPrice);
+      if (Object.keys(parseErrors).length > 0) {
+        setFieldErrors(parseErrors);
+        throw new Error("Проверьте поля формы");
+      }
       const data: UpsertBookingInput = {
         kind,
         status,
@@ -457,7 +501,8 @@ function BookingForm({
         setError(e.message);
         setFieldErrors(e.fields ?? {});
       } else {
-        setError(String(e));
+        // Локальные ошибки разбора полей уже выставлены в fieldErrors.
+        setError(e instanceof Error ? e.message : String(e));
       }
     },
   });
@@ -608,9 +653,11 @@ function BookingForm({
           <div className="row wrap" style={{ gap: 12 }}>
             <Field label="База, ₽/мес">
               <input inputMode="numeric" value={basePricePerMonth} onChange={(e) => setBasePricePerMonth(e.target.value)} />
+              {err("basePricePerMonth")}
             </Field>
             <Field label="Итого, ₽">
               <input inputMode="numeric" value={totalPrice} onChange={(e) => setTotalPrice(e.target.value)} disabled={kind === "service"} />
+              {err("totalPrice")}
             </Field>
             <Field label="Напомнить">
               <input
@@ -621,6 +668,7 @@ function BookingForm({
                   setReminderAt(e.target.value);
                 }}
               />
+              {err("reminderAt")}
             </Field>
           </div>
           <Field label="Комментарий к цене">
@@ -634,6 +682,7 @@ function BookingForm({
                   <option key={u.id} value={u.id}>{u.name || u.email}</option>
                 ))}
               </select>
+              {err("managerId")}
             </Field>
           )}
         </div>

@@ -174,7 +174,7 @@ export function App() {
 }
 
 function BrandMark() {
-  return <span className="brand-mark">ГТ</span>;
+  return <span className="brand-mark">N</span>;
 }
 
 function Login() {
@@ -185,6 +185,9 @@ function Login() {
   const mutation = useMutation({
     mutationFn: () => api.login({ email, password }),
     onSuccess: (user) => {
+      // Симметрично логауту: вход другим пользователем не должен подхватывать
+      // кэш предыдущего, если вкладку не закрывали (или логаут не дошёл).
+      queryClient.clear();
       queryClient.setQueryData(SESSION_KEY, user);
     },
   });
@@ -344,6 +347,10 @@ function Dashboard({ user }: { user: SessionUser }) {
   const logout = useMutation({
     mutationFn: () => api.logout(),
     onSettled: () => {
+      // Полная очистка кэша, а не только сессии: иначе следующий сотрудник в
+      // той же вкладке до фонового рефетча видел заявки, контакты и телефоны
+      // предыдущего — те лежали в ["leads"], ["contact", id], ["users"].
+      queryClient.clear();
       queryClient.setQueryData(SESSION_KEY, null);
       queryClient.invalidateQueries({ queryKey: SESSION_KEY });
     },

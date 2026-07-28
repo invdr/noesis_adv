@@ -186,6 +186,21 @@ export function LeadCard({
     onSuccess: invalidate,
   });
 
+  // Большинство записей карточки не показывали отказ вообще: 403 на чужой
+  // заметке или запрещённое назначение выглядели как «ничего не произошло».
+  // У changeProject и setReferrer ошибка рисуется рядом с полем, поэтому
+  // здесь они не дублируются.
+  const mutationError = [
+    ["Не удалось сменить этап", changeStage.error],
+    ["Не удалось изменить ответственного", assign.error],
+    ["Не удалось изменить источник", changeSource.error],
+    ["Не удалось сохранить следующий контакт", saveNextContact.error],
+    ["Не удалось завершить контакт", completeContact.error],
+    ["Не удалось добавить заметку", addNote.error],
+    ["Не удалось изменить заметку", editNote.error],
+    ["Не удалось удалить заметку", removeNote.error],
+  ].find(([, err]) => Boolean(err)) as [string, Error] | undefined;
+
   if (lead.isLoading) return <p className="hint">Загрузка…</p>;
   if (lead.error || !lead.data) {
     return (
@@ -438,6 +453,12 @@ export function LeadCard({
       <button className="btn-ghost" onClick={onBack} style={{ marginBottom: "1rem" }}>
         ← к списку
       </button>
+
+      {mutationError && (
+        <p className="alert alert-error" role="alert" style={{ marginBottom: "1rem" }}>
+          {mutationError[0]}: {mutationError[1].message}
+        </p>
+      )}
 
       <div style={{ marginBottom: "1.25rem" }}>
         <h2

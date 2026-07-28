@@ -1176,7 +1176,11 @@ export const api = {
     const a = document.createElement("a");
     a.href = url;
     a.download = "leads.csv";
+    // Якорь должен быть в документе на момент клика — иначе часть браузеров
+    // (в т.ч. Firefox) скачивание не запускает. Так же делает downloadCsv.
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   },
 };

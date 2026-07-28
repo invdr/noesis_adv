@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FinanceIncome, UpsertFinanceIncomeInput } from "@noesis/contracts";
 import { api } from "../api/client";
-import { productToday } from "../shared/date";
+import { displayInclusivePeriod, productToday } from "../shared/date";
 import { parseAmount, rub } from "./finance-ui";
 
 interface Draft {
@@ -197,7 +197,7 @@ export function FinanceIncomeTab() {
                   <option value="">— не указана —</option>
                   {bookings.data?.items.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.side.code} · {b.startDate}–{b.endDate}
+                      {b.side.code} · {displayInclusivePeriod(b.startDate, b.endDate)}
                       {b.client ? ` · ${b.client.fullName}` : ""}
                     </option>
                   ))}
