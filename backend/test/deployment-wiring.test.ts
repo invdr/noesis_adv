@@ -73,3 +73,59 @@ describe("deployment wiring for booking reminders", () => {
     expect(readme).toContain("sudo bash infra/deploy-no-docker.sh");
   });
 });
+
+describe("CRM публикуется атомарно, как и лендинг", () => {
+  /**
+   * Vite чистит выходной каталог перед сборкой. Пока nginx раздавал
+   * webapp/dist напрямую, в этом окне document root был полупустым, а падение
+   * сборки после очистки оставляло CRM нерабочей без отката. Проверяем связку
+   * «сборка в релиз → симлинк current → nginx смотрит на current».
+   */
+  test("no-docker деплой собирает CRM через build-webapp.sh, а nginx смотрит на current", async () => {
+    const [deploy, buildWebapp, nginx] = await Promise.all([
+      readFile(resolve(root, "infra/deploy-no-docker.sh"), "utf8"),
+      readFile(resolve(root, "infra/build-webapp.sh"), "utf8"),
+      readFile(resolve(root, "infra/nginx/no-docker.conf.template"), "utf8"),
+    ]);
+
+    expect(deploy).toContain('bash "$ROOT/infra/build-webapp.sh"');
+    expect(buildWebapp).toContain('ln -sfn "releases/$ts" "$WEB/current"');
+    expect(nginx).toContain("alias {{NOESIS_DEPLOY_DIR}}/webapp/web/current/;");
+    expect(nginx).not.toContain("webapp/dist");
+  });
+
+  test("сборка CRM не публикует пустой релиз", async () => {
+    const buildWebapp = await readFile(resolve(root, "infra/build-webapp.sh"), "utf8");
+
+    expect(buildWebapp).toContain('if [ ! -s "$DIST/index.html" ]');
+    expect(buildWebapp).toContain('ls -A "$DIST/assets"');
+  });
+});
+
+describe("бэкап нацелен на действующий прод (no-docker)", () => {
+  /**
+   * Скрипт бэкапа был написан под Docker-стек, которого на проде нет: он
+   * падал на первой же проверке, то есть резервных копий не существовало.
+   * Проверяем статически, что и скрипт, и runbook работают с тем стеком,
+   * который реально запущен, — регрессия иначе снова бесшумная.
+   */
+  test("backup.sh читает no-docker.env и ходит в host PostgreSQL, а не в docker compose", async () => {
+    const backup = await readFile(resolve(root, "infra/backup.sh"), "utf8");
+
+    expect(backup).not.toContain("docker compose");
+    expect(backup).toContain("infra/no-docker.env");
+    expect(backup).toContain("as_postgres pg_dump");
+    // Каталог файлов архивируем напрямую — тома контейнера backend нет.
+    expect(backup).toContain('tar -C "$FILES_DIR" -czf');
+    expect(backup).toContain("NOESIS_FILES_DIR");
+  });
+
+  test("runbook восстановления описывает systemd и psql без docker compose", async () => {
+    const runbook = await readFile(resolve(root, "docs/backup-restore.md"), "utf8");
+
+    expect(runbook).not.toContain("docker compose");
+    expect(runbook).toContain("systemctl stop noesis-backend");
+    expect(runbook).toContain("sudo -u postgres psql -v ON_ERROR_STOP=1");
+    expect(runbook).toContain("infra/no-docker.env");
+  });
+});

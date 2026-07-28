@@ -51,6 +51,8 @@ uploads/
 
 # релизы лендинга на VPS (сборка + симлинк current, Веха 4.2) — не в репозитории
 website/web/
+# релизы CRM на VPS (тот же приём: сборка в сторонке + симлинк current)
+webapp/web/
 # рантайм-лок сериализации сборки (flock)
 infra/.site-build.lock
 

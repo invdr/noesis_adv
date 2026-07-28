@@ -24,7 +24,7 @@ backend ──▶ postgres:5432
                 ├── catlg.ru             → существующий Next.js :3000
                 └── noesis.catlg.ru      → Noesis
                         ├── /            → website/web/current
-                        ├── /crm/        → webapp/dist
+                        ├── /crm/        → webapp/web/current
                         ├── /files/      → /var/lib/noesis/files
                         └── /api/        → 127.0.0.1:3001
 Noesis backend ──▶ host PostgreSQL:5432, отдельная БД/роль

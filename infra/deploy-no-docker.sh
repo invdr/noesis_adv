@@ -240,15 +240,45 @@ install_nginx_site() {
   export NOESIS_SERVER_NAMES NOESIS_SSL_CERT NOESIS_SSL_KEY NOESIS_BACKEND_PORT
   export NOESIS_FILES_DIR NOESIS_DEPLOY_DIR
 
-  local rendered site_available site_enabled
+  local rendered site_available site_enabled backup had_available had_enabled
   rendered="$(mktemp)"
   site_available="/etc/nginx/sites-available/$NOESIS_NGINX_SITE"
   site_enabled="/etc/nginx/sites-enabled/$NOESIS_NGINX_SITE"
   render_template "$ROOT/infra/nginx/no-docker.conf.template" "$rendered"
+
+  # Прежнее состояние запоминаем до установки: если nginx -t отвергнет новый
+  # конфиг, невалидный файл нельзя оставлять в sites-enabled. Запущенный nginx
+  # переживёт это на конфиге в памяти, но следующий reload из любого источника
+  # (certbot-хук, перезагрузка) уронит весь сервер — включая соседний сайт на
+  # этих же портах.
+  had_available=""
+  if [ -f "$site_available" ]; then had_available=1; fi
+  had_enabled=""
+  if [ -e "$site_enabled" ] || [ -L "$site_enabled" ]; then had_enabled=1; fi
+  backup="$(mktemp)"
+  if [ -n "$had_available" ]; then cp -p "$site_available" "$backup"; fi
+
   install -m 0644 "$rendered" "$site_available"
   rm -f "$rendered"
   ln -sfn "$site_available" "$site_enabled"
-  nginx -t
+
+  if ! nginx -t; then
+    echo "nginx -t отверг новый конфиг — возвращаем предыдущий и прерываем." >&2
+    if [ -n "$had_available" ]; then
+      install -m 0644 "$backup" "$site_available"
+    else
+      rm -f "$site_available"
+    fi
+    if [ -z "$had_enabled" ]; then rm -f "$site_enabled"; fi
+    rm -f "$backup"
+    # Проверяем, что откат вернул рабочее состояние: молча оставить сервер с
+    # непроходящим nginx -t хуже, чем громко сообщить об этом сейчас.
+    if ! nginx -t; then
+      echo "ВНИМАНИЕ: конфигурация nginx не проходит проверку и после отката." >&2
+    fi
+    exit 1
+  fi
+  rm -f "$backup"
   systemctl reload nginx
 }
 
@@ -279,7 +309,7 @@ build_frontends() {
   export SITE_URL BUILD_KEEP_RELEASES
 
   bash "$ROOT/infra/build-website.sh"
-  "$BUN_BIN" run build:webapp
+  bash "$ROOT/infra/build-webapp.sh"
 }
 
 notify_published() {

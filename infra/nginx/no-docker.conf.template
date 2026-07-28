@@ -100,7 +100,8 @@ server {
   }
 
   location /crm/ {
-    alias {{NOESIS_DEPLOY_DIR}}/webapp/dist/;
+    # current — симлинк на последний успешно собранный релиз (build-webapp.sh).
+    alias {{NOESIS_DEPLOY_DIR}}/webapp/web/current/;
     try_files $uri $uri/ /crm/index.html;
   }
 

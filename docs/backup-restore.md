@@ -2,34 +2,43 @@
 
 Прод — один VPS, отката деплоя нет (roll-forward). Единственная защита
 данных (заявки, сделки, записи согласий ПДн, загруженные файлы) — резервные
-копии. Этот документ — что бэкапим, как включить расписание и **отрепетированная**
-процедура восстановления на чистом сервере.
+копии. Этот документ — что бэкапим, как включить расписание и процедура
+восстановления на чистом сервере.
+
+Всё ниже — про **действующий прод: no-Docker** (host nginx + host PostgreSQL +
+systemd, `/var/www/noesis_adv`), тот же стек, который разворачивает
+`infra/deploy-no-docker.sh`. Docker на сервере не установлен; если когда-нибудь
+вернётесь на `docker-compose.prod.yml`, процедуру придётся переписать.
 
 ## Что бэкапим
 
 | Что | Откуда | Куда |
 | --- | --- | --- |
-| БД PostgreSQL (`pg_dump --clean --if-exists`, gzip) | контейнер `postgres` | `/root/noesis-backups/<дата>/db.sql.gz` |
-| Загруженные файлы (фото конструкций, документы, фотоотчёты) | том `files_data` через контейнер `backend` | `/root/noesis-backups/<дата>/files.tar.gz` |
+| БД PostgreSQL (`pg_dump --clean --if-exists`, gzip) | host PostgreSQL, база `POSTGRES_DB` | `/root/noesis-backups/<дата>/db.sql.gz` |
+| Загруженные файлы (фото конструкций, документы, фотоотчёты) | каталог `NOESIS_FILES_DIR` (по умолчанию `/var/lib/noesis/files`) | `/root/noesis-backups/<дата>/files.tar.gz` |
 
 Не бэкапим: статику сайта/CRM (пересобирается из репозитория), сам репозиторий
-(живёт на GitHub). **Но `infra/.env` в репо нет** — храните его копию в надёжном
-месте (менеджер паролей): без секретов восстановление начнётся с пересоздания
-всех паролей и токенов.
+(живёт на GitHub). **Но `infra/no-docker.env` в репо нет** — храните его копию в
+надёжном месте (менеджер паролей): без секретов восстановление начнётся с
+пересоздания всех паролей и токенов.
 
 ## Запуск
 
 ```bash
-cd /root/noesis_adv
-bash infra/backup.sh          # разовая копия
+cd /var/www/noesis_adv
+bash infra/backup.sh          # разовая копия, от root
 ```
+
+Скрипт читает `infra/no-docker.env` (базу, пользователя и `NOESIS_FILES_DIR`),
+снимает дамп системным пользователем `postgres` (peer-аутентификация — пароль
+роли нигде не светится) и архивирует каталог файлов напрямую.
 
 Расписание — cron на хосте (ежедневно в 03:00 МСК):
 
 ```bash
 crontab -e
 # добавить строку:
-0 3 * * * cd /root/noesis_adv && bash infra/backup.sh >> /var/log/tower-backup.log 2>&1
+0 3 * * * cd /var/www/noesis_adv && bash infra/backup.sh >> /var/log/noesis-backup.log 2>&1
 ```
 
 Ротация встроена: каталоги старше `BACKUP_KEEP_DAYS` (по умолчанию 14) дней
@@ -38,7 +47,7 @@ crontab -e
 ## Офсайт-копия (переживает отказ диска VPS)
 
 Локальный каталог `/root/noesis-backups` не спасает при потере самого VPS.
-Минимальный офсайт уже встроен: если в `infra/.env` заданы
+Минимальный офсайт уже встроен: если в `infra/no-docker.env` заданы
 
 ```
 TELEGRAM_BOT_TOKEN=...            # уже есть (уведомления о заявках)
@@ -66,24 +75,29 @@ rclone sync /root/noesis-backups remote:noesis-backups
 
 ## Восстановление
 
-Отрепетировано (июль 2026) для БД: дамп → чистая база → 0 ошибок, количество
-строк по всем таблицам совпало. Команды файловой ветки (шаг 4) проверены на
-тестовом архиве вне прод-стека; при первой возможности прогоните шаги 3–4 на
-VPS целиком и обновите эту пометку.
+Процедура ниже переписана под no-Docker и **на прод-стеке ещё не
+отрепетирована** — прогоните её на тестовой базе при первой возможности и
+обновите эту пометку. Ранее репетиция (июль 2026) проводилась на Docker-стеке,
+которого на сервере больше нет.
+
+Во всех блоках креды и каталоги берутся из `infra/no-docker.env`, а обращение к
+базе идёт от системного пользователя `postgres`, как в `backup.sh` и
+`deploy-no-docker.sh`.
 
 ### Случай А: испортили данные, сервер жив
 
 ```bash
-cd /root/noesis_adv
-COMPOSE="docker compose -f infra/docker-compose.prod.yml --env-file infra/.env"
+cd /var/www/noesis_adv
 # Ошибка в любом звене пайпа = ошибка команды, а не молчаливый «успех».
 set -o pipefail
-# Креды БД — из infra/.env, как их видит сам стек (не хардкодим).
-PG_USER=$(grep -E '^POSTGRES_USER=' infra/.env | cut -d= -f2-); PG_USER=${PG_USER:-noesis}
-PG_DB=$(grep -E '^POSTGRES_DB=' infra/.env | cut -d= -f2-); PG_DB=${PG_DB:-noesis}
+# Настройки — из no-docker.env, как их видит сам стек (не хардкодим).
+set -a; . infra/no-docker.env; set +a
+PG_DB="${POSTGRES_DB:-noesis}"
+PG_USER="${POSTGRES_USER:-noesis}"
+FILES_DIR="${NOESIS_FILES_DIR:-/var/lib/noesis/files}"
 
 # 1) Остановить backend, чтобы никто не писал в БД во время восстановления.
-$COMPOSE stop backend
+systemctl stop noesis-backend
 
 # 2) Пересоздать базу пустой и залить дамп.
 #    Восстанавливаем в пустую базу, а не поверх: --clean внутри дампа чистит
@@ -91,54 +105,59 @@ $COMPOSE stop backend
 #    вперёд (после снятия копии катились миграции), DROP старой таблицы
 #    упадёт на зависимостях. ON_ERROR_STOP: без него psql продолжает после
 #    ошибок и возвращает 0 — частично применённый дамп сойдёт за успех.
-$COMPOSE exec -T postgres dropdb -U "$PG_USER" "$PG_DB"
-$COMPOSE exec -T postgres createdb -U "$PG_USER" "$PG_DB"
+sudo -u postgres dropdb "$PG_DB"
+sudo -u postgres createdb -O "$PG_USER" "$PG_DB"
 gunzip -c /root/noesis-backups/<дата>/db.sql.gz \
-  | $COMPOSE exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB"
+  | sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$PG_DB"
 
-# 3) Поднять backend обратно: exec следующего шага требует живой контейнер
-#    (том files_data смонтирован именно в него).
-$COMPOSE up -d backend
-
-# 4) Файлы (если нужно): очистить том и распаковать архив.
-#    Осторожно: сносит текущие файлы. rm с глобом не подходит — глоб раскрыл бы
-#    хостовый shell, а не контейнер; find выполняется целиком внутри.
-$COMPOSE exec -T backend find /srv/files -mindepth 1 -delete
-$COMPOSE exec -T backend tar -C /srv/files -xzf - \
-  < /root/noesis-backups/<дата>/files.tar.gz
+# 3) Файлы (если нужно): очистить каталог и распаковать архив.
+#    Осторожно: сносит текущие файлы.
+find "$FILES_DIR" -mindepth 1 -delete
+tar -C "$FILES_DIR" -xzf /root/noesis-backups/<дата>/files.tar.gz
+chown -R noesis:noesis "$FILES_DIR"
 # (гибче: восстановить во временный каталог и разложить вручную)
 
+# 4) Поднять backend обратно.
+systemctl start noesis-backend
+
 # 5) Пересобрать сайт на восстановленных данных.
-bun run deploy:vps
+bash infra/deploy-no-docker.sh
 ```
 
 ### Случай Б: VPS потерян, поднимаем с нуля
 
-1. Новый VPS: установить Docker + Docker Compose и Bun
-   (`curl -fsSL https://bun.sh/install | bash`).
-2. `git clone <репозиторий> /root/noesis_adv && cd /root/noesis_adv`.
-3. Восстановить `infra/.env` из надёжного места (или пересоздать по
-   `infra/.env.example` — тогда все секреты новые).
-4. Поднять только Postgres и залить дамп **до** первого старта backend
-   (иначе миграции создадут пустую схему поверх — не страшно, дамп её
-   перезапишет, но чище так):
+1. Новый VPS: nginx, PostgreSQL 18 и Bun
+   (`curl -fsSL https://bun.sh/install | bash`). Первичная настройка — см.
+   [DEPLOYMENT_VPS.md](./DEPLOYMENT_VPS.md).
+2. `git clone <репозиторий> /var/www/noesis_adv && cd /var/www/noesis_adv`.
+3. Восстановить `infra/no-docker.env` из надёжного места (или пересоздать по
+   `infra/no-docker.env.example` — тогда все секреты новые).
+4. Прогнать деплой один раз: он создаст роль, базу, systemd-юниты и накатит
+   миграции.
 
    ```bash
-   COMPOSE="docker compose -f infra/docker-compose.prod.yml --env-file infra/.env"
-   set -o pipefail
-   PG_USER=$(grep -E '^POSTGRES_USER=' infra/.env | cut -d= -f2-); PG_USER=${PG_USER:-noesis}
-   PG_DB=$(grep -E '^POSTGRES_DB=' infra/.env | cut -d= -f2-); PG_DB=${PG_DB:-noesis}
-   $COMPOSE up -d postgres
-   # дождаться healthy: $COMPOSE ps
-   gunzip -c db.sql.gz \
-     | $COMPOSE exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB"
+   bash infra/deploy-no-docker.sh
    ```
 
-5. `bun run deploy:vps` — поднимет backend (миграции на старте увидят
-   актуальную схему и пропустятся), соберёт сайт/CRM, пересоздаст nginx.
-6. Восстановить файлы в том — backend уже поднят, см. Случай А, шаг 4.
-7. Проверить: вход в CRM, список заявок, страницы конструкций, загруженные фото.
-8. Вернуть cron с бэкапом (см. выше) — на новом сервере его нет.
+5. Залить дамп поверх созданной схемы (backend на время заливки остановить):
+
+   ```bash
+   set -o pipefail
+   set -a; . infra/no-docker.env; set +a
+   PG_DB="${POSTGRES_DB:-noesis}"
+   PG_USER="${POSTGRES_USER:-noesis}"
+   systemctl stop noesis-backend
+   sudo -u postgres dropdb "$PG_DB"
+   sudo -u postgres createdb -O "$PG_USER" "$PG_DB"
+   gunzip -c db.sql.gz \
+     | sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$PG_DB"
+   systemctl start noesis-backend
+   ```
+
+6. Восстановить файлы — см. Случай А, шаг 3.
+7. Пересобрать сайт: `bash infra/deploy-no-docker.sh`.
+8. Проверить: вход в CRM, список заявок, страницы конструкций, загруженные фото.
+9. Вернуть cron с бэкапом (см. выше) — на новом сервере его нет.
 
 ### Пометки
 
@@ -149,12 +168,14 @@ bun run deploy:vps
 - Пользователи/сессии тоже в дампе: все пароли и логины работают как на момент
   копии; активные сессии протухнут по TTL — это нормально.
 - Проверяйте бэкап хотя бы раз в квартал: `gunzip -t db.sql.gz` (целостность) и
-  тестовое восстановление в отдельную базу (`$COMPOSE`, `$PG_USER` — как в
-  Случае А):
+  тестовое восстановление в отдельную базу:
 
   ```bash
-  $COMPOSE exec -T postgres createdb -U "$PG_USER" noesis_check
+  set -o pipefail
+  set -a; . infra/no-docker.env; set +a
+  PG_USER="${POSTGRES_USER:-noesis}"
+  sudo -u postgres createdb -O "$PG_USER" noesis_check
   gunzip -c db.sql.gz \
-    | $COMPOSE exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d noesis_check
-  $COMPOSE exec -T postgres dropdb -U "$PG_USER" noesis_check
+    | sudo -u postgres psql -v ON_ERROR_STOP=1 -d noesis_check
+  sudo -u postgres dropdb noesis_check
   ```

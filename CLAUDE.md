@@ -106,7 +106,8 @@ bash infra/deploy-no-docker.sh    # bun install → migrate deploy → seed → 
 Перед этим ветка должна быть запушена, а гейт (`bun run typecheck`+`test`) —
 зелёным (сам `deploy-no-docker.sh` гейт не гоняет).
 
-Бэкапы: `bash infra/backup.sh` на VPS; восстановление —
+Бэкапы: `bash infra/backup.sh` на VPS от root (читает `infra/no-docker.env`,
+снимает дамп через системного пользователя `postgres`); восстановление —
 [docs/backup-restore.md](./docs/backup-restore.md).
 
 ## Дизайн
