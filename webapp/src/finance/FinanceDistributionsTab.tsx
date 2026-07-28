@@ -4,6 +4,7 @@ import type { FinanceDistribution, UpsertFinancePayoutInput } from "@noesis/cont
 import { api } from "../api/client";
 import { productToday } from "../shared/date";
 import { backMonths, currentMonth, monthLabel, percentLabel, parseAmount, rub } from "./finance-ui";
+import { TruncatedNotice } from "./TruncatedNotice";
 
 export function FinanceDistributionsTab() {
   const qc = useQueryClient();
@@ -256,6 +257,8 @@ function PayoutsSection() {
         </div>
 
         {error && <p className="alert alert-error" role="alert">{error}</p>}
+
+        <TruncatedNotice shown={payouts.data?.items.length} total={payouts.data?.total} />
 
         {draft && (
           <div className="form-grid" style={{ marginTop: "0.75rem" }}>

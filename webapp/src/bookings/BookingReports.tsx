@@ -9,12 +9,24 @@ import {
 import { api, ApiError, apiUrl } from "../api/client";
 import { previousDateOnly, productToday } from "../shared/date";
 
+/**
+ * Бронь, по которой ведётся фотоотчёт. `endDate` здесь — ИСКЛЮЧАЮЩАЯ граница
+ * (первый свободный день), из неё считается `maxDate`.
+ *
+ * Это ловушка: `Booking` отдаёт исключающую границу, а `DealBookingSummary` —
+ * уже включающую (бэкенд применяет previousDateOnly в deal-dto). Раньше оба
+ * типа сюда подходили структурно, и разница не всплывала лишь потому, что
+ * вызов из карточки сделки идёт с `readOnly`, где `maxDate` не используется.
+ * Стоило бы сделать отчёты со стороны сделки редактируемыми — и граница молча
+ * уехала бы на день назад при зелёном typecheck. Поэтому просим границу
+ * отдельным полем с однозначным именем.
+ */
 type BookingReportTarget = {
   id: string;
   status: BookingStatus;
-  /** В карточке брони `endDate` — первый свободный день, не включённый в период. */
   startDate?: string;
-  endDate?: string;
+  /** Первый день ПОСЛЕ размещения (исключающая граница периода). */
+  exclusiveEndDate?: string;
 };
 
 /**
@@ -38,7 +50,7 @@ export function BookingReports({
     queryFn: () => api.listBookingReports(booking.id),
   });
   const canManage = !readOnly && booking.status !== "cancelled";
-  const canCreate = canManage && Boolean(booking.startDate && booking.endDate);
+  const canCreate = canManage && Boolean(booking.startDate && booking.exclusiveEndDate);
 
   const changed = () => {
     setError("");
@@ -81,7 +93,7 @@ export function BookingReports({
           report={report}
           canManage={canManage}
           minDate={booking.startDate}
-          maxDate={booking.endDate ? previousDateOnly(booking.endDate) : undefined}
+          maxDate={booking.exclusiveEndDate ? previousDateOnly(booking.exclusiveEndDate) : undefined}
           onChanged={changed}
           onError={failed}
           onDelete={() => {
@@ -99,7 +111,7 @@ export function BookingReports({
           bookingId={booking.id}
           initialDate={booking.startDate ?? productToday()}
           minDate={booking.startDate!}
-          maxDate={previousDateOnly(booking.endDate!)}
+          maxDate={previousDateOnly(booking.exclusiveEndDate!)}
           onAdded={changed}
           onError={failed}
         />

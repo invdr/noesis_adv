@@ -7,7 +7,8 @@ import {
   type DealDocumentType,
   type LeadDetail,
 } from "@noesis/contracts";
-import { api, ApiError } from "../api/client";
+import { api, apiUrl, ApiError } from "../api/client";
+import { shiftDateOnly } from "../shared/date";
 import { navigate } from "../router";
 import { BookingReports } from "../bookings/BookingReports";
 
@@ -94,7 +95,18 @@ export function DealSection({
                   {BOOKING_STATUS_LABEL[b.status]}
                 </span>
                 <span className="deal-booking-price tnum">{priceLabel(b.totalPrice)}</span>
-                <BookingReports booking={b} readOnly compact />
+                <BookingReports
+                  booking={{
+                    id: b.id,
+                    status: b.status,
+                    startDate: b.startDate,
+                    // В сводке сделки endDate уже включающий — возвращаем к
+                    // полуоткрытой границе, которую ждёт компонент.
+                    exclusiveEndDate: shiftDateOnly(b.endDate, 1),
+                  }}
+                  readOnly
+                  compact
+                />
               </li>
             ))}
           </ul>
@@ -119,7 +131,7 @@ export function DealSection({
                 {detail.dealDocuments.map((doc) => (
                   <li key={doc.id} className="deal-doc">
                     <span className="badge badge-neutral">{DEAL_DOCUMENT_TYPE_LABEL[doc.type]}</span>
-                    <a href={doc.asset.url} target="_blank" rel="noopener" className="deal-doc-name">
+                    <a href={apiUrl(doc.asset.url)} target="_blank" rel="noopener" className="deal-doc-name">
                       {doc.name}
                     </a>
                     <button

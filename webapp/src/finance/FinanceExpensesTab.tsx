@@ -9,6 +9,7 @@ import {
 import { api } from "../api/client";
 import { displayInclusivePeriod, productToday } from "../shared/date";
 import { parseAmount, rub } from "./finance-ui";
+import { TruncatedNotice } from "./TruncatedNotice";
 
 interface Draft {
   id: string | null;
@@ -147,6 +148,7 @@ export function FinanceExpensesTab() {
 
       {error && <p className="alert alert-error" role="alert">{error}</p>}
 
+      <TruncatedNotice shown={expenses.data?.items.length} total={expenses.data?.total} />
       <div className="card" style={{ marginTop: "1rem" }}>
         <table className="table-flush table-hover">
           <thead>

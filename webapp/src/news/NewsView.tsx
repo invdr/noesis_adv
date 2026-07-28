@@ -8,6 +8,7 @@ import {
   type UpsertNewsInput,
 } from "@noesis/contracts";
 import { api, ApiError } from "../api/client";
+import { productToday } from "../shared/date";
 
 const KEY = ["news"];
 const LABELS_KEY = ["news-labels"];
@@ -340,9 +341,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-/** ISO-дата → значение для `<input type="date">` (yyyy-mm-dd). */
+/**
+ * ISO-дата → значение для `<input type="date">` (yyyy-mm-dd). Для НОВОЙ новости
+ * подставляем продуктовый день (МСК), а не UTC: с 00:00 до 03:00 по Москве
+ * `toISOString()` даёт вчерашнюю дату, и новость публиковалась задним числом.
+ */
 function toDateInput(iso?: string): string {
-  const d = iso ? new Date(iso) : new Date();
+  if (!iso) return productToday();
+  const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
 

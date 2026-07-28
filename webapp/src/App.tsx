@@ -521,7 +521,19 @@ function SiteBuildIndicator({ canPublish = false }: { canPublish?: boolean }) {
     },
   });
   const s = build.data;
-  if (!s) return null;
+  // Раньше любой отказ /api/site-build прятал и статус, и кнопку публикации:
+  // админ просто терял возможность опубликовать сайт и не понимал почему.
+  if (!s) {
+    if (build.isPending) return null;
+    return (
+      <span className="status-pill is-err" title={(build.error as Error)?.message}>
+        <span className="status-pill-text">
+          <span className="status-pill-title">Статус сайта недоступен</span>
+          <span className="status-pill-sub">не удалось получить</span>
+        </span>
+      </span>
+    );
+  }
 
   const pill = (() => {
     if (s.status === "failed") {

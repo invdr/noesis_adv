@@ -4,6 +4,7 @@ import type { FinanceIncome, UpsertFinanceIncomeInput } from "@noesis/contracts"
 import { api } from "../api/client";
 import { displayInclusivePeriod, productToday } from "../shared/date";
 import { parseAmount, rub } from "./finance-ui";
+import { TruncatedNotice } from "./TruncatedNotice";
 
 interface Draft {
   id: string | null;
@@ -110,6 +111,7 @@ export function FinanceIncomeTab() {
 
       {error && <p className="alert alert-error" role="alert">{error}</p>}
 
+      <TruncatedNotice shown={income.data?.items.length} total={income.data?.total} />
       <div className="card" style={{ marginTop: "1rem" }}>
         <table className="table-flush table-hover">
           <thead>

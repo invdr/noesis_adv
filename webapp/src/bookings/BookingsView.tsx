@@ -691,7 +691,15 @@ function BookingForm({
       {booking && (
         <div className="card" style={{ marginTop: "1.25rem" }}>
           <div className="card-body">
-            <BookingReports booking={booking} />
+            <BookingReports
+              booking={{
+                id: booking.id,
+                status: booking.status,
+                startDate: booking.startDate,
+                // Booking.endDate — полуоткрытая граница, ровно то, что нужно.
+                exclusiveEndDate: booking.endDate,
+              }}
+            />
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -54,9 +54,20 @@ export function KanbanBoard({
   const [moveError, setMoveError] = useState("");
   // Терминальные колонки (won/lost) по умолчанию свёрнуты — они длинные и редко
   // нужны в потоке работы; admin/менеджер разворачивает их кликом.
+  //
+  // Пересчитываем при смене набора этапов: инициализатор useState срабатывает
+  // один раз на экземпляр компонента, а переключение воронки его не
+  // перемонтирует — терминальные колонки новой воронки оставались развёрнутыми.
+  const terminalKey = stages
+    .filter((s) => s.kind !== "in_progress")
+    .map((s) => s.id)
+    .join(",");
   const [collapsed, setCollapsed] = useState<Set<string>>(
-    () => new Set(stages.filter((s) => s.kind !== "in_progress").map((s) => s.id)),
+    () => new Set(terminalKey ? terminalKey.split(",") : []),
   );
+  useEffect(() => {
+    setCollapsed(new Set(terminalKey ? terminalKey.split(",") : []));
+  }, [terminalKey]);
   const toggleCollapsed = (id: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
