@@ -8,13 +8,13 @@ import {
   csvCell,
   exportLeadsCsv,
   getLeadStats,
-  normalizePhoneSearch,
   setLeadReferrer,
   updateNextContact,
   updateLeadConstruction,
   updateLeadSource,
   updateLeadStage,
 } from "../src/leads/lead-service";
+import { normalizePhoneSearch } from "../src/http/phone-search";
 import type { LeadRow } from "../src/leads/lead-dto";
 
 function runtimeWith(prisma: any): Runtime {

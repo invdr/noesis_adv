@@ -6,6 +6,7 @@ import {
   type OccupancyStatus,
   type UiStatus,
 } from "./availability";
+import { matchesCatalogFilters, type CatalogFilters } from "./catalog-filter";
 import { addDays, minPeriodEnd, shortDate, todayLocal } from "./dates";
 import { onShortlistChange, readShortlist, shortlistKey, sortSideCodes, upsertShortlist } from "./shortlist";
 import { loadYandexMaps, MapUnavailableError, waitYMapsReady } from "./yandex-map";
@@ -26,17 +27,7 @@ interface CatalogData {
   map: { apiKey: string; center: [number, number]; zoom: number };
 }
 
-interface Filters {
-  from: string;
-  to: string;
-  format: string;
-  district: string;
-  lighting: string;
-  sideCount: string;
-  priceFrom: number | null;
-  priceTo: number | null;
-  onlyFree: boolean;
-}
+type Filters = CatalogFilters;
 
 function parseJson<T>(id: string): T | null {
   const node = document.getElementById(id);
@@ -128,23 +119,15 @@ function init(): void {
       sideCount: String(values.get("sideCount") || ""),
       priceFrom: numberOrNull(values.get("priceFrom")),
       priceTo: numberOrNull(values.get("priceTo")),
+      // Гасим флаг, пока занятости нет: matchesCatalogFilters на onlyFree
+      // отсеивает всё, у чего нет записи «free», — включая случай «данные ещё
+      // не пришли». Инвариант живёт здесь, предикат на него опирается.
       onlyFree: onlyFreeInput.checked && availability !== null,
     };
   };
 
-  const matches = (item: CatalogItem, active: Filters): boolean => {
-    if (active.format && item.format !== active.format) return false;
-    if (active.district && item.district !== active.district) return false;
-    if (active.lighting && item.lighting !== active.lighting) return false;
-    if (active.sideCount && item.sideCount !== Number(active.sideCount)) return false;
-    if (active.priceFrom != null || active.priceTo != null) {
-      const prices = item.sides.map((side) => side.effectivePricePerMonth).filter((price): price is number => typeof price === "number");
-      if (!prices.length && item.pricePerMonth != null) prices.push(item.pricePerMonth);
-      if (!prices.some((price) => (active.priceFrom == null || price >= active.priceFrom) && (active.priceTo == null || price <= active.priceTo))) return false;
-    }
-    if (active.onlyFree && availability?.get(item.id)?.status !== "free") return false;
-    return true;
-  };
+  const matches = (item: CatalogItem, active: Filters): boolean =>
+    matchesCatalogFilters(item, active, availability);
 
   const markerColor = (id: string): string => {
     if (id === selectedId) return "#8B0000";

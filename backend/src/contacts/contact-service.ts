@@ -11,6 +11,7 @@ import { normalizeRuPhone } from "@noesis/contracts";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
+import { normalizePhoneSearch } from "../http/phone-search";
 import { visibilityWhere } from "../leads/lead-visibility";
 import { canAccessClientContact, clientContactAccessWhere } from "./client-access";
 import {
@@ -667,12 +668,6 @@ async function restoreDuplicateArchivedClient(
     include: organizationInclude,
   });
   return contactDto(rt, user, row);
-}
-
-function normalizePhoneSearch(term: string): string | null {
-  const digits = term.replace(/\D/g, "");
-  if (digits.length < 3) return null;
-  return digits.replace(/^8/, "7");
 }
 
 /**

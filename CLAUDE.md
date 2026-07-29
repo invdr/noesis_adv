@@ -68,7 +68,7 @@ bun run --cwd backend prisma:migrate   # миграции (dev)
 bun run dev                 # все surfaces параллельно
 bun run dev:backend|dev:website|dev:webapp
 bun run typecheck           # типы по всему монорепо
-bun run test                # contracts + backend + webapp
+bun run test                # contracts + backend + webapp + website
 bun run build               # прод-сборка всех workspaces
 ```
 

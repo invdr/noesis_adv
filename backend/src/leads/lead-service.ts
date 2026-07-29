@@ -25,6 +25,7 @@ import type { Lead as PrismaLead } from "@prisma/client";
 import type { Runtime } from "../runtime";
 import { HttpError } from "../http/errors";
 import { mskDay } from "../http/msk";
+import { normalizePhoneSearch } from "../http/phone-search";
 import { getEntryStageId } from "../stages/stage-service";
 import { requireAssignableSource } from "../sources/source-service";
 import { findOrCreateClientByPhone } from "../contacts/contact-service";
@@ -589,17 +590,6 @@ export async function listLeads(
     pageSize: query.pageSize,
     total,
   };
-}
-
-/**
- * Цифровой терм для поиска по телефону: выдёргивает цифры из ввода, ведущую
- * `8` приводит к `7` (хранение — `+7…`). Меньше 3 цифр — не телефонный запрос,
- * возвращаем `null` (иначе однозначный «1» матчил бы полбазы).
- */
-export function normalizePhoneSearch(term: string): string | null {
-  const digits = term.replace(/\D/g, "");
-  if (digits.length < 3) return null;
-  return digits.replace(/^8/, "7");
 }
 
 /**

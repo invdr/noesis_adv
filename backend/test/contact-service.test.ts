@@ -157,6 +157,30 @@ describe("listContacts", () => {
     expect(JSON.stringify(where)).toContain("company");
   });
 
+  test("поиск по телефону ищет и по нормализованным цифрам", async () => {
+    let where: any;
+    const prisma = aggregatePrisma({ contact: { findMany: async (args: any) => { where = args.where; return []; } } });
+
+    // Телефон хранится как «+7…», а ищут как привыкли — «8 (912) …». То же
+    // правило применяет поиск по заявкам: общий normalizePhoneSearch.
+    await listContacts(runtimeWith(prisma), admin, { search: "8 (912) 345-67-89" });
+
+    const serialized = JSON.stringify(where);
+    expect(serialized).toContain("79123456789"); // 8 → 7, разделители убраны
+    expect(serialized).toContain("8 (912) 345-67-89"); // и исходный терм тоже
+  });
+
+  test("короткий поисковый терм не считается телефоном", async () => {
+    let where: any;
+    const prisma = aggregatePrisma({ contact: { findMany: async (args: any) => { where = args.where; return []; } } });
+
+    await listContacts(runtimeWith(prisma), admin, { search: "12" });
+
+    // Иначе «1» матчил бы полбазы: цифровой вариант в OR не добавляется.
+    const phoneClauses = JSON.stringify(where).match(/"phone"/g) ?? [];
+    expect(phoneClauses).toHaveLength(1);
+  });
+
   test("менеджер видит партнёров и доступных ему клиентов", async () => {
     let where: any;
     const prisma = aggregatePrisma({ contact: { findMany: async (args: any) => { where = args.where; return []; } } });

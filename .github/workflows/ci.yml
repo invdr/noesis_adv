@@ -32,7 +32,7 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Tests (contracts + backend + webapp)
+      - name: Tests (contracts + backend + webapp + website)
         run: bun run test
 
   e2e:
